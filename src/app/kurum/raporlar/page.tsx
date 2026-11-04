@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { classroomsOf, fullName, LESSON_TYPES, requireOwner, ymd } from "@/lib/kurum";
 import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/components/kurum/ui";
 import PrintButton from "@/components/PrintButton";
+import ExportButton from "@/components/ExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,11 @@ async function Absence({ ownerId, sessionWhere, sinif }: { ownerId: string; sess
         <Kpi label="Toplam devamsızlık" value={totalAbs} />
         <Kpi label="Ortalama devam" value={`%${avgRate}`} />
       </div>
+      <ExportBar
+        fileName="devamsizlik_raporu"
+        headers={["Sıra", "Öğrenci No", "Ad Soyad", "Sınıf", "Ders", "Gelmedi", "Geç", "İzinli", "Devam %"]}
+        rows={rows.map((r, i) => [i + 1, r.s.studentNo, fullName(r.s), r.s.classroom?.name ?? "", r.total, r.absent, r.late, r.excused, r.rate])}
+      />
       <Table head={["#", "Öğrenci", "Sınıf", "Ders", "Gelmedi", "Geç", "İzinli", "Devam %"]}>
         {rows.map((r, i) => (
           <tr key={r.s.id} className={r.rate !== null && r.rate < 80 ? "bg-red-50/50" : ""}>
@@ -126,7 +132,14 @@ async function Absentees({ sessionWhere }: { sessionWhere: SW }) {
   if (!rows.length) return <Empty>Seçilen aralıkta gelmeyen öğrenci kaydı yok. 🎉</Empty>;
   return (
     <>
-      <p className="mb-3 text-sm text-slate-500">{rows.length} devamsızlık kaydı · {new Set(rows.map((r) => r.studentId)).size} farklı öğrenci</p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-slate-500">{rows.length} devamsızlık kaydı · {new Set(rows.map((r) => r.studentId)).size} farklı öğrenci</p>
+        <ExportButton
+          fileName="gelmeyen_ogrenciler"
+          headers={["Tarih", "Saat", "Sınıf", "Ders", "Öğretmen", "Öğrenci No", "Öğrenci", "Veli", "Veli telefonu"]}
+          rows={rows.map((r) => [fmt(r.session.date), `${r.session.startTime}–${r.session.endTime}`, r.session.classroom.name, r.session.subject, r.session.teacher.name, r.student.studentNo, fullName(r.student), r.student.parentName, r.student.parentPhone])}
+        />
+      </div>
       <Table head={["Tarih", "Saat", "Sınıf", "Ders", "Öğrenci", "Veli", "Veli telefonu"]}>
         {rows.map((r) => (
           <tr key={r.id}>
@@ -167,6 +180,11 @@ async function TeacherCounts({ ownerId, sessionWhere }: { ownerId: string; sessi
         <Kpi label="İşlenen ders" value={sessions.length} />
         <Kpi label="Toplam süre" value={`${hours(totalMin)} saat`} />
       </div>
+      <ExportBar
+        fileName="ogretmen_ders_sayilari"
+        headers={["Öğretmen", "Branş", "Toplam ders", ...Object.values(LESSON_TYPES), "Toplam saat"]}
+        rows={rows.map((r) => [r.t.name, r.t.branch, r.count, ...Object.keys(LESSON_TYPES).map((k) => r.byType[k] ?? 0), Math.round((r.minutes / 60) * 10) / 10])}
+      />
       <Table head={["Öğretmen", "Branş", "Toplam ders", ...Object.values(LESSON_TYPES), "Toplam saat"]}>
         {rows.map((r) => (
           <tr key={r.t.id}>
@@ -215,6 +233,22 @@ async function LessonList({ ownerId, sessionWhere, sinif }: { ownerId: string; s
         Planlanan: öğrencinin sınıfına düşen ve yoklaması alınmış ders sayısı · Katıldı: Geldi + Geç kaldı.
         Ders kutularında <b>katıldı/planlanan</b> gösterilir.
       </p>
+      <ExportBar
+        fileName="ogrenci_ders_listesi"
+        headers={["Öğrenci No", "Öğrenci", "Sınıf", "Planlanan", "Katıldı", ...Object.values(LESSON_TYPES), "Derslere göre (katıldı/planlanan)"]}
+        rows={rows.map(({ s, m }) => [
+          s.studentNo,
+          fullName(s),
+          s.classroom?.name ?? "",
+          m!.planned,
+          m!.attended,
+          ...Object.keys(LESSON_TYPES).map((k) => m!.byType[k] ?? 0),
+          Object.entries(m!.bySubject)
+            .sort((a, b) => a[0].localeCompare(b[0], "tr"))
+            .map(([sub, [p, c]]) => `${sub} ${c}/${p}`)
+            .join(", "),
+        ])}
+      />
       <Table head={["Öğrenci", "Sınıf", "Planlanan", "Katıldı", ...Object.values(LESSON_TYPES), "Derslere göre"]}>
         {rows.map(({ s, m }) => (
           <tr key={s.id}>
@@ -242,6 +276,14 @@ async function LessonList({ ownerId, sessionWhere, sinif }: { ownerId: string; s
 }
 
 /* ---------------------------------- yardımcılar ---------------------------------- */
+
+function ExportBar(props: React.ComponentProps<typeof ExportButton>) {
+  return (
+    <div className="no-print mb-3 flex justify-end">
+      <ExportButton {...props} />
+    </div>
+  );
+}
 
 function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (

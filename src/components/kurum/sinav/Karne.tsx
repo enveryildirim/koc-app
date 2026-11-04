@@ -1,4 +1,4 @@
-import { EXAM_TYPES, fmtDate, fmtNet } from "@/lib/exam";
+import { EXAM_TYPES, fmtDate, fmtNet, topicStats } from "@/lib/exam";
 import type { examReport } from "@/lib/examServer";
 
 type Report = Awaited<ReturnType<typeof examReport>>;
@@ -28,6 +28,13 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
     total.b += s.b;
   });
   const maxSection = Math.max(...secs.map((s) => s.count));
+  // Konu başarısı: öğrenci vs kurum
+  const myTopics = topicStats(secs, [row]);
+  const allTopics = new Map(topicStats(secs, report.rows).map((t) => [t.section + "|" + t.topic, t.rate]));
+  const topicsBySection = secs
+    .map((s) => ({ name: s.name, list: myTopics.filter((t) => t.section === s.name && t.total > 0) }))
+    .filter((x) => x.list.length > 0);
+  const weakTopics = myTopics.filter((t) => t.total > 0 && t.rate < 50).sort((a, b) => a.rate - b.rate);
 
   return (
     <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-slate-200 print:p-6 print:shadow-none print:ring-0">
@@ -49,10 +56,11 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
         </table>
       </header>
 
-      <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+      <div className="mt-4 grid grid-cols-4 gap-3 text-center">
         <Box label="Toplam net" value={fmtNet(row.totalNet)} big />
+        <Box label="Tahmini puan" value={fmtNet(row.score)} big />
         <Box label="Sınıf sırası" value={`${row.classRank} / ${classSize}`} />
-        <Box label="Kurum sırası" value={`${row.rank} / ${general.n}`} />
+        <Box label={`Kurum sırası · ilk %${row.percentile}`} value={`${row.rank} / ${general.n}`} />
       </div>
 
       <h2 className="mt-5 mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Ders analizi</h2>
@@ -130,6 +138,38 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
         ))}
         <p className="pt-1 text-[10px] text-slate-400">Biçim: soru no: verdiğiniz cevap → doğru cevap (– boş)</p>
       </div>
+
+      {topicsBySection.length > 0 && (
+        <>
+          <h2 className="mt-5 mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Konu başarısı</h2>
+          {weakTopics.length > 0 && (
+            <p className="mb-2 rounded bg-red-50 px-2 py-1 text-xs text-red-800">
+              <b>Öncelikli çalışılması gereken konular:</b> {weakTopics.slice(0, 6).map((t) => `${t.topic} (%${t.rate})`).join(", ")}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+            {topicsBySection.map((sec) => (
+              <div key={sec.name} className="break-inside-avoid">
+                <div className="mt-1 font-semibold">{sec.name}</div>
+                {sec.list.map((t) => {
+                  const k = allTopics.get(t.section + "|" + t.topic) ?? 0;
+                  return (
+                    <div key={t.topic} className="grid grid-cols-[1fr_70px_34px] items-center gap-2">
+                      <span className="truncate">{t.topic}</span>
+                      <div className="relative h-2 rounded bg-slate-100">
+                        <div className={`h-full rounded ${t.rate < 50 ? "bg-red-400" : t.rate < 70 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${t.rate}%` }} />
+                        <div className="absolute top-[-2px] h-3 w-0.5 bg-slate-700" style={{ left: `${k}%` }} />
+                      </div>
+                      <span className="text-right tabular-nums">%{t.rate}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <p className="pt-1 text-[10px] text-slate-400">Çubuk: konudaki doğru oranı · siyah çizgi: kurum ortalaması</p>
+        </>
+      )}
     </article>
   );
 }

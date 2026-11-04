@@ -165,6 +165,62 @@ src/app/
 - **Kurum adı:** Kurum adı olarak kullanıcının `name` alanı kullanılır; kayıt formundaki etiket "Kurum adı". Demo hesap: "Örnek Eğitim Kurumu".
 - **Kapsam dışı:** SMS ve e-posta ile otomatik gönderim yok; veli için giriş yapılan bir veli portalı da yok.
 
+## 4c. Raporlar ve analiz (4 Kasım 2026'da eklendi)
+
+Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullanımı karşılaştırılarak belirlendi. Bu adımda "1. öncelik" ve "2. öncelik" raporlarının hepsi yapıldı.
+
+**Tahmini puan** (`lib/exam.ts`: `resolveScoring`, `computeScore`, `maxScore`)
+- Formül: puan = taban + Σ(max(0, net) × katsayı). Sonuç `ExamResult.score`'da saklanır.
+- Ayar `Exam.scoring` alanında JSON olarak tutulur; boşsa sınav türünün varsayılanı kullanılır:
+  - LGS: taban 194,752; katsayılar 4,348 / 4,256 / 4,124 / 1,666 / 1,899 / 1,5075 (tam puan ≈ 500)
+  - TYT: taban 100; katsayılar 3,3 / 3,4 / 3,3 / 3,4 (tam puan 500)
+  - AYT: taban 100; her ders 5 (yalnızca AYT netleriyle)
+  - Serbest: 100 üzerinden eşit ağırlık
+- Katsayılar yaklaşık değerlerdir; arayüzde her yerde "tahmini" yazar. Kurum katsayıları cevap anahtarı ekranından değiştirebilir.
+- Sıralama tahmini puana göre yapılır (eşitlikte net). Kurum içi yüzdelik = sıra / katılımcı sayısı.
+
+**Konu (kazanım) analizi**
+- `sections[].topics`: A kitapçığı soru sırasıyla her sorunun konusu. Cevap anahtarı ekranında "1-5: Konu" biçiminde girilir (`parseTopicSpec` / `formatTopicSpec`).
+- `sections[].bOrder`: B kitapçığı eşlemesi; `bOrder[j]` = B'deki j. sorunun A'daki indeksi.
+  - "A'dan karıştır" düğmesi `makeBooklet()` ile B anahtarını ve eşlemeyi birlikte üretir.
+  - Eşleme yoksa B kitapçıklı öğrenciler o bölümün konu hesabına katılmaz ve arayüz bunu uyarır.
+- `topicStats()` konu analizi sekmesini, karnedeki konu başarısını, profildeki konu eksiklerini ve birleştirilmiş karneyi besler (`lib/studentTopics.ts > combinedTopics`).
+
+**Yeni ekranlar ve sekmeler**
+- **Deneme sekmeleri:** Konu analizi; Girmeyenler (sınava giren sınıfların kurum içi öğrencilerinden sonucu olmayanlar). Sıralı listeye Puan ve % sütunları, sınıf ortalamalarına ortalama puan eklendi.
+- **`/kurum/denemeler/birlesik`:**
+  - Seçili sınavlar ortalaması: tür, deneme seçimi ve sınıf filtresiyle; ortalama öğrencinin girdiği denemeler üzerinden alınır.
+  - Sınıf birleştirilmiş karne: deneme bazında sınıf ve kurum ortalamaları; öğrenci × deneme net matrisi.
+- **`/kurum/ogrenciler/[id]/birlesik?tur=`:** yazdırılabilir öğrenci birleştirilmiş karnesi (denemeler, ortalama, sınıf sırası, net gelişim grafiği, eksik/güçlü konular).
+- **Karne:** tahmini puan, yüzdelik dilim ve konu başarısı (öğrenci ile kurum karşılaştırması, öncelikli konular).
+- **Veli karnesi:** denemelerde tahmini puan.
+- **`/kurum/analiz`** (yardımcı agent yazdı; veri katmanı `lib/analysis.ts`, grafik `components/kurum/analiz/LineChart.tsx`):
+  - **Sınıf gelişimi:** tür ve ders seçimi, sınıf × deneme ortalamaları, çizgi grafik.
+  - **Risk / erken uyarı:** kurallar ve ağırlıklar aşağıdaki tabloda. Toplam 4+ = Yüksek, 2–3 = Orta, 1 = Düşük.
+
+    | Uyarı | Kural | Ağırlık |
+    |---|---|---|
+    | Net düşüşü | Aynı türdeki son iki denemede ≥ 5 net veya ≥ %10 düşüş | 2 |
+    | Son denemeye girmedi | Sınıfın son denemesinde sonucu yok | 1 |
+    | Devam düşük | Son 30 günde devam < %85 | 2 |
+    | Ödev yapmıyor | Son 30 günde ödev yapma < %60 | 1 |
+
+  - **Öğretmen ve ders performansı:** ders programı ile deneme bölüm adı eşleştirmesi (takma ad tablosu, "içerir" kuralı); ilk ve son deneme, kurum farkı.
+- **Excel'e aktarma:** `components/ExportButton.tsx` (`write-excel-file` ile gerçek .xlsx). Şu raporlarda var: sıralı liste, sınıf ortalamaları, soru analizi, konu analizi, girmeyenler, birleştirilmiş raporlar, analiz merkezi, devam raporları ve ödev raporu.
+
+**Seed değişiklikleri**
+- Denemelere konular ve B eşlemesi eklendi.
+- Konu bazında zorluk farkı var; bazı konular kurum genelinde zayıf çıkar.
+- Puanlar hesaplanmış durumda.
+- Ödev yapma oranı gerçekçi hale getirildi; önceki oranlarla risk listesinin %75'i "ödev yapmıyor" uyarısı alıyordu.
+
+**Doğrulama**
+- Tüm yeni sayfalar 200 döndü.
+- Puan formülü 39/39 sonuçta bağımsız hesapla aynı çıktı.
+- Konu analizi (B kitapçıklılar dahil) 28/28 konuda bağımsız hesapla aynı çıktı.
+- Girmeyen sayısı ve seçili sınav ortalaması veritabanıyla aynı.
+- Hatalı B eşlemesi 400 döndü; özel katsayı sonrası yeniden puanlama beklenen değeri verdi, varsayılana dönüş eski değerleri geri getirdi.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)
@@ -184,9 +240,11 @@ src/app/
 - [x] **Veli karnesi** (`/kurum/veli-karnesi`, öğrenci profilinde kart, herkese açık `/veli/[token]`) — bkz. bölüm 4b.
 
 ### Yapılmayanlar / sonraki adımlar
-- [ ] **Puan hesabı:** Resmi LGS/YKS puanı hesaplanmıyor; şu an sadece net var.
-- [ ] **Kitapçıklar arası soru eşleme:** B kitapçığı sorularını A sırasına eşleyen tablo yok. Bu yüzden soru analizi kitapçık bazında ayrı gösteriliyor.
+- [ ] **Resmi puan yok:** Tahmini puan var (bkz. 4c); resmi LGS/YKS puanı ve Türkiye geneli yüzdelik dilim yok (yalnızca kurum içi).
+- [ ] **Soru frekans analizi kitapçık bazında:** B eşlemesi artık var ve konu analizinde kullanılıyor, ama soru frekans analizi hâlâ kitapçık bazında ayrı.
 - [ ] **Kurum karşılaştırma:** Kurumlar arası karşılaştırma ve çoklu şube yok.
+- [ ] **Ödev raporu:** Sınıf ve ders bazında ödev raporu yok (öğrenci bazında var).
+- [ ] **Risk eşikleri sabit:** Risk eşikleri kodda tanımlı (`lib/analysis.ts`); kurumun ayarlayabileceği bir ekran yok.
 - [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye otomatik SMS/e-posta (şu an WhatsApp linki ve kopyalama var), ödeme/paket satışı yok.
 - [ ] **Excel biçimi:** Eski `.xls` desteklenmiyor; `.xlsx` veya CSV gerekiyor.
 - [ ] **OMR iyileştirmeleri:** Form yön işareti eklenmeli, gerçek taramalarla test edilmeli.

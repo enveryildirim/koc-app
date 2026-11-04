@@ -7,6 +7,7 @@ import { Kpi, PageHeader, th, td } from "@/components/kurum/ui";
 import StudentForm from "@/components/kurum/kayit/StudentForm";
 import PrintButton from "@/components/PrintButton";
 import VeliCard from "@/components/kurum/veli/VeliCard";
+import { combinedTopics } from "@/lib/studentTopics";
 import { defaultPeriod } from "@/lib/parentReport";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   // Sınav türüne göre gruplanmış sonuçlar (birleştirilmiş karne)
   const byType = new Map<string, typeof st.results>();
   for (const r of st.results) byType.set(r.exam.type, [...(byType.get(r.exam.type) ?? []), r]);
+
+  const weakTopics = combinedTopics(st.results)
+    .filter((t) => t.rate < 50)
+    .sort((a, b) => a.rate - b.rate)
+    .slice(0, 15);
 
   const hw = { DONE: 0, PARTIAL: 0, NOT_DONE: 0, PENDING: 0 } as Record<string, number>;
   st.homeworks.forEach((h) => (hw[h.status] = (hw[h.status] ?? 0) + 1));
@@ -90,7 +96,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           return (
             <div key={type} className="card mb-4 overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-                <h3 className="font-semibold">{EXAM_TYPES[type]?.label ?? type} · {results.length} sınav</h3>
+                <h3 className="font-semibold">
+                  {EXAM_TYPES[type]?.label ?? type} · {results.length} sınav
+                  <Link href={`/kurum/ogrenciler/${st.id}/birlesik?tur=${type}`} className="no-print ml-3 text-xs font-medium text-brand-600 hover:underline">
+                    Birleştirilmiş karne →
+                  </Link>
+                </h3>
                 <NetTrend values={results.map((r) => r.totalNet)} max={maxNet} />
               </div>
               <div className="overflow-x-auto">
@@ -103,6 +114,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                         <th key={s.name} className={`${th} text-right`}>{s.name}</th>
                       ))}
                       <th className={`${th} text-right`}>Toplam net</th>
+                      <th className={`${th} text-right`}>Puan</th>
                       <th />
                     </tr>
                   </thead>
@@ -115,6 +127,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                           <td key={s.name} className={`${td} text-right tabular-nums`}>{fmtNet(stats[i][si]?.net ?? 0)}</td>
                         ))}
                         <td className={`${td} text-right font-bold tabular-nums`}>{fmtNet(r.totalNet)}</td>
+                        <td className={`${td} text-right tabular-nums`}>{fmtNet(r.score)}</td>
                         <td className={`${td} text-right`}>
                           <Link className="no-print text-brand-600 hover:underline" href={`/kurum/denemeler/${r.examId}/karne/${r.id}`}>Karne</Link>
                         </td>
@@ -126,6 +139,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                         <td key={si} className={`${td} text-right tabular-nums`}>{fmtNet(a)}</td>
                       ))}
                       <td className={`${td} text-right tabular-nums`}>{fmtNet(avgTotal)}</td>
+                      <td className={`${td} text-right tabular-nums`}>{fmtNet(results.reduce((a, r) => a + r.score, 0) / results.length)}</td>
                       <td />
                     </tr>
                   </tbody>
@@ -135,6 +149,19 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           );
         })}
       </section>
+
+      {weakTopics.length > 0 && (
+        <section className="card p-4">
+          <h2 className="font-semibold">Konu eksikleri <span className="text-xs font-normal text-slate-500">(tüm denemelerde doğru oranı %50’nin altında)</span></h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {weakTopics.map((t) => (
+              <span key={t.section + t.topic} className="rounded-lg bg-red-50 px-2.5 py-1 text-xs text-red-800 ring-1 ring-red-100">
+                {t.topic} <span className="text-red-500">· {t.section}</span> <b>%{t.rate}</b>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card overflow-hidden">

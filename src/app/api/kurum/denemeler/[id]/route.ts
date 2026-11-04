@@ -19,15 +19,29 @@ export async function PUT(req: Request, ctx: Ctx) {
       .replace(/[^A-E]/g, "")
       .slice(0, n);
 
-  const sections = (body.sections as { name: string; count: number; keyA: string; keyB: string }[]).map((s) => {
+  type SecIn = { name: string; count: number; keyA: string; keyB: string; topics?: string[]; bOrder?: number[] };
+  const sections = (body.sections as SecIn[]).map((s) => {
     const count = Math.max(1, Math.min(120, Number(s.count) || 1));
-    return { name: String(s.name ?? "").trim() || "Bölüm", count, keyA: clean(s.keyA, count), keyB: clean(s.keyB, count) };
+    const topics = Array.isArray(s.topics) ? Array.from({ length: count }, (_, i) => String(s.topics![i] ?? "").trim().slice(0, 80)) : undefined;
+    const bOrder = Array.isArray(s.bOrder) && s.bOrder.length ? s.bOrder.map(Number) : undefined;
+    return {
+      name: String(s.name ?? "").trim() || "Bölüm",
+      count,
+      keyA: clean(s.keyA, count),
+      keyB: clean(s.keyB, count),
+      ...(topics?.some(Boolean) ? { topics } : {}),
+      ...(bOrder ? { bOrder } : {}),
+    };
   });
   for (const s of sections) {
     for (const ch of s.keyA + s.keyB) {
       if (!allowed.includes(ch)) {
         return NextResponse.json({ error: `${s.name}: '${ch}' bu sınav türünde geçerli bir şık değil (${allowed}).` }, { status: 400 });
       }
+    }
+    if (s.bOrder) {
+      const ok = s.bOrder.length === s.count && new Set(s.bOrder).size === s.count && s.bOrder.every((i) => Number.isInteger(i) && i >= 0 && i < s.count);
+      if (!ok) return NextResponse.json({ error: `${s.name}: B kitapçığı eşlemesi 1–${s.count} arası her soruyu bir kez içermeli.` }, { status: 400 });
     }
   }
   const total = sections.reduce((a, s) => a + s.count, 0);
@@ -41,10 +55,21 @@ export async function PUT(req: Request, ctx: Ctx) {
       bookletB: body.bookletB ?? exam.bookletB,
       wrongPer: Math.max(0, Math.min(10, Number(body.wrongPer ?? exam.wrongPer))),
       sections: JSON.stringify(sections),
+      scoring: scoringJson(body.scoring, sections.length),
     },
   });
   await regrade(id);
   return NextResponse.json({ ok: true });
+}
+
+/** { base, coefs } doğrulanır; geçersiz veya bölüm sayısıyla uyuşmuyorsa "" (= türün varsayılanı). */
+function scoringJson(v: unknown, n: number) {
+  if (!v || typeof v !== "object") return "";
+  const { base, coefs } = v as { base: unknown; coefs: unknown };
+  if (!Array.isArray(coefs) || coefs.length !== n) return "";
+  const nums = coefs.map(Number);
+  if (!Number.isFinite(Number(base)) || nums.some((c) => !Number.isFinite(c) || c < 0 || c > 100)) return "";
+  return JSON.stringify({ base: Number(base), coefs: nums });
 }
 
 export async function DELETE(_req: Request, ctx: Ctx) {

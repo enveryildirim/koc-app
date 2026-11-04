@@ -6,6 +6,7 @@ const LINKS = [
   ["/kurum", "📊", "Özet"],
   ["/kurum/ogrenciler", "🎓", "Öğrenciler"],
   ["/kurum/denemeler", "📝", "Denemeler & Optik"],
+  ["/kurum/analiz", "🔎", "Analiz & Uyarılar"],
   ["/kurum/odevler", "📚", "Ödev Takip"],
   ["/kurum/ders-programi", "🗓️", "Ders Programı"],
   ["/kurum/yoklama", "✅", "Yoklama"],

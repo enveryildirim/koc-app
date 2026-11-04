@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { classroomsOf, fullName, requireOwner } from "@/lib/kurum";
 import { Empty, PageHeader, Tabs, td, th } from "@/components/kurum/ui";
 import PrintButton from "@/components/PrintButton";
+import ExportButton from "@/components/ExportButton";
 import FilterBar from "@/components/kurum/odev/FilterBar";
 import { ODEV_TABS } from "@/components/kurum/odev/tabs";
 
@@ -52,7 +53,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
       <PageHeader title="Ödev Takip" sub="Öğrenci bazında ödev yapma raporu" actions={<PrintButton />} />
       <Tabs tabs={ODEV_TABS} active="rapor" />
 
-      <div className="no-print mb-4 flex justify-end">
+      <div className="no-print mb-4 flex flex-wrap items-end justify-end gap-2">
+        <ExportButton
+          fileName={`odev_raporu_${clsName ?? "tum_siniflar"}`}
+          headers={["Öğrenci No", "Öğrenci", "Sınıf", "Toplam", "Yaptı", "Eksik", "Yapmadı", "Bekliyor", "Yapma oranı %"]}
+          rows={rows.map((r) => [r.no, r.name, r.cls, r.total, r.DONE, r.PARTIAL, r.NOT_DONE, r.PENDING, r.rate])}
+        />
         <FilterBar
           filters={[
             { name: "sinif", label: "Sınıf", options: [{ value: "", label: "Tüm sınıflar" }, ...classrooms.map((c) => ({ value: c.id, label: c.name }))] },

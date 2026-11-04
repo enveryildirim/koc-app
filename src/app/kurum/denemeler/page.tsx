@@ -19,6 +19,7 @@ export default async function Page() {
       <PageHeader
         title="Denemeler & Optik Okuma"
         sub="Deneme sınavı oluşturun, cevap anahtarını girin, optik formları tarayın veya optik okuyucu dosyasını yükleyin."
+        actions={<Link href="/kurum/denemeler/birlesik" className="btn-secondary">📊 Birleştirilmiş raporlar</Link>}
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         {exams.length === 0 ? (

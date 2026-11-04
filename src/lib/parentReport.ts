@@ -59,6 +59,7 @@ export async function buildParentReport(studentId: string, from: string, to: str
         classAvg: round2(peerStats.reduce((a, p) => a + (p[i]?.net ?? 0), 0) / Math.max(1, peerStats.length)),
       })),
       totalNet: r.totalNet,
+      score: r.score,
       maxNet: secs.reduce((a, s) => a + s.count, 0),
       classAvg: round2(peers.reduce((a, p) => a + p.totalNet, 0) / Math.max(1, peers.length)),
       rank: better + 1,

@@ -70,6 +70,7 @@ export default function VeliKarne({ r }: { r: ParentReport }) {
                   <div className="text-xs">
                     Net <b className="text-base text-brand-700">{fmtNet(e.totalNet)}</b>
                     <span className="text-slate-500"> / {e.maxNet}</span>
+                    <span className="ml-3">Tahmini puan <b>{fmtNet(e.score)}</b></span>
                     <span className="ml-3 text-slate-500">Sınıf ort. {fmtNet(e.classAvg)}</span>
                     <span className="ml-3 font-semibold">Sınıf sırası {e.rank}/{e.peers}</span>
                   </div>

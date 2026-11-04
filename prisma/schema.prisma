@@ -138,11 +138,14 @@ model Exam {
   /// LGS | TYT | AYT | SERBEST
   type      String
   date      DateTime
-  /// JSON: [{ name, count, keyA, keyB }] — key: "ABCD..." (her soru için bir harf)
+  /// JSON: [{ name, count, keyA, keyB, topics?, bOrder? }] — key: "ABCD..." (her soru için bir harf);
+  /// topics: A kitapçığı soru sırasıyla konu adları; bOrder[j] = B'deki j. sorunun A'daki indeksi
   sections  String
   bookletB  Boolean      @default(true)
   /// Kaç yanlış bir doğruyu götürür (0 = götürmez)
   wrongPer  Int          @default(4)
+  /// Tahmini puan ayarı JSON: { base, coefs: number[] } (bölüm sırasıyla). Boş = türün varsayılanı
+  scoring   String       @default("")
   createdAt DateTime     @default(now())
   results   ExamResult[]
 }
@@ -159,6 +162,8 @@ model ExamResult {
   /// JSON: [{ d, y, b, net }] bölüm sırasıyla
   stats     String
   totalNet  Float
+  /// Tahmini puan (Exam.scoring ile)
+  score     Float    @default(0)
   /// OMR | TXT | MANUAL
   source    String   @default("MANUAL")
   createdAt DateTime @default(now())

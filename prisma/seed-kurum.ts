@@ -1,7 +1,7 @@
 /** Kurum modülleri için test verisi: sınıflar, öğrenciler, denemeler, ödevler, ders programı ve yoklama. */
 import { PrismaClient } from "@prisma/client";
 import { randomBytes } from "crypto";
-import { EXAM_TYPES, gradeExam, LETTERS, randomKey, shuffleKey } from "../src/lib/exam";
+import { EXAM_TYPES, gradeExam, LETTERS, makeBooklet, randomKey, resolveScoring } from "../src/lib/exam";
 
 const FIRST = [
   "Ahmet", "Ayşe", "Mehmet", "Zeynep", "Mustafa", "Elif", "Emre", "Esra", "Burak", "Merve", "Can", "Selin", "Kerem", "Nil",
@@ -93,6 +93,31 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   };
 
   /* ---------------------------------- Denemeler ---------------------------------- */
+  // Bölüm başına konu (kazanım) listesi; sorulara sırayla blok blok dağıtılır.
+  const TOPICS: Record<string, string[]> = {
+    "Türkçe": ["Sözcükte anlam", "Cümlede anlam", "Paragraf", "Yazım ve noktalama", "Fiilimsiler", "Cümle türleri"],
+    "Matematik": ["Çarpanlar ve katlar", "Üslü ifadeler", "Kareköklü ifadeler", "Veri analizi", "Olasılık", "Cebirsel ifadeler", "Doğrusal denklemler"],
+    "Fen Bilimleri": ["Mevsimler ve iklim", "DNA ve genetik kod", "Basınç", "Madde ve endüstri", "Basit makineler"],
+    "T.C. İnkılap Tarihi": ["Bir kahraman doğuyor", "Milli uyanış", "Ya istiklal ya ölüm"],
+    "Din Kültürü": ["Kader inancı", "Zekât ve sadaka", "Din ve hayat"],
+    "İngilizce": ["Friendship", "Teen life", "In the kitchen", "On the phone"],
+    "Sosyal Bilimler": ["Tarih", "Coğrafya", "Felsefe", "Din kültürü"],
+    "Temel Matematik": ["Temel kavramlar", "Sayı basamakları", "Bölme-bölünebilme", "Rasyonel sayılar", "Problemler", "Fonksiyonlar", "Geometri"],
+    "Fizik": ["Kuvvet ve hareket", "Elektrik", "Dalgalar", "Optik"],
+    "Kimya": ["Mol kavramı", "Kimyasal tepkimeler", "Asit-baz"],
+    "Biyoloji": ["Hücre bölünmeleri", "Kalıtım", "Ekoloji"],
+    "Genel": ["Genel"],
+  };
+  const topicsFor = (name: string, count: number) => {
+    const list = TOPICS[name] ?? ["Genel"];
+    return Array.from({ length: count }, (_, i) => list[Math.floor((i * list.length) / count)]);
+  };
+  // Konu bazında zorluk: bazı konular kurum genelinde zayıf olsun
+  const topicDifficulty = new Map<string, number>();
+  const diff = (topic: string) => {
+    if (!topicDifficulty.has(topic)) topicDifficulty.set(topic, (Math.random() - 0.5) * 0.4);
+    return topicDifficulty.get(topic)!;
+  };
   const examDefs = [
     { name: "LGS Deneme 1", type: "LGS", level: "8", ago: 42 },
     { name: "LGS Deneme 2", type: "LGS", level: "8", ago: 28 },
@@ -105,8 +130,10 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     const t = EXAM_TYPES[e.type];
     const sections = t.sections.map((s, si) => {
       const keyA = randomKey(s.count, t.choices);
-      return { name: s.name, count: s.count, keyA, keyB: shuffleKey(keyA, 7 + ei * 13 + si) };
+      const { keyB, bOrder } = makeBooklet(keyA, 7 + ei * 13 + si);
+      return { name: s.name, count: s.count, keyA, keyB, bOrder, topics: topicsFor(s.name, s.count) };
     });
+    const scoring = resolveScoring(e.type, sections);
     const exam = await prisma.exam.create({
       data: { ownerId, name: e.name, type: e.type, date: daysAgo(e.ago), sections: JSON.stringify(sections), wrongPer: t.wrongPer },
     });
@@ -118,14 +145,16 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       let answers = "";
       for (const s of sections) {
         const key = booklet === "B" ? s.keyB : s.keyA;
-        const p = sk(st.id, s.name) + (ei % 3) * 0.03; // denemeler ilerledikçe hafif gelişim
+        const base = sk(st.id, s.name) + (ei % 3) * 0.03; // denemeler ilerledikçe hafif gelişim
         for (let i = 0; i < s.count; i++) {
+          const topic = s.topics[booklet === "B" ? s.bOrder[i] : i];
+          const p = Math.min(0.97, Math.max(0.05, base + diff(s.name + topic)));
           if (Math.random() < 0.12 * (1 - p)) answers += " ";
           else if (Math.random() < p) answers += key[i];
           else answers += LETTERS[Math.floor(Math.random() * t.choices)];
         }
       }
-      const g = gradeExam(sections, answers, booklet, t.wrongPer);
+      const g = gradeExam(sections, answers, booklet, t.wrongPer, scoring);
       rows.push({
         examId: exam.id,
         studentId: st.id,
@@ -133,6 +162,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
         answers,
         stats: JSON.stringify(g.stats),
         totalNet: g.totalNet,
+        score: g.score,
         source: pick(["OMR", "OMR", "TXT"]),
       });
     }
@@ -176,7 +206,9 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
         data: c.students.map((st) => {
           const p = baseSkill.get(st.id) ?? 0.6;
           const r = Math.random();
-          const status = !past ? "PENDING" : r < p * 0.9 ? "DONE" : r < p * 0.9 + 0.12 ? "PARTIAL" : "NOT_DONE";
+          // Çoğu öğrenci ödevini yapar; başarısı düşük olanlarda yapmama olasılığı artar
+          const done = 0.58 + p * 0.38;
+          const status = !past ? "PENDING" : r < done ? "DONE" : r < done + 0.1 ? "PARTIAL" : "NOT_DONE";
           return { homeworkId: hw.id, studentId: st.id, status };
         }),
       });

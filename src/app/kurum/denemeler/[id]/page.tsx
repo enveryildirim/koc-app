@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { classroomsOf, requireOwner } from "@/lib/kurum";
-import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, LETTERS, normNo, totalQuestions } from "@/lib/exam";
+import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, LETTERS, normNo, topicStats, totalQuestions } from "@/lib/exam";
 import { examReport, loadExam } from "@/lib/examServer";
 import { examFormSpec, examKeys } from "@/lib/examOmr";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/components/kurum/ui";
@@ -12,6 +12,7 @@ import DeleteResult from "@/components/kurum/sinav/DeleteResult";
 import OmrScanner from "@/components/OmrScanner";
 import FormSvg from "@/components/FormSvg";
 import PrintButton from "@/components/PrintButton";
+import ExportButton from "@/components/ExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     { key: "anahtar", label: "Cevap anahtarı", href: `${base}?tab=anahtar` },
     { key: "optik", label: "Optik form tara", href: `${base}?tab=optik` },
     { key: "txt", label: "Okuyucu dosyası (TXT)", href: `${base}?tab=txt` },
+    { key: "konu", label: "Konu analizi", href: `${base}?tab=konu` },
     { key: "analiz", label: "Soru frekans analizi", href: `${base}?tab=analiz` },
     { key: "siniflar", label: "Sınıf ortalamaları", href: `${base}?tab=siniflar` },
+    { key: "girmeyenler", label: "Girmeyenler", href: `${base}?tab=girmeyenler` },
   ];
+  const fileBase = exam.name;
   const header = (
     <>
       <PageHeader
@@ -58,6 +62,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         {header}
         <KeyEditor
           examId={id}
+          type={exam.type}
+          scoring={exam.scoringResolved}
           initial={{ name: exam.name, date: exam.date.toISOString().slice(0, 10), bookletB: exam.bookletB, wrongPer: exam.wrongPer, sections: exam.secs }}
           choices={choicesFor(exam.type)}
           hasResults={(await prisma.examResult.count({ where: { examId: id } })) > 0}
@@ -138,6 +144,133 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     );
   }
 
+  /* -------------------------------- Girmeyenler -------------------------------- */
+  if (tab === "girmeyenler") {
+    // Beklenen katılımcılar: sınava en az bir öğrencisi giren sınıfların kurum içi öğrencileri
+    const takenIds = new Set(report.rows.map((r) => r.studentId));
+    const classIds = [...new Set(report.rows.map((r) => r.classId))].filter((c) => c !== "_");
+    const expected = await prisma.student.findMany({
+      where: { ownerId, external: false, classroomId: { in: sinif ? [sinif] : classIds } },
+      include: { classroom: true },
+      orderBy: [{ classroom: { name: "asc" } }, { studentNo: "asc" }],
+    });
+    const missing = expected.filter((s) => !takenIds.has(s.id));
+    return (
+      <>
+        {header}
+        <div className="no-print mb-4 flex flex-wrap items-center gap-2">
+          <ClassFilter base={base} tab="girmeyenler" classes={classes} sinif={sinif} />
+          <ExportButton
+            fileName={`${fileBase} - girmeyenler`}
+            headers={["No", "Ad Soyad", "Sınıf", "Telefon", "Veli", "Veli telefonu"]}
+            rows={missing.map((s) => [s.studentNo, `${s.firstName} ${s.lastName}`, s.classroom?.name ?? "", s.phone, s.parentName, s.parentPhone])}
+          />
+        </div>
+        <p className="mb-3 text-sm text-slate-500">
+          Sınava girdiği sınıflardaki öğrencilerden sonucu olmayanlar: <b>{missing.length}</b> / {expected.length} öğrenci.
+        </p>
+        {missing.length === 0 ? (
+          <Empty>Tüm öğrenciler sınava girmiş. 👏</Empty>
+        ) : (
+          <div className="card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className={th}>No</th>
+                  <th className={th}>Ad Soyad</th>
+                  <th className={th}>Sınıf</th>
+                  <th className={th}>Veli</th>
+                  <th className={th}>Veli telefonu</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {missing.map((s) => (
+                  <tr key={s.id}>
+                    <td className={`${td} font-mono`}>{s.studentNo}</td>
+                    <td className={td}>
+                      <Link href={`/kurum/ogrenciler/${s.id}`} className="font-medium hover:text-brand-600">{s.firstName} {s.lastName}</Link>
+                    </td>
+                    <td className={td}>{s.classroom?.name}</td>
+                    <td className={td}>{s.parentName || "—"}</td>
+                    <td className={td}>{s.parentPhone ? <a className="text-brand-600" href={`tel:${s.parentPhone.replace(/\s/g, "")}`}>{s.parentPhone}</a> : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  /* -------------------------------- Konu analizi ------------------------------- */
+  if (tab === "konu") {
+    const stats = topicStats(exam.secs, rows).sort((a, b) => a.rate - b.rate);
+    const general = sinif ? topicStats(exam.secs, report.rows) : stats;
+    const genRate = new Map(general.map((g) => [g.section + "|" + g.topic, g.rate]));
+    const noTopics = exam.secs.every((s) => !s.topics?.some(Boolean));
+    const missingMap = exam.bookletB && exam.secs.some((s) => s.topics?.some(Boolean) && !(s.bOrder?.length === s.count));
+    return (
+      <>
+        {header}
+        {noTopics ? (
+          <Empty>
+            Bu denemede sorulara konu atanmamış. <Link className="font-semibold text-brand-600" href={`${base}?tab=anahtar`}>Cevap anahtarı</Link> ekranındaki
+            “Konular / kazanımlar” bölümünden ekleyebilirsiniz.
+          </Empty>
+        ) : (
+          <>
+            <div className="no-print mb-4 flex flex-wrap items-center gap-2">
+              <ClassFilter base={base} tab="konu" classes={classes} sinif={sinif} />
+              <ExportButton
+                fileName={`${fileBase} - konu analizi`}
+                headers={["Ders", "Konu", "Soru sayısı", "Doğru oranı %", ...(sinif ? ["Kurum %"] : [])]}
+                rows={stats.map((t) => [t.section, t.topic, t.questions, t.rate, ...(sinif ? [genRate.get(t.section + "|" + t.topic) ?? null] : [])])}
+              />
+            </div>
+            {missingMap && (
+              <p className="mb-3 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
+                Bazı bölümlerde B kitapçığı soru eşlemesi girilmemiş; bu bölümlerde yalnızca A kitapçıklı öğrenciler hesaba katıldı.
+              </p>
+            )}
+            <p className="mb-3 text-sm text-slate-500">En zayıf konudan en güçlüye sıralı. %50’nin altındaki konular kırmızıdır; tekrar planlamasında öncelik verilebilir.</p>
+            <div className="card overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className={th}>Ders</th>
+                    <th className={th}>Konu</th>
+                    <th className={`${th} text-right`}>Soru</th>
+                    <th className={th}>Doğru oranı</th>
+                    {sinif && <th className={`${th} text-right`}>Kurum</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {stats.map((t) => (
+                    <tr key={t.section + t.topic}>
+                      <td className={`${td} text-slate-500`}>{t.section}</td>
+                      <td className={`${td} font-medium`}>{t.topic}</td>
+                      <td className={`${td} text-right`}>{t.questions}</td>
+                      <td className={`${td} w-64`}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2.5 flex-1 overflow-hidden rounded bg-slate-100">
+                            <div className={`h-full ${t.rate < 50 ? "bg-red-400" : t.rate < 70 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${t.rate}%` }} />
+                          </div>
+                          <span className={`w-10 text-right text-xs font-semibold ${t.rate < 50 ? "text-red-600" : ""}`}>%{t.rate}</span>
+                        </div>
+                      </td>
+                      {sinif && <td className={`${td} text-right text-slate-500`}>%{genRate.get(t.section + "|" + t.topic) ?? "—"}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
   /* --------------------------- Soru frekans analizi --------------------------- */
   if (tab === "analiz") {
     const bk = sp.kitapcik === "B" ? "B" : "A";
@@ -159,6 +292,25 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             </div>
           )}
           <span className="text-sm text-slate-500">{list.length} öğrenci</span>
+          <ExportButton
+            fileName={`${fileBase} - soru analizi ${bk}`}
+            headers={["Ders", "Soru", "Cevap", ...LETTERS.slice(0, c).split("").map((l) => `${l} %`), "Boş %", "Başarı %"]}
+            rows={(() => {
+              const out: (string | number)[][] = [];
+              let off = 0;
+              for (const s of exam.secs) {
+                const key = bk === "B" ? s.keyB || s.keyA : s.keyA;
+                for (let i = 0; i < s.count; i++) {
+                  const ans = list.map((r) => r.answers[off + i] ?? " ");
+                  const n = Math.max(1, ans.length);
+                  const p = (ch: string) => Math.round((ans.filter((a) => a === ch).length / n) * 100);
+                  out.push([s.name, i + 1, key[i] ?? "", ...LETTERS.slice(0, c).split("").map(p), p(" "), key[i] ? p(key[i]) : 0]);
+                }
+                off += s.count;
+              }
+              return out;
+            })()}
+          />
         </div>
         <p className="mb-4 text-sm text-slate-500">
           Her soru için şıkların seçilme oranı. Doğru şık yeşil; başarı oranı %40’ın altındaki sorular kırmızı işaretlidir.
@@ -233,6 +385,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <th key={s.name} className={`${th} text-right`}>{s.name}</th>
                 ))}
                 <th className={`${th} text-right`}>Toplam net</th>
+                <th className={`${th} text-right`}>Ort. puan</th>
                 <th className={th} />
               </tr>
             </thead>
@@ -245,6 +398,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                     <td key={i} className={`${td} text-right tabular-nums ${v < report.general.sections[i] ? "text-red-600" : "text-emerald-700"}`}>{fmtNet(v)}</td>
                   ))}
                   <td className={`${td} text-right font-bold tabular-nums`}>{fmtNet(c.total)}</td>
+                  <td className={`${td} text-right tabular-nums`}>{fmtNet(c.score)}</td>
                   <td className={`${td} w-40`}>
                     <div className="h-2 overflow-hidden rounded bg-slate-100">
                       <div className="h-full bg-brand-500" style={{ width: `${(c.total / maxTotal) * 100}%` }} />
@@ -259,12 +413,23 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <td key={i} className={`${td} text-right tabular-nums`}>{fmtNet(v)}</td>
                 ))}
                 <td className={`${td} text-right tabular-nums`}>{fmtNet(report.general.total)}</td>
+                <td className={`${td} text-right tabular-nums`}>{fmtNet(report.general.score)}</td>
                 <td />
               </tr>
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Yeşil: kurum ortalamasının üstü · Kırmızı: altı</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-slate-500">Yeşil: kurum ortalamasının üstü · Kırmızı: altı · Puanlar tahminidir.</p>
+          <ExportButton
+            fileName={`${fileBase} - sınıf ortalamaları`}
+            headers={["Sınıf", "Öğrenci", ...exam.secs.map((s) => `${s.name} net`), "Toplam net", "Ort. puan"]}
+            rows={[
+              ...list.map((c) => [c.name, c.size, ...c.sections, c.total, c.score]),
+              ["Kurum geneli", report.general.n, ...report.general.sections, report.general.total, report.general.score],
+            ]}
+          />
+        </div>
       </>
     );
   }
@@ -277,12 +442,25 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <div className="no-print mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Kpi label="Katılım" value={rows.length} />
         <Kpi label="Ortalama net" value={fmtNet(sel ? sel.total : report.general.total)} />
-        <Kpi label="En yüksek" value={fmtNet(Math.max(...rows.map((r) => r.totalNet)))} />
-        <Kpi label="En düşük" value={fmtNet(Math.min(...rows.map((r) => r.totalNet)))} />
+        <Kpi label="Ort. tahmini puan" value={fmtNet(sel ? sel.score : report.general.score)} hint={`En yüksek ${fmtNet(Math.max(...rows.map((r) => r.score)))}`} />
+        <Kpi label="Net aralığı" value={`${fmtNet(Math.min(...rows.map((r) => r.totalNet)))} – ${fmtNet(Math.max(...rows.map((r) => r.totalNet)))}`} />
       </div>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
         <ClassFilter base={base} tab="sonuclar" classes={classes} sinif={sinif} />
         <Link href={`${base}/karneler${sinif ? `?sinif=${sinif}` : ""}`} className="btn-secondary">📄 Tüm karneleri yazdır</Link>
+        <ExportButton
+          fileName={`${fileBase} - sıralı liste`}
+          headers={[
+            "Genel sıra", "Sınıf sırası", "No", "Ad Soyad", "Sınıf", "Kitapçık",
+            ...exam.secs.flatMap((s) => [`${s.name} D`, `${s.name} Y`, `${s.name} Net`]),
+            "Toplam net", "Tahmini puan", "Yüzdelik %",
+          ]}
+          rows={rows.map((r) => [
+            r.rank, r.classRank, r.studentNo, r.name, r.className, r.booklet,
+            ...r.stats.flatMap((s) => [s.d, s.y, s.net]),
+            r.totalNet, r.score, r.percentile,
+          ])}
+        />
       </div>
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">{exam.name} – Sıralı Liste</h1>
@@ -302,6 +480,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <th key={s.name} className={`${th} text-center`} colSpan={3}>{s.name}</th>
               ))}
               <th className={`${th} text-right`}>Net</th>
+              <th className={`${th} text-right`}>Puan</th>
+              <th className={`${th} text-right`} title="Kurum içi yüzdelik dilim">%</th>
               <th className="no-print" />
             </tr>
             <tr className="text-[10px] text-slate-400">
@@ -309,7 +489,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               {exam.secs.map((s) => (
                 <Sub key={s.name} />
               ))}
-              <th colSpan={2} />
+              <th colSpan={4} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -327,6 +507,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <Cells key={i} s={s} />
                 ))}
                 <td className={`${td} text-right text-sm font-bold tabular-nums`}>{fmtNet(r.totalNet)}</td>
+                <td className={`${td} text-right tabular-nums`}>{fmtNet(r.score)}</td>
+                <td className={`${td} text-right tabular-nums text-slate-500`}>{r.percentile}</td>
                 <td className={`${td} no-print text-right`}>
                   <DeleteResult url={`/api/kurum/denemeler/${id}/sonuclar/${r.id}`} />
                 </td>
