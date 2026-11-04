@@ -56,6 +56,26 @@ export default function VeliKarne({ r }: { r: ParentReport }) {
         </section>
       )}
 
+      {r.upcoming.length > 0 && (
+        <Section title="Yaklaşanlar (30 gün)">
+          <ul className="divide-y divide-slate-100 text-xs">
+            {r.upcoming.map((u) => (
+              <li key={u.key} className="flex items-start gap-3 py-1.5">
+                <span className="w-28 shrink-0 font-medium">
+                  {fmtDate(u.start)}
+                  {u.end !== u.start && ` – ${fmtDate(u.end)}`}
+                </span>
+                <span className={`badge shrink-0 ${UPCOMING[u.kind]?.cls ?? "bg-slate-100 text-slate-700"}`}>{UPCOMING[u.kind]?.label ?? "Etkinlik"}</span>
+                <span>
+                  {u.title}
+                  {u.note && <span className="block text-slate-500">{u.note}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       <Section title="Deneme sınavları">
         {r.exams.length === 0 ? (
           <Muted>Bu dönemde girilen deneme yok.</Muted>
@@ -161,6 +181,16 @@ export default function VeliKarne({ r }: { r: ParentReport }) {
     </article>
   );
 }
+
+const UPCOMING: Record<string, { label: string; cls: string }> = {
+  HOLIDAY: { label: "Tatil", cls: "bg-red-50 text-red-700" },
+  EXAM: { label: "Sınav", cls: "bg-indigo-50 text-indigo-700" },
+  DENEME: { label: "Deneme", cls: "bg-violet-50 text-violet-700" },
+  MEETING: { label: "Toplantı", cls: "bg-sky-50 text-sky-700" },
+  EVENT: { label: "Etkinlik", cls: "bg-emerald-50 text-emerald-700" },
+  ODEV: { label: "Ödev teslimi", cls: "bg-amber-50 text-amber-800" },
+  OTHER: { label: "Duyuru", cls: "bg-slate-100 text-slate-700" },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

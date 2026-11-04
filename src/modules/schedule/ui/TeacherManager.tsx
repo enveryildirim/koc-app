@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TeacherRow } from "../types";
 
@@ -54,7 +55,9 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
                 </tr>
               ) : (
                 <tr key={t.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium">{t.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link href={`/kurum/ders-programi/ogretmen/${t.id}`} className="hover:text-brand-700 hover:underline">{t.name}</Link>
+                  </td>
                   <td className="px-4 py-3">{t.branch}</td>
                   <td className="px-4 py-3 text-slate-500">{t.slotCount}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">

@@ -11,6 +11,7 @@ export type EventDraft = {
   endDate: string;
   classroomId: string;
   note: string;
+  parentVisible: boolean;
 };
 
 /** Etkinlik ekleme / düzenleme penceresi. */
@@ -25,6 +26,8 @@ export default function EventForm({
 }) {
   const router = useRouter();
   const [f, setF] = useState(initial);
+  // Yönetici "velilere göster"i elle değiştirmediyse türün varsayılanını izle
+  const [touched, setTouched] = useState(!!initial.id);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<EventDraft>) => setF({ ...f, ...p });
@@ -57,7 +60,11 @@ export default function EventForm({
           </div>
           <div>
             <label className="label">Tür</label>
-            <select className="input" value={f.kind} onChange={(e) => set({ kind: e.target.value })}>
+            <select
+              className="input"
+              value={f.kind}
+              onChange={(e) => set({ kind: e.target.value, ...(touched ? {} : { parentVisible: EVENT_KINDS[e.target.value].parentDefault }) })}
+            >
               {Object.entries(EVENT_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
           </div>
@@ -85,6 +92,17 @@ export default function EventForm({
             <label className="label">Not (isteğe bağlı)</label>
             <textarea className="input" rows={2} value={f.note} onChange={(e) => set({ note: e.target.value })} />
           </div>
+          <label className="col-span-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={f.parentVisible}
+              onChange={(e) => {
+                setTouched(true);
+                set({ parentVisible: e.target.checked });
+              }}
+            />
+            Velilere göster <span className="text-xs text-slate-500">(veli karnesinin &quot;Yaklaşanlar&quot; bölümünde, notuyla birlikte)</span>
+          </label>
         </div>
         {f.kind === "HOLIDAY" && (
           <p className="mt-3 text-xs text-slate-500">Tatil günlerinde yoklama ekranı, ilgili sınıfların derslerini &quot;tatil&quot; olarak gösterir.</p>

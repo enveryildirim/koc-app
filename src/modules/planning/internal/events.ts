@@ -5,14 +5,15 @@ import { EVENT_KINDS, nationalHolidays, YMD } from "../calendar";
 
 export type DateRange = { from: string; to: string };
 
-/** Aralıkla kesişen etkinlikler. `classroomId` verilirse kurum geneli + o sınıfınkiler. */
-export async function listEvents(ownerId: string, range: DateRange, classroomId?: string) {
+/** Aralıkla kesişen etkinlikler. Sınıf(lar) verilirse kurum geneli + o sınıfların etkinlikleri. */
+export async function listEvents(ownerId: string, range: DateRange, classroomId?: string | string[]) {
+  const ids = classroomId === undefined ? undefined : ([] as string[]).concat(classroomId);
   return prisma.calendarEvent.findMany({
     where: {
       ownerId,
       startDate: { lte: range.to },
       endDate: { gte: range.from },
-      ...(classroomId ? { OR: [{ classroomId: null }, { classroomId }] } : {}),
+      ...(ids ? { OR: [{ classroomId: null }, { classroomId: { in: ids } }] } : {}),
     },
     include: { classroom: { select: { name: true } } },
     orderBy: [{ startDate: "asc" }, { title: "asc" }],
@@ -44,7 +45,8 @@ async function parseEvent(ownerId: string, body: Record<string, unknown>) {
       throw invalid("Sınıf bulunamadı.");
     }
   }
-  return { title, kind, startDate, endDate, classroomId, note: String(body.note ?? "").trim() };
+  const parentVisible = typeof body.parentVisible === "boolean" ? body.parentVisible : EVENT_KINDS[kind].parentDefault;
+  return { title, kind, startDate, endDate, classroomId, note: String(body.note ?? "").trim(), parentVisible };
 }
 
 async function ownedEvent(ownerId: string, id: string) {
@@ -79,7 +81,7 @@ export async function addNationalHolidays(ownerId: string, year: number) {
   const todo = list.filter((h) => !has.has(`${h.date}|${h.title}`));
   if (!todo.length) throw conflict("Bu eğitim yılının resmî tatilleri zaten ekli.");
   await prisma.calendarEvent.createMany({
-    data: todo.map((h) => ({ ownerId, kind: "HOLIDAY", title: h.title, startDate: h.date, endDate: h.date })),
+    data: todo.map((h) => ({ ownerId, kind: "HOLIDAY", title: h.title, startDate: h.date, endDate: h.date, parentVisible: true })),
   });
   return { added: todo.length };
 }

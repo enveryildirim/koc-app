@@ -318,12 +318,12 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   const year = schoolYearOf(ymd(daysAgo(0)));
   const day = (n: number) => ymd(daysAgo(-n));
   const events = [
-      ...nationalHolidays(year).map((h) => ({ ownerId, kind: "HOLIDAY", title: h.title, startDate: h.date, endDate: h.date })),
-      { ownerId, kind: "MEETING", title: "Veli toplantısı", startDate: day(9), endDate: day(9), note: "18:30, konferans salonu" },
-      { ownerId, kind: "EXAM", title: "LGS kurum denemesi (plan)", startDate: day(16), endDate: day(16), classroomId: classes[0].id },
-      { ownerId, kind: "EXAM", title: "LGS kurum denemesi (plan)", startDate: day(16), endDate: day(16), classroomId: classes[1].id },
-      { ownerId, kind: "EVENT", title: "Üniversite tanıtım gezisi", startDate: day(23), endDate: day(23), classroomId: classes[2].id },
-      { ownerId, kind: "HOLIDAY", title: "Ara tatil (örnek)", startDate: mondayOf(day(28)), endDate: addDays(mondayOf(day(28)), 4) },
+      ...nationalHolidays(year).map((h) => ({ ownerId, kind: "HOLIDAY", title: h.title, startDate: h.date, endDate: h.date, parentVisible: true })),
+      { ownerId, kind: "MEETING", title: "Veli toplantısı", startDate: day(9), endDate: day(9), note: "18:30, konferans salonu", parentVisible: true },
+      { ownerId, kind: "EXAM", title: "LGS kurum denemesi", startDate: day(16), endDate: day(16), classroomId: classes[0].id, parentVisible: true },
+      { ownerId, kind: "EXAM", title: "LGS kurum denemesi", startDate: day(16), endDate: day(16), classroomId: classes[1].id, parentVisible: true },
+      { ownerId, kind: "EVENT", title: "Üniversite tanıtım gezisi", startDate: day(23), endDate: day(23), classroomId: classes[2].id, parentVisible: true },
+      { ownerId, kind: "HOLIDAY", title: "Ara tatil (örnek)", startDate: mondayOf(day(28)), endDate: addDays(mondayOf(day(28)), 4), parentVisible: true },
       { ownerId, kind: "MEETING", title: "Öğretmenler kurulu", startDate: day(2), endDate: day(2) },
   ];
   await prisma.calendarEvent.createMany({ data: events });

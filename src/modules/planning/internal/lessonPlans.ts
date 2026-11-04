@@ -3,7 +3,7 @@ import { conflict, invalid, notFound } from "@/shared/errors";
 import { classroomsOf, getClassroom } from "@/modules/enrollment/server";
 import { listSlots } from "@/modules/schedule/server";
 import { schoolYearOf, schoolYearRange, YMD } from "../calendar";
-import { itemState, layoutPlan, parsePlan, planProgress, type PlanSlot, type Range } from "../plan";
+import { itemState, layoutPlan, mondayOf, parsePlan, planProgress, type PlanSlot, type Range } from "../plan";
 
 /** Planın dağıtımında atlanacak tatiller: kurum geneli + o sınıfa ait tatil etkinlikleri. */
 export async function holidayRanges(ownerId: string, classroomId: string, year: number): Promise<Range[]> {
@@ -208,4 +208,31 @@ export async function planEditorData(ownerId: string, year: number) {
     subjectsByClass,
     holidays: holidays.map((h) => ({ start: h.startDate, end: h.endDate, classroomId: h.classroomId })),
   };
+}
+
+/**
+ * Verilen (sınıf, ders) çiftlerinin bu eğitim yılındaki planları: ilerleme, bu hafta plana göre
+ * işlenecek konular ve sıradaki işlenmemiş konu. Planı olmayan çift `plan: null` döner.
+ */
+export async function plansForPairs<T extends { classroomId: string; subject: string }>(ownerId: string, pairs: T[], today: string) {
+  const thisWeek = mondayOf(today);
+  const plans = await prisma.lessonPlan.findMany({
+    where: { ownerId, year: schoolYearOf(today), classroomId: { in: [...new Set(pairs.map((p) => p.classroomId))] } },
+    include: { items: { orderBy: { order: "asc" } } },
+  });
+  return pairs.map((pair) => {
+    const plan = plans.find((p) => p.classroomId === pair.classroomId && p.subject === pair.subject);
+    if (!plan) return { ...pair, plan: null };
+    const thisWeekTopics = plan.items.filter((i) => i.week <= thisWeek && thisWeek <= i.endWeek);
+    const next = plan.items.find((i) => !i.doneDate);
+    return {
+      ...pair,
+      plan: {
+        id: plan.id,
+        progress: planProgress(plan.items, today),
+        thisWeek: thisWeekTopics.map((i) => ({ topic: i.topic, done: !!i.doneDate })),
+        next: next ? { topic: next.topic, week: next.week } : null,
+      },
+    };
+  });
 }

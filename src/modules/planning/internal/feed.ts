@@ -1,4 +1,4 @@
-import { ymd } from "@/shared/date";
+import { addDays, ymd } from "@/shared/date";
 import { examsBetween } from "@/modules/exams/server";
 import { homeworkDueBetween } from "@/modules/homework/server";
 import type { CalendarItem } from "../calendar";
@@ -6,9 +6,9 @@ import { listEvents, type DateRange } from "./events";
 
 /**
  * Takvimin tek kaynağı: elle girilen etkinlikler + denemeler + ödev teslimleri, tarihe göre sıralı.
- * `classroomId` verilirse kurum geneli kayıtlar ve o sınıfa ait olanlar döner.
+ * Sınıf(lar) verilirse kurum geneli kayıtlar ve o sınıflara ait olanlar döner.
  */
-export async function calendarFeed(ownerId: string, range: DateRange, classroomId?: string): Promise<CalendarItem[]> {
+export async function calendarFeed(ownerId: string, range: DateRange, classroomId?: string | string[]): Promise<CalendarItem[]> {
   const [events, exams, homework] = await Promise.all([
     listEvents(ownerId, range, classroomId),
     examsBetween(ownerId, range.from, range.to),
@@ -26,6 +26,8 @@ export async function calendarFeed(ownerId: string, range: DateRange, classroomI
       note: e.note,
       href: null,
       eventId: e.id,
+      parentVisible: e.parentVisible,
+      subject: null,
     })),
     ...exams.map((x) => ({
       key: `x:${x.id}`,
@@ -38,6 +40,8 @@ export async function calendarFeed(ownerId: string, range: DateRange, classroomI
       note: x.type,
       href: `/kurum/denemeler/${x.id}`,
       eventId: null,
+      parentVisible: true,
+      subject: null,
     })),
     ...homework.map((h) => ({
       key: `h:${h.id}`,
@@ -50,7 +54,21 @@ export async function calendarFeed(ownerId: string, range: DateRange, classroomI
       note: "",
       href: `/kurum/odevler/${h.id}`,
       eventId: null,
+      parentVisible: true,
+      subject: h.subject,
     })),
   ];
   return items.sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title, "tr"));
+}
+
+/**
+ * Veli karnesi için yaklaşanlar (bugünden itibaren `days` gün): velilere açık etkinlikler, sınıfın
+ * ödev teslimleri ve öğrencinin daha önce girdiği türdeki denemeler. Kurum içi bağlantılar çıkarılır.
+ */
+export async function upcomingForStudent(ownerId: string, classroomId: string | null, examTypes: string[], today: string, days = 30) {
+  const range = { from: today, to: addDays(today, days) };
+  const items = await calendarFeed(ownerId, range, classroomId ?? []);
+  return items
+    .filter((i) => i.parentVisible && (i.kind !== "DENEME" || examTypes.includes(i.note)))
+    .map((i) => ({ key: i.key, kind: i.kind, title: i.title, start: i.start, end: i.end, note: i.kind === "DENEME" ? "" : i.note }));
 }

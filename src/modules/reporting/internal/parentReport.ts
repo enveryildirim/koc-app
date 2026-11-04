@@ -9,6 +9,8 @@ import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { parseSections, round2 } from "@/modules/exams";
 import { listStudents, type StudentFilter } from "@/modules/enrollment/server";
+import { upcomingForStudent } from "@/modules/planning/server";
+import { ymd } from "@/shared/date";
 import { attendanceSummary, homeworkSummary } from "./summary";
 
 export const newParentToken = () => randomBytes(18).toString("base64url");
@@ -75,8 +77,14 @@ async function buildParentReport(student: StudentWithClass, from: string, to: st
     .filter((a) => a.status !== "PRESENT")
     .sort((a, b) => b.session.date.localeCompare(a.session.date) || b.session.startTime.localeCompare(a.session.startTime));
 
+  /* ------------------------------- Yaklaşanlar ------------------------------ */
+  // Denemelerin sınıfı yok: yalnızca öğrencinin daha önce girdiği türdeki denemeler gösterilir.
+  const types = await prisma.examResult.findMany({ where: { studentId }, select: { exam: { select: { type: true } } }, distinct: ["examId"] });
+  const upcoming = await upcomingForStudent(student.ownerId, student.classroomId, [...new Set(types.map((t) => t.exam.type))], ymd());
+
   return {
     institution: owner.name,
+    upcoming,
     student: {
       id: student.id,
       name: `${student.firstName} ${student.lastName}`,

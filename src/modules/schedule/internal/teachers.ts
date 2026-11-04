@@ -38,3 +38,8 @@ export async function deleteTeacher(ownerId: string, id: string) {
   const t = await ownedTeacher(ownerId, id);
   await prisma.teacher.delete({ where: { id: t.id } });
 }
+
+/** Öğretmen (sayfa için); yoksa veya başka kurumunsa null. */
+export async function findTeacher(ownerId: string, id: string) {
+  return prisma.teacher.findFirst({ where: { id, ownerId } });
+}

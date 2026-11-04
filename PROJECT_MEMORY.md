@@ -245,7 +245,14 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
   - **Analiz merkezi, "Yıllık plan" sekmesi** (`planAlerts`):
     - Plana göre geride kalan dersler.
     - Son 45 gündeki denemelerde yalnızca **gecikme** (`late`) yüzünden işlenmeden sorulan konular. "Sırası gelmemiş" konular gürültü olduğu için listelenmez; LGS/YKS denemeleri bütün müfredattan soru sorar.
-- **Sonraki aşama:** 4) öğretmen görünümü (öğretmenin dersleri + planları) ve veli linkine "yaklaşan denemeler / ödevler" bölümü.
+- **Öğretmen sayfası** (aşama 4): `/kurum/ders-programi/ogretmen/[id]`. Öğretmen listesindeki ada tıklanarak açılır. Yazdırılabilir; içinde şunlar var:
+  - haftalık program,
+  - her (sınıf, ders) için bu hafta plana göre işlenecek konular, sıradaki işlenmemiş konu ve geride/uygun durumu (`plansForPairs`),
+  - sınıflarının yaklaşan 14 günü. Ödevler yalnızca öğretmenin kendi derslerinden gelir. Sayfa kurum içi olduğu için iç toplantılar da görünür.
+- **Veli karnesi, "Yaklaşanlar (30 gün)" bölümü** (aşama 4, `upcomingForStudent`):
+  - Kaynaklar: velilere açık etkinlikler, sınıfın ödev teslimleri ve öğrencinin **daha önce girdiği türdeki** denemeler. Denemenin sınıfı olmadığı için tür üzerinden süzülür; 12. sınıf velisi LGS denemesi görmez.
+  - **Gizlilik:** `CalendarEvent.parentVisible` alanı. Varsayılan türe göre belirlenir (`EVENT_KINDS[k].parentDefault`): tatil, deneme planı ve etkinlik açık; toplantı ve diğer kapalı. Etkinlik formunda "Velilere göster" kutusuyla değiştirilir; takvimin liste görünümünde 👪 ile işaretlenir. Velilere açık etkinliğin **notu da velilere görünür**.
+- **Yapılmayanlar:** öğretmen ve öğrenci girişi (rol/yetki sistemi). Bunun yerine öğretmen için yazdırılabilir sayfa, veli için mevcut paylaşım linki kullanılıyor.
 
 ## 5. Özellik durumu
 

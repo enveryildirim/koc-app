@@ -272,6 +272,8 @@ model CalendarEvent {
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   note        String     @default("")
+  /// Veli karnesinin "Yaklaşanlar" bölümünde gösterilsin mi (iç toplantılar gösterilmez)
+  parentVisible Boolean  @default(false)
   createdAt   DateTime   @default(now())
 
   @@index([ownerId, startDate])

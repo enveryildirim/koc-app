@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addMonths, monthGrid, monthLabel } from "@/shared/date";
-import { ALL_KINDS, covers, schoolYearLabel, schoolYearMonths, schoolYearOf, type CalendarItem } from "../calendar";
+import { ALL_KINDS, covers, EVENT_KINDS, schoolYearLabel, schoolYearMonths, schoolYearOf, type CalendarItem } from "../calendar";
 import EventForm, { type EventDraft } from "./EventForm";
 
 export type CalendarViewMode = "ay" | "yil" | "liste";
@@ -40,10 +40,10 @@ export default function CalendarView(p: Props) {
   };
 
   const newEvent = (date: string) =>
-    setDraft({ title: "", kind: "EVENT", startDate: date, endDate: date, classroomId: p.classroomId, note: "" });
+    setDraft({ title: "", kind: "EVENT", startDate: date, endDate: date, classroomId: p.classroomId, note: "", parentVisible: EVENT_KINDS.EVENT.parentDefault });
   const open = (i: CalendarItem) => {
     if (i.eventId)
-      setDraft({ id: i.eventId, title: i.title, kind: i.kind, startDate: i.start, endDate: i.end, classroomId: i.classroomId ?? "", note: i.note });
+      setDraft({ id: i.eventId, title: i.title, kind: i.kind, startDate: i.start, endDate: i.end, classroomId: i.classroomId ?? "", note: i.note, parentVisible: i.parentVisible });
     else if (i.href) router.push(i.href);
   };
 
@@ -242,7 +242,10 @@ function ListView({ items, year, onItem }: Props & { onItem: (i: CalendarItem) =
                   {x.title}
                   {x.note && x.kind !== "DENEME" && <div className="text-xs font-normal text-slate-500">{x.note}</div>}
                 </td>
-                <td className="px-4 py-2 text-slate-600">{x.classroom ?? "Tüm kurum"}</td>
+                <td className="px-4 py-2 text-slate-600">
+                  {x.classroom ?? "Tüm kurum"}
+                  {x.eventId && x.parentVisible && <span className="ml-1" title="Velilere gösteriliyor">👪</span>}
+                </td>
               </tr>
             );
           })}

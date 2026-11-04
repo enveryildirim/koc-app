@@ -1,12 +1,13 @@
 /** Takvim türleri ve tarih yardımcıları (istemci + sunucu güvenli). */
 
 /** Elle girilen etkinlik türleri. */
-export const EVENT_KINDS: Record<string, { label: string; cls: string; dot: string }> = {
-  HOLIDAY: { label: "Tatil", cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
-  EXAM: { label: "Sınav / deneme planı", cls: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-400" },
-  MEETING: { label: "Toplantı", cls: "bg-sky-50 text-sky-700 ring-sky-200", dot: "bg-sky-500" },
-  EVENT: { label: "Etkinlik", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
-  OTHER: { label: "Diğer", cls: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" },
+/** parentDefault: yeni etkinlikte "velilere göster" seçeneğinin varsayılanı. */
+export const EVENT_KINDS: Record<string, { label: string; cls: string; dot: string; parentDefault: boolean }> = {
+  HOLIDAY: { parentDefault: true, label: "Tatil", cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
+  EXAM: { parentDefault: true, label: "Sınav / deneme planı", cls: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-400" },
+  MEETING: { parentDefault: false, label: "Toplantı", cls: "bg-sky-50 text-sky-700 ring-sky-200", dot: "bg-sky-500" },
+  EVENT: { parentDefault: true, label: "Etkinlik", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+  OTHER: { parentDefault: false, label: "Diğer", cls: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" },
 };
 
 /** Diğer modüllerden otomatik gelen kayıtlar (takvimden düzenlenmez). */
@@ -29,6 +30,10 @@ export type CalendarItem = {
   note: string;
   href: string | null;
   eventId: string | null;
+  /** Veli karnesinde gösterilebilir mi (etkinlikte ayar; ödev ve denemede her zaman) */
+  parentVisible: boolean;
+  /** Ödev teslimlerinde ders adı */
+  subject: string | null;
 };
 
 export const YMD = /^\d{4}-\d{2}-\d{2}$/;
