@@ -48,8 +48,8 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         >
           {mode === "register" && (
             <div>
-              <label className="label">Ad Soyad</label>
-              <input className="input" value={form.name} onChange={set("name")} required />
+              <label className="label">Kurum adı</label>
+              <input className="input" placeholder="ör. Başarı Akademi" value={form.name} onChange={set("name")} required />
             </div>
           )}
           <div>

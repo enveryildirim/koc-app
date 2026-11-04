@@ -1,5 +1,6 @@
 /** Kurum modülleri için test verisi: sınıflar, öğrenciler, denemeler, ödevler, ders programı ve yoklama. */
 import { PrismaClient } from "@prisma/client";
+import { randomBytes } from "crypto";
 import { EXAM_TYPES, gradeExam, LETTERS, randomKey, shuffleKey } from "../src/lib/exam";
 
 const FIRST = [
@@ -253,5 +254,26 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
         }),
       });
     }
+  }
+
+  /* ------------------------------ Veli karnesi ------------------------------ */
+  // 8-A'nın ilk yarısına bağlantı paylaşılmış, bir kısmı veli tarafından açılmış olsun; birkaç öğrenciye görüş yazılsın.
+  const notes = [
+    "Derslere düzenli katılıyor, deneme netlerinde istikrarlı bir yükseliş var. Paragraf sorularında süre yönetimine çalışmasını öneriyoruz.",
+    "Matematikte belirgin gelişme gösterdi. Ödevlerini zamanında teslim etmesi için evde takip etmenizi rica ederiz.",
+    "Son haftalarda devamsızlığı arttı; kendisiyle görüştük. Ev ile iş birliği yaparak devamını sağlayalım.",
+  ];
+  const first = classes[0].students.slice(0, Math.ceil(classes[0].students.length / 2));
+  for (const [i, st] of first.entries()) {
+    const shared = new Date(Date.now() - (3 + i) * 3600000);
+    await prisma.student.update({
+      where: { id: st.id },
+      data: {
+        parentToken: randomBytes(18).toString("base64url"),
+        parentSharedAt: shared,
+        parentViewedAt: i % 3 === 0 ? null : new Date(shared.getTime() + 40 * 60000),
+        parentNote: notes[i] ?? "",
+      },
+    });
   }
 }

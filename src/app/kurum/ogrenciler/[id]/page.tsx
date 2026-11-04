@@ -6,6 +6,8 @@ import { EXAM_TYPES, fmtDate, fmtNet, parseSections } from "@/lib/exam";
 import { Kpi, PageHeader, th, td } from "@/components/kurum/ui";
 import StudentForm from "@/components/kurum/kayit/StudentForm";
 import PrintButton from "@/components/PrintButton";
+import VeliCard from "@/components/kurum/veli/VeliCard";
+import { defaultPeriod } from "@/lib/parentReport";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   });
   if (!st || st.ownerId !== ownerId) notFound();
   const classes = await classroomsOf(ownerId);
+  const owner = await prisma.user.findUniqueOrThrow({ where: { id: ownerId }, select: { name: true } });
+  const period = defaultPeriod();
 
   // Sınav türüne göre gruplanmış sonuçlar (birleştirilmiş karne)
   const byType = new Map<string, typeof st.results>();
@@ -55,6 +59,24 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <Kpi label="Devam" value={attTotal ? `%${Math.round(((att.PRESENT + att.LATE) / attTotal) * 100)}` : "—"} hint={`${att.ABSENT} gelmedi · ${att.LATE} geç · ${att.EXCUSED} izinli`} />
         <Kpi label="Veli" value={<span className="text-base">{st.parentName || "—"}</span>} hint={st.parentPhone} />
       </div>
+
+      <VeliCard
+        institution={owner.name}
+        from={period.from}
+        to={period.to}
+        student={{
+          id: st.id,
+          name: `${st.firstName} ${st.lastName}`,
+          studentNo: st.studentNo,
+          className: st.classroom?.name ?? "",
+          parentName: st.parentName,
+          parentPhone: st.parentPhone,
+          token: st.parentToken,
+          sharedAt: st.parentSharedAt?.toISOString() ?? null,
+          viewedAt: st.parentViewedAt?.toISOString() ?? null,
+          note: st.parentNote,
+        }}
+      />
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Girdiği sınavlar</h2>

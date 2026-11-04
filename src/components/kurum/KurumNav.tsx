@@ -10,6 +10,7 @@ const LINKS = [
   ["/kurum/ders-programi", "🗓️", "Ders Programı"],
   ["/kurum/yoklama", "✅", "Yoklama"],
   ["/kurum/raporlar", "📈", "Devam Raporları"],
+  ["/kurum/veli-karnesi", "👪", "Veli Karnesi"],
   ["/panel", "💻", "Online Testler"],
 ];
 

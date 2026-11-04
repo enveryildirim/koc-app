@@ -143,6 +143,28 @@ src/app/
 
 ---
 
+## 4b. Veli karnesi
+
+- **İçerik:** Seçilen dönemin özeti. Denemeler (ders bazında D/Y/B/net, sınıf ortalaması ve sınıf sırası, önceki denemeye göre değişim), ödevler, devamsızlıklar ve öğretmen görüşü. Telefon ekranına uygun ve yazdırılabilir.
+- **Dosyalar:**
+  - Veri: `lib/parentReport.ts > buildParentReport(studentId, from, to)`
+  - Görünüm: `components/kurum/veli/VeliKarne.tsx`
+- **Paylaşım:**
+  - `Student.parentToken` alanında 18 rastgele bayt (base64url) tutulur. Link biçimi: `/veli/<token>?bas=YYYY-MM-DD&bit=YYYY-MM-DD`.
+  - Giriş gerekmez, sayfa `noindex`; yalnızca o öğrencinin verisi gösterilir.
+  - `POST /api/kurum/veli` ile `share` (varsa aynı token korunur), `renew` (eski link geçersiz olur) ve `revoke` (iptal) yapılır.
+- **Takip:**
+  - `parentSharedAt`: linkin oluşturulduğu zaman.
+  - `parentViewedAt`: velinin linki son açtığı zaman. Kurum hesabıyla açılan önizleme sayılmaz.
+- **Öğretmen görüşü:** `Student.parentNote`, `POST /api/kurum/veli/not` ile kaydedilir.
+- **Gönderim:**
+  - WhatsApp düğmesi `wa.me/<905…>?text=` adresini mesaj hazır olarak açar; numara `lib/phone.ts > waPhone` ile dönüştürülür. Gönderimi kullanıcı onaylar.
+  - Toplu "bağlantı listesini kopyala" seçeneği var.
+  - Yazdırma: `/kurum/veli-karnesi/yazdir?sinif=` (sınıf) veya `?ogrenci=` (tek öğrenci).
+- **Layout:** `src/middleware.ts`, `x-pathname` header'ını ekler. Root layout bu header'a bakarak `/veli/*` sayfalarında site menüsünü ve footer'ı gizler.
+- **Kurum adı:** Kurum adı olarak kullanıcının `name` alanı kullanılır; kayıt formundaki etiket "Kurum adı". Demo hesap: "Örnek Eğitim Kurumu".
+- **Kapsam dışı:** SMS ve e-posta ile otomatik gönderim yok; veli için giriş yapılan bir veli portalı da yok.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)
@@ -159,12 +181,13 @@ src/app/
 - [x] **Raporlar:** sıralı liste (genel ve sınıf sırası), öğrenci karnesi ve hata karnesi, toplu karne yazdırma, soru frekans analizi (kitapçık bazında), sınıf ortalamaları.
 - [x] **Ödev takip:** liste, KPI, filtre; durum işaretleme (anında kaydedilir); öğrenci bazında rapor. (Yardımcı agent yazdı.)
 - [x] **Ders programı ve yoklama:** haftalık program (sınıf ve öğretmen görünümü), öğretmenler, günlük yoklama, ek ders/etüt; dört devam raporu. (Yardımcı agent yazdı.)
+- [x] **Veli karnesi** (`/kurum/veli-karnesi`, öğrenci profilinde kart, herkese açık `/veli/[token]`) — bkz. bölüm 4b.
 
 ### Yapılmayanlar / sonraki adımlar
 - [ ] **Puan hesabı:** Resmi LGS/YKS puanı hesaplanmıyor; şu an sadece net var.
 - [ ] **Kitapçıklar arası soru eşleme:** B kitapçığı sorularını A sırasına eşleyen tablo yok. Bu yüzden soru analizi kitapçık bazında ayrı gösteriliyor.
 - [ ] **Kurum karşılaştırma:** Kurumlar arası karşılaştırma ve çoklu şube yok.
-- [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye SMS/e-posta, ödeme/paket satışı yok.
+- [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye otomatik SMS/e-posta (şu an WhatsApp linki ve kopyalama var), ödeme/paket satışı yok.
 - [ ] **Excel biçimi:** Eski `.xls` desteklenmiyor; `.xlsx` veya CSV gerekiyor.
 - [ ] **OMR iyileştirmeleri:** Form yön işareti eklenmeli, gerçek taramalarla test edilmeli.
 - [ ] **Otomatik test yok:** Projede birim/e2e testi yok. Doğrulamalar elle, curl ile ve REA tarayıcı senaryolarıyla yapıldı.

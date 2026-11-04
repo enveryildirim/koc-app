@@ -105,22 +105,28 @@ model Classroom {
 }
 
 model Student {
-  id          String           @id @default(cuid())
-  ownerId     String
-  classroomId String?
-  classroom   Classroom?       @relation(fields: [classroomId], references: [id], onDelete: SetNull)
-  studentNo   String
-  firstName   String
-  lastName    String
-  phone       String           @default("")
-  parentName  String           @default("")
-  parentPhone String           @default("")
+  id             String           @id @default(cuid())
+  ownerId        String
+  classroomId    String?
+  classroom      Classroom?       @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  studentNo      String
+  firstName      String
+  lastName       String
+  phone          String           @default("")
+  parentName     String           @default("")
+  parentPhone    String           @default("")
   /// Kurum dışı öğrenci (STS: dışarıdan sınava katılan)
-  external    Boolean          @default(false)
-  createdAt   DateTime         @default(now())
-  results     ExamResult[]
-  homeworks   HomeworkStatus[]
-  attendances Attendance[]
+  external       Boolean          @default(false)
+  /// Veli karnesi paylaşım anahtarı (giriş gerektirmeyen link). null = paylaşılmadı / iptal edildi
+  parentToken    String?          @unique
+  parentSharedAt DateTime?
+  parentViewedAt DateTime?
+  /// Veli karnesinde gösterilen öğretmen / rehberlik görüşü
+  parentNote     String           @default("")
+  createdAt      DateTime         @default(now())
+  results        ExamResult[]
+  homeworks      HomeworkStatus[]
+  attendances    Attendance[]
 
   @@unique([ownerId, studentNo])
 }
