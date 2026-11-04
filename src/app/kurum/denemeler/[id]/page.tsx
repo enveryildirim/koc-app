@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { examPlanCoverage } from "@/modules/planning/server";
+import ExamPlanCoverage from "@/modules/planning/ui/ExamPlanCoverage";
 import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, LETTERS, normNo, topicStats, totalQuestions } from "@/modules/exams";
@@ -33,6 +35,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     { key: "optik", label: "Optik form tara", href: `${base}?tab=optik` },
     { key: "txt", label: "Okuyucu dosyası (TXT)", href: `${base}?tab=txt` },
     { key: "konu", label: "Konu analizi", href: `${base}?tab=konu` },
+    { key: "plan", label: "Plan uyumu", href: `${base}?tab=plan` },
     { key: "analiz", label: "Soru frekans analizi", href: `${base}?tab=analiz` },
     { key: "siniflar", label: "Sınıf ortalamaları", href: `${base}?tab=siniflar` },
     { key: "girmeyenler", label: "Girmeyenler", href: `${base}?tab=girmeyenler` },
@@ -191,6 +194,32 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </tbody>
             </table>
           </div>
+        )}
+      </>
+    );
+  }
+
+  /* ------------------------------ Yıllık plan uyumu ------------------------------ */
+  if (tab === "plan") {
+    const cov = await examPlanCoverage(ownerId, id);
+    const shown = (cov?.classes ?? []).filter((c) => !sinif || c.classroomId === sinif);
+    return (
+      <>
+        {header}
+        {!cov?.hasTopics ? (
+          <Empty>
+            Plan uyumu için sorulara konu atanmış olmalı. <Link className="font-semibold text-brand-600" href={`${base}?tab=anahtar`}>Cevap anahtarı</Link> ekranındaki
+            “Konular / kazanımlar” bölümünden ekleyebilirsiniz.
+          </Empty>
+        ) : shown.length === 0 ? (
+          <Empty>Bu denemede sınıfı olan öğrenci sonucu yok.</Empty>
+        ) : (
+          <>
+            <div className="no-print mb-4 flex flex-wrap items-center gap-2">
+              <ClassFilter base={base} tab="plan" classes={classes} sinif={sinif} />
+            </div>
+            <ExamPlanCoverage classes={shown} examDate={cov.exam.date} />
+          </>
         )}
       </>
     );

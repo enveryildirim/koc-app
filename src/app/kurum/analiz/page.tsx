@@ -4,6 +4,9 @@ import { requireOwner } from "@/modules/identity/server";
 import { EXAM_TYPES, fmtDate, fmtNet } from "@/modules/exams";
 import { classProgress, examTypesOf, RISK_FLAGS, RISK_RULES, RiskFlag, riskList, teacherPerformance } from "@/modules/reporting/server";
 import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
+import { schoolYearLabel } from "@/modules/planning";
+import { planAlerts } from "@/modules/planning/server";
+import { ymd } from "@/shared/date";
 import ExportButton from "@/shared/ui/ExportButton";
 import PrintButton from "@/shared/ui/PrintButton";
 import LineChart, { SERIES_COLORS } from "@/modules/reporting/ui/LineChart";
@@ -16,6 +19,7 @@ const TABS = [
   { key: "gelisim", label: "Sınıf gelişimi" },
   { key: "risk", label: "Risk / erken uyarı" },
   { key: "ogretmen", label: "Öğretmen & ders performansı" },
+  { key: "plan", label: "Yıllık plan" },
 ];
 
 export default async function Page({ searchParams }: { searchParams: SP }) {
@@ -34,6 +38,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       {tab === "gelisim" && <Progress ownerId={ownerId} tur={sp.tur} ders={sp.ders ?? ""} />}
       {tab === "risk" && <Risk ownerId={ownerId} sinif={sp.sinif ?? ""} />}
       {tab === "ogretmen" && <Teachers ownerId={ownerId} />}
+      {tab === "plan" && <PlanTab ownerId={ownerId} />}
     </div>
   );
 }
@@ -434,6 +439,108 @@ async function Teachers({ ownerId }: { ownerId: string }) {
         Eşleşme: ders programındaki ders adı ile deneme bölüm adı küçük harfe çevrilip karşılaştırılır; “Temel Matematik” → Matematik, “T.C. İnkılap Tarihi” → İnkılap Tarihi gibi takma adlar tanınır.
         Değişim, sınıfın o türdeki ilk ve son denemesindeki bölüm ortalama neti arasındaki farktır.
       </p>
+    </div>
+  );
+}
+
+/* ================================ 4. Yıllık plan ================================ */
+
+const fmtShort = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+
+async function PlanTab({ ownerId }: { ownerId: string }) {
+  const a = await planAlerts(ownerId, ymd());
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-4">
+        <Kpi label="Planlı ders" value={`${a.plannedCount} / ${a.pairCount}`} hint={`${schoolYearLabel(a.year)} · ders programındaki sınıf-ders çiftleri`} />
+        <Kpi label="Plana göre geride" value={a.behind.length} hint="bitiş haftası geçmiş, işlenmemiş konusu olan" />
+        <Kpi label="Gecikme yüzünden işlenmeden sorulan" value={a.late.length} hint="son 45 gündeki denemelerde (konu × sınıf)" />
+      </div>
+      {a.plannedCount === 0 ? (
+        <Empty>
+          Henüz yıllık ders planı yok. <Link href="/kurum/takvim/plan" className="font-semibold text-brand-600">Yıllık ders planı</Link> sayfasından oluşturabilirsiniz.
+        </Empty>
+      ) : (
+        <>
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Plana göre geride kalan dersler</h2>
+            {a.behind.length === 0 ? (
+              <Empty>Tüm planlar yolunda.</Empty>
+            ) : (
+              <div className="card overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className={th}>Sınıf</th>
+                      <th className={th}>Ders</th>
+                      <th className={th}>Öğretmen</th>
+                      <th className={`${th} text-right`}>Geride</th>
+                      <th className={`${th} text-right`}>Geciken konu</th>
+                      <th className={`${th} text-right`}>İşlenen</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {a.behind.map((r) => (
+                      <tr key={r.plan!.id}>
+                        <td className={`${td} font-medium`}>{r.classroom}</td>
+                        <td className={td}>{r.subject}</td>
+                        <td className={`${td} text-slate-600`}>{r.teachers.join(", ") || "—"}</td>
+                        <td className={`${td} text-right font-semibold text-red-600`}>{r.plan!.progress.behindWeeks} hafta</td>
+                        <td className={`${td} text-right`}>{r.plan!.progress.late}</td>
+                        <td className={`${td} text-right text-slate-600`}>{r.plan!.progress.done} / {r.plan!.progress.total}</td>
+                        <td className={`${td} text-right`}>
+                          <Link href={`/kurum/takvim/plan/${r.plan!.id}`} className="text-brand-700 hover:underline">Plan</Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+          <section>
+            <h2 className="mb-1 text-lg font-semibold">Gecikme yüzünden denemede işlenmeden sorulan konular</h2>
+            <p className="mb-2 text-sm text-slate-500">
+              Plana göre deneme tarihinden önce işlenmiş olması gereken ama işlenmemiş konular. Planda daha sonraya bırakılan konular burada listelenmez; onları
+              denemenin &quot;Plan uyumu&quot; sekmesinde görebilirsiniz.
+            </p>
+            {a.late.length === 0 ? (
+              <Empty>Son 45 günde böyle bir konu yok.</Empty>
+            ) : (
+              <div className="card overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className={th}>Deneme</th>
+                      <th className={th}>Sınıf</th>
+                      <th className={th}>Ders</th>
+                      <th className={th}>Konu</th>
+                      <th className={th}>Planlanan hafta</th>
+                      <th className={`${th} text-right`}>Doğru oranı</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {a.late.map((e) => (
+                      <tr key={`${e.examId}|${e.classroomId}|${e.section}|${e.topic}`}>
+                        <td className={td}>
+                          <Link href={`/kurum/denemeler/${e.examId}?tab=plan&sinif=${e.classroomId}`} className="hover:text-brand-700">{e.exam}</Link>
+                          <div className="text-xs text-slate-500">{fmtShort(e.date)}</div>
+                        </td>
+                        <td className={`${td} font-medium`}>{e.classroom}</td>
+                        <td className={td}>{e.section}</td>
+                        <td className={td}>{e.topic}</td>
+                        <td className={`${td} text-slate-600`}>{e.plannedWeek ? `${fmtShort(e.plannedWeek)} haftası` : "—"}</td>
+                        <td className={`${td} text-right ${e.rate < 50 ? "font-semibold text-red-600" : ""}`}>%{e.rate}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 /** Analiz & Uyarılar merkezi için veri katmanı (sunucu). */
 import { prisma } from "@/shared/db";
+import { subjectMatches } from "@/shared/subjects";
 import { ExamSection, parseSections, round2 } from "@/modules/exams";
 import { ymd } from "@/shared/date";
 import { RISK_FLAGS, RISK_RULES, type RiskFlag } from "../risk";
@@ -162,28 +163,6 @@ export async function riskList(ownerId: string, classroomId?: string) {
 }
 
 /* ========================== 3. Öğretmen / ders performansı ========================== */
-
-const ALIASES: Record<string, string> = {
-  "temel matematik": "matematik",
-  "t.c. inkılap tarihi": "inkılap tarihi",
-  "tc inkılap tarihi": "inkılap tarihi",
-  "t.c. inkılap tarihi ve atatürkçülük": "inkılap tarihi",
-  "inkılap tarihi ve atatürkçülük": "inkılap tarihi",
-  "din kültürü ve ahlak bilgisi": "din kültürü",
-  "ingilizce": "ingilizce",
-  "yabancı dil": "ingilizce",
-};
-
-export function normSubject(s: string) {
-  const n = s.toLocaleLowerCase("tr-TR").replace(/\s+/g, " ").trim();
-  return ALIASES[n] ?? n.replace(/\./g, "").trim();
-}
-
-export function subjectMatches(section: string, subject: string) {
-  const a = normSubject(section);
-  const b = normSubject(subject);
-  return a === b || a.includes(b) || b.includes(a);
-}
 
 export async function teacherPerformance(ownerId: string) {
   const [slots, exams] = await Promise.all([

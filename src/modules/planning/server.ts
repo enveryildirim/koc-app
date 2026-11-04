@@ -3,3 +3,4 @@ import "server-only";
 export * from "./internal/events";
 export * from "./internal/feed";
 export * from "./internal/lessonPlans";
+export * from "./internal/coverage";

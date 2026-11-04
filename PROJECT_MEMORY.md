@@ -231,7 +231,21 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
   - **İşlendi işareti:** plan sayfasından veya yoklama alma ekranındaki "Bu derste işlenen konu" kartından (`topicsForLesson`) konulur. Eşleşme sınıf + ders adının **tam aynı** olmasına dayanır.
   - **İlerleme** (`planProgress`): bitiş haftası geçmiş ama işlenmemiş konu varsa, en eskisinin bitiş haftasından bu yana geçen hafta sayısı "N hafta geride" olarak gösterilir.
   - **Kopyalama:** plan başka sınıflara kopyalanabilir; dağıtım her sınıfın kendi tatillerine göre yapılır. Planı zaten olan sınıf atlanır.
-- **Sonraki aşamalar:** 3) plan ile deneme konularını eşleştirme ("denemede çıkan konu henüz işlenmedi") ve analiz merkezine "plana göre geride" uyarısı; 4) öğretmen görünümü ve veli linkine takvim bölümü.
+- **Plan ↔ deneme uyumu** (aşama 3, `planning/internal/coverage.ts`):
+  - **Deneme detayı, "Plan uyumu" sekmesi:** denemeye giren her sınıf için, konusu girilmiş bölümlerin her konusu dört durumdan birine ayrılır:
+    - `done`: deneme tarihine kadar işlenmiş.
+    - `late`: planlanan son haftanın Cuma'sı denemeden önce geçmiş ama konu işlenmemiş (gecikme).
+    - `notYet`: planda deneme tarihinden sonraya yerleştirilmiş.
+    - `unplanned`: planda karşılığı yok.
+  - **Bağlantı:** sınıflar, sonucu olan öğrencilerin sınıfından bulunur. Bölüm ile plan dersi `shared/subjects.ts > subjectMatches` ile eşlenir (TYT "Temel Matematik" ↔ "Matematik").
+  - **Konu eşleştirme** (`planning/topics.ts > matchPlanTopics`), sözcüklerin ilk 5 harfine (kök) göre çalışır:
+    - Kısa adın bütün kökleri uzun adda geçiyorsa eşleşir ("Olasılık" ↔ "Basit Olayların Olma Olasılığı").
+    - Böyle bir eşleşme yoksa, deneme konusunun her kökü plandaki konulardan birinde geçiyorsa o konuların hepsiyle eşleşir ("Yazım ve noktalama" → "Yazım Kuralları" + "Noktalama İşaretleri").
+    - Eşleşen plan konusu arayüzde "plandaki karşılığı" diye gösterilir; böylece yanlış eşleşme fark edilebilir.
+  - **Analiz merkezi, "Yıllık plan" sekmesi** (`planAlerts`):
+    - Plana göre geride kalan dersler.
+    - Son 45 gündeki denemelerde yalnızca **gecikme** (`late`) yüzünden işlenmeden sorulan konular. "Sırası gelmemiş" konular gürültü olduğu için listelenmez; LGS/YKS denemeleri bütün müfredattan soru sorar.
+- **Sonraki aşama:** 4) öğretmen görünümü (öğretmenin dersleri + planları) ve veli linkine "yaklaşan denemeler / ödevler" bölümü.
 
 ## 5. Özellik durumu
 
