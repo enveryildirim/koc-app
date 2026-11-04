@@ -33,12 +33,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           {types.map((t) => (
             <Link key={t} href={`?tur=${t}`} className={t === type ? "btn-primary" : "btn-secondary"}>{EXAM_TYPES[t]?.label ?? t}</Link>
           ))}
-          <PrintButton label="🖨️ Yazdır" />
+          <PrintButton label="Yazdır" />
         </>
       }
     />
   );
-  if (!type) return <>{header}<div className="card p-8 text-center text-sm text-slate-500">Öğrencinin deneme sonucu yok.</div></>;
+  if (!type) return <>{header}<div className="card p-8 text-center text-sm text-lead">Öğrencinin deneme sonucu yok.</div></>;
 
   const secNames: string[] = [];
   for (const r of results) for (const s of parseSections(r.exam.sections)) if (!secNames.includes(s.name)) secNames.push(s.name);
@@ -62,26 +62,26 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   return (
     <>
       {header}
-      <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-slate-200 print:p-6 print:shadow-none print:ring-0">
+      <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-rule print:p-6 print:shadow-none print:ring-0">
         <header className="flex items-start justify-between border-b-4 border-brand-600 pb-3">
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-brand-600">{institution} · Birleştirilmiş Karne</div>
+            <div className="text-xs font-bold tracking-widest text-brand-600">{institution} · Birleştirilmiş Karne</div>
             <h1 className="text-xl font-extrabold">{st.firstName} {st.lastName}</h1>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-lead">
               No: {st.studentNo} · Sınıf: {st.classroom?.name ?? "—"} · {EXAM_TYPES[type]?.label ?? type} · {results.length} deneme
             </div>
           </div>
           <div className="text-right text-xs">
-            <div className="text-slate-500">Ortalama net / tahmini puan</div>
+            <div className="text-lead">Ortalama net / tahmini puan</div>
             <div className="text-2xl font-extrabold text-brand-700">{fmtNet(avg(results.map((r) => r.totalNet)))}</div>
             <div className="font-semibold">{fmtNet(avg(results.map((r) => r.score)))} puan</div>
           </div>
         </header>
 
-        <h2 className="mt-5 mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Denemeler</h2>
+        <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Denemeler</h2>
         <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="bg-brand-600 text-white">
+            <tr className="bg-graphite text-white">
               <th className="px-2 py-1.5 text-left">Deneme</th>
               {secNames.map((n) => (
                 <th key={n} className="px-2 py-1.5 text-right">{n}</th>
@@ -94,21 +94,21 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </thead>
           <tbody>
             {rows.map((x) => (
-              <tr key={x.r.id} className="border-b border-slate-200 odd:bg-slate-50">
+              <tr key={x.r.id} className="border-b border-rule odd:bg-paper">
                 <td className="px-2 py-1.5">
                   <b>{x.r.exam.name}</b>
-                  <div className="text-[10px] text-slate-500">{fmtDate(x.r.exam.date)}</div>
+                  <div className="text-[10px] text-lead">{fmtDate(x.r.exam.date)}</div>
                 </td>
                 {x.nets.map((n, j) => (
                   <td key={j} className="px-2 py-1.5 text-right tabular-nums">{n === null ? "—" : fmtNet(n)}</td>
                 ))}
                 <td className="px-2 py-1.5 text-right font-bold tabular-nums">{fmtNet(x.r.totalNet)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums">{fmtNet(x.r.score)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums text-slate-500">{fmtNet(x.classAvg)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-lead">{fmtNet(x.classAvg)}</td>
                 <td className="px-2 py-1.5 text-right">{x.rank}/{x.peers}</td>
               </tr>
             ))}
-            <tr className="bg-slate-100 font-bold">
+            <tr className="bg-mist font-bold">
               <td className="px-2 py-1.5">Ortalama</td>
               {secNames.map((_, j) => (
                 <td key={j} className="px-2 py-1.5 text-right tabular-nums">
@@ -125,24 +125,24 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
         {rows.length >= 2 && (
           <>
-            <h2 className="mt-5 mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Net gelişimi</h2>
+            <h2 className="mt-5 mb-2 text-xs font-bold text-lead">Net gelişimi</h2>
             <Trend values={rows.map((x) => x.r.totalNet)} classAvg={rows.map((x) => x.classAvg)} labels={rows.map((x) => x.r.exam.name)} max={maxNet} />
           </>
         )}
 
         {topics.length > 0 && (
           <>
-            <h2 className="mt-5 mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Konu analizi (tüm denemeler)</h2>
+            <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Konu analizi (tüm denemeler)</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg bg-red-50 p-3">
                 <div className="text-xs font-bold text-red-800">Eksik konular (%50 altı)</div>
                 {weak.length === 0 ? (
-                  <p className="mt-1 text-xs text-slate-600">Belirgin eksik konu yok.</p>
+                  <p className="mt-1 text-xs text-lead">Belirgin eksik konu yok.</p>
                 ) : (
                   <ul className="mt-1 space-y-0.5 text-xs">
                     {weak.slice(0, 12).map((t) => (
                       <li key={t.section + t.topic} className="flex justify-between gap-2">
-                        <span>{t.topic} <span className="text-slate-500">· {t.section}</span></span>
+                        <span>{t.topic} <span className="text-lead">· {t.section}</span></span>
                         <b className="text-red-700">%{t.rate}</b>
                       </li>
                     ))}
@@ -152,12 +152,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <div className="rounded-lg bg-emerald-50 p-3">
                 <div className="text-xs font-bold text-emerald-800">Güçlü konular (%75 ve üstü)</div>
                 {strong.length === 0 ? (
-                  <p className="mt-1 text-xs text-slate-600">Henüz %75 üstü konu yok.</p>
+                  <p className="mt-1 text-xs text-lead">Henüz %75 üstü konu yok.</p>
                 ) : (
                   <ul className="mt-1 space-y-0.5 text-xs">
                     {strong.map((t) => (
                       <li key={t.section + t.topic} className="flex justify-between gap-2">
-                        <span>{t.topic} <span className="text-slate-500">· {t.section}</span></span>
+                        <span>{t.topic} <span className="text-lead">· {t.section}</span></span>
                         <b className="text-emerald-700">%{t.rate}</b>
                       </li>
                     ))}
@@ -167,7 +167,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             </div>
           </>
         )}
-        <p className="mt-6 border-t border-slate-200 pt-2 text-[10px] text-slate-400">Puanlar tahminidir; resmi sınav puanı değildir.</p>
+        <p className="mt-6 border-t border-rule pt-2 text-[10px] text-lead/70">Puanlar tahminidir; resmi sınav puanı değildir.</p>
       </article>
     </>
   );

@@ -45,7 +45,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
 
   return (
     <div>
-      <PageHeader title="Ödev Takip" sub="Öğrenci bazında ödev yapma raporu" actions={<PrintButton />} />
+      <PageHeader title="Ödev takibi" sub="Öğrenci bazında ödev yapma raporu" actions={<PrintButton />} />
       <Tabs tabs={ODEV_TABS} active="rapor" />
 
       <div className="no-print mb-4 flex flex-wrap items-end justify-end gap-2">
@@ -78,7 +78,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
       ) : (
         <div className="card overflow-x-auto print:shadow-none print:ring-0">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-paper">
               <tr>
                 <th className={th}>No</th>
                 <th className={th}>Öğrenci</th>
@@ -91,10 +91,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
                 <th className={th}>Yapma oranı</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {rows.map((r) => (
                 <tr key={r.id}>
-                  <td className={`${td} font-mono text-xs text-slate-500`}>{r.no}</td>
+                  <td className={`${td} num text-xs text-lead`}>{r.no}</td>
                   <td className={`${td} font-medium`}>
                     <Link href={`/kurum/ogrenciler/${r.id}`} className="hover:text-brand-600">{r.name}</Link>
                   </td>
@@ -103,13 +103,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
                   <td className={`${td} text-right text-emerald-700`}>{r.DONE}</td>
                   <td className={`${td} text-right text-amber-700`}>{r.PARTIAL}</td>
                   <td className={`${td} text-right text-red-700`}>{r.NOT_DONE}</td>
-                  <td className={`${td} text-right text-slate-500`}>{r.PENDING}</td>
+                  <td className={`${td} text-right text-lead`}>{r.PENDING}</td>
                   <td className={`${td} min-w-40`}>
                     {r.rate === null ? (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-lead/70">—</span>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-mist">
                           <div
                             className={r.rate < 50 ? "h-full bg-red-500" : r.rate < 75 ? "h-full bg-amber-400" : "h-full bg-emerald-500"}
                             style={{ width: `${r.rate}%` }}
@@ -125,7 +125,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
           </table>
         </div>
       )}
-      <p className="mt-2 text-xs text-slate-500">Yapma oranı = Yaptı / (Yaptı + Eksik + Yapmadı). “Bekliyor” durumundaki ödevler orana katılmaz.</p>
+      <p className="mt-2 text-xs text-lead">Yapma oranı = Yaptı / (Yaptı + Eksik + Yapmadı). “Bekliyor” durumundaki ödevler orana katılmaz.</p>
     </div>
   );
 }

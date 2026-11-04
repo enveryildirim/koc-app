@@ -36,21 +36,21 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
   const weakTopics = myTopics.filter((t) => t.total > 0 && t.rate < 50).sort((a, b) => a.rate - b.rate);
 
   return (
-    <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-slate-200 print:p-6 print:shadow-none print:ring-0">
+    <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-rule print:p-6 print:shadow-none print:ring-0">
       <header className="flex items-start justify-between border-b-4 border-brand-600 pb-3">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-brand-600">SınavKur · Öğrenci Karnesi</div>
+          <div className="text-xs font-bold tracking-widest text-brand-600">SınavKur · Öğrenci Karnesi</div>
           <h1 className="text-xl font-extrabold">{exam.name}</h1>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-lead">
             {EXAM_TYPES[exam.type]?.label ?? exam.type} · {fmtDate(exam.date)} · {exam.wrongPer ? `${exam.wrongPer} yanlış 1 doğruyu götürür` : "yanlış götürmez"}
           </div>
         </div>
         <table className="text-xs">
           <tbody>
-            <tr><td className="pr-2 text-slate-500">Ad Soyad</td><td className="font-bold">{row.name}</td></tr>
-            <tr><td className="pr-2 text-slate-500">Numara</td><td className="font-mono">{row.studentNo}</td></tr>
-            <tr><td className="pr-2 text-slate-500">Sınıf</td><td>{row.className}</td></tr>
-            <tr><td className="pr-2 text-slate-500">Kitapçık</td><td>{row.booklet}</td></tr>
+            <tr><td className="pr-2 text-lead">Ad Soyad</td><td className="font-bold">{row.name}</td></tr>
+            <tr><td className="pr-2 text-lead">Numara</td><td className="num">{row.studentNo}</td></tr>
+            <tr><td className="pr-2 text-lead">Sınıf</td><td>{row.className}</td></tr>
+            <tr><td className="pr-2 text-lead">Kitapçık</td><td>{row.booklet}</td></tr>
           </tbody>
         </table>
       </header>
@@ -62,10 +62,10 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
         <Box label={`Kurum sırası · ilk %${row.percentile}`} value={`${row.rank} / ${general.n}`} />
       </div>
 
-      <h2 className="mt-5 mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Ders analizi</h2>
+      <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Ders analizi</h2>
       <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="bg-brand-600 text-white">
+          <tr className="bg-graphite text-white">
             {["Ders", "Soru", "Doğru", "Yanlış", "Boş", "Net", "Sınıf ort.", "Kurum ort."].map((h, i) => (
               <th key={h} className={`px-2 py-1.5 ${i ? "text-right" : "text-left"}`}>{h}</th>
             ))}
@@ -75,19 +75,19 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
           {secs.map((s, i) => {
             const st = row.stats[i];
             return (
-              <tr key={s.name} className="border-b border-slate-200 odd:bg-slate-50">
+              <tr key={s.name} className="border-b border-rule odd:bg-paper">
                 <td className="px-2 py-1.5 font-semibold">{s.name}</td>
                 <td className="px-2 py-1.5 text-right">{s.count}</td>
                 <td className="px-2 py-1.5 text-right text-emerald-700">{st.d}</td>
                 <td className="px-2 py-1.5 text-right text-red-600">{st.y}</td>
-                <td className="px-2 py-1.5 text-right text-slate-500">{st.b}</td>
+                <td className="px-2 py-1.5 text-right text-lead">{st.b}</td>
                 <td className="px-2 py-1.5 text-right font-bold">{fmtNet(st.net)}</td>
                 <td className="px-2 py-1.5 text-right">{fmtNet(cls?.sections[i] ?? 0)}</td>
                 <td className="px-2 py-1.5 text-right">{fmtNet(general.sections[i])}</td>
               </tr>
             );
           })}
-          <tr className="bg-slate-100 font-bold">
+          <tr className="bg-mist font-bold">
             <td className="px-2 py-1.5">Toplam</td>
             <td className="px-2 py-1.5 text-right">{total.q}</td>
             <td className="px-2 py-1.5 text-right">{total.d}</td>
@@ -100,24 +100,24 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
         </tbody>
       </table>
 
-      <h2 className="mt-5 mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Net karşılaştırma</h2>
+      <h2 className="mt-5 mb-2 text-xs font-bold text-lead">Net karşılaştırma</h2>
       <div className="space-y-1.5">
         {secs.map((s, i) => (
           <div key={s.name} className="grid grid-cols-[120px_1fr] items-center gap-2 text-xs">
             <span className="truncate">{s.name}</span>
             <div className="space-y-0.5">
-              <Bar value={row.stats[i].net} max={maxSection} cls="bg-brand-600" label={fmtNet(row.stats[i].net)} />
+              <Bar value={row.stats[i].net} max={maxSection} cls="bg-graphite" label={fmtNet(row.stats[i].net)} />
               <Bar value={general.sections[i]} max={maxSection} cls="bg-slate-300" label={fmtNet(general.sections[i])} />
             </div>
           </div>
         ))}
-        <div className="flex gap-4 pt-1 text-[10px] text-slate-500">
-          <span><i className="mr-1 inline-block h-2 w-3 bg-brand-600" />Öğrenci</span>
+        <div className="flex gap-4 pt-1 text-[10px] text-lead">
+          <span><i className="mr-1 inline-block h-2 w-3 bg-graphite" />Öğrenci</span>
           <span><i className="mr-1 inline-block h-2 w-3 bg-slate-300" />Kurum ortalaması</span>
         </div>
       </div>
 
-      <h2 className="mt-5 mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Hata karnesi (yanlış ve boş sorular)</h2>
+      <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Hata karnesi (yanlış ve boş sorular)</h2>
       <div className="space-y-1.5 text-xs">
         {secs.map((s, i) => (
           <div key={s.name} className="grid grid-cols-[120px_1fr] gap-2">
@@ -127,7 +127,7 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
                 <span className="text-emerald-700">Hepsi doğru 🎉</span>
               ) : (
                 errors[i].map((e) => (
-                  <span key={e.q} className={`rounded px-1.5 py-0.5 ${e.given === "–" ? "bg-slate-100 text-slate-600" : "bg-red-50 text-red-700"}`}>
+                  <span key={e.q} className={`rounded px-1.5 py-0.5 ${e.given === "–" ? "bg-mist text-lead" : "bg-red-50 text-red-700"}`}>
                     {e.q}: {e.given}→{e.correct}
                   </span>
                 ))
@@ -135,12 +135,12 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
             </div>
           </div>
         ))}
-        <p className="pt-1 text-[10px] text-slate-400">Biçim: soru no: verdiğiniz cevap → doğru cevap (– boş)</p>
+        <p className="pt-1 text-[10px] text-lead/70">Biçim: soru no: verdiğiniz cevap → doğru cevap (– boş)</p>
       </div>
 
       {topicsBySection.length > 0 && (
         <>
-          <h2 className="mt-5 mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Konu başarısı</h2>
+          <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Konu başarısı</h2>
           {weakTopics.length > 0 && (
             <p className="mb-2 rounded bg-red-50 px-2 py-1 text-xs text-red-800">
               <b>Öncelikli çalışılması gereken konular:</b> {weakTopics.slice(0, 6).map((t) => `${t.topic} (%${t.rate})`).join(", ")}
@@ -155,7 +155,7 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
                   return (
                     <div key={t.topic} className="grid grid-cols-[1fr_70px_34px] items-center gap-2">
                       <span className="truncate">{t.topic}</span>
-                      <div className="relative h-2 rounded bg-slate-100">
+                      <div className="relative h-2 rounded bg-mist">
                         <div className={`h-full rounded ${t.rate < 50 ? "bg-red-400" : t.rate < 70 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${t.rate}%` }} />
                         <div className="absolute top-[-2px] h-3 w-0.5 bg-slate-700" style={{ left: `${k}%` }} />
                       </div>
@@ -166,7 +166,7 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
               </div>
             ))}
           </div>
-          <p className="pt-1 text-[10px] text-slate-400">Çubuk: konudaki doğru oranı · siyah çizgi: kurum ortalaması</p>
+          <p className="pt-1 text-[10px] text-lead/70">Çubuk: konudaki doğru oranı · siyah çizgi: kurum ortalaması</p>
         </>
       )}
     </article>
@@ -175,9 +175,9 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
 
 function Box({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
-    <div className="rounded-lg bg-brand-50 py-2">
-      <div className={`font-extrabold text-brand-700 ${big ? "text-2xl" : "text-lg"}`}>{value}</div>
-      <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+    <div className="border-t-2 border-graphite pt-1.5 pb-1">
+      <div className={`num font-display font-semibold [font-stretch:85%] ${big ? "text-2xl" : "text-lg"}`}>{value}</div>
+      <div className="text-[10px] text-lead">{label}</div>
     </div>
   );
 }
@@ -185,7 +185,7 @@ function Box({ label, value, big }: { label: string; value: string; big?: boolea
 function Bar({ value, max, cls, label }: { value: number; max: number; cls: string; label: string }) {
   return (
     <div className="flex items-center gap-1">
-      <div className="h-2.5 flex-1 rounded bg-slate-100">
+      <div className="h-2.5 flex-1 rounded bg-mist">
         <div className={`h-full rounded ${cls}`} style={{ width: `${Math.max(0, (value / max) * 100)}%` }} />
       </div>
       <span className="w-10 text-right tabular-nums text-[10px]">{label}</span>

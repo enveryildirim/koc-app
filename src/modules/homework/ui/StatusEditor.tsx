@@ -51,14 +51,14 @@ export default function StatusEditor({ homeworkId, rows: initial }: { homeworkId
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-rule p-4">
         {STATUS_ORDER.map((s) => (
           <span key={s} className={`badge px-3 py-1 text-sm ${STATUS[s].cls}`}>
             {STATUS[s].label}: <b className="ml-1">{counts[s]}</b>
           </span>
         ))}
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-lead">
             {bulk === "saving" ? "Kaydediliyor…" : bulk === "saved" ? "Toplu işlem kaydedildi ✓" : bulk === "error" ? "Toplu işlem kaydedilemedi" : "Değişiklikler anında kaydedilir"}
           </span>
           <button className="btn-secondary py-1.5" onClick={() => markAll("DONE")} disabled={bulk === "saving"}>
@@ -71,19 +71,19 @@ export default function StatusEditor({ homeworkId, rows: initial }: { homeworkId
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50">
+          <thead className="bg-paper">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">No</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Öğrenci</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Durum</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Not</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-lead">No</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-lead">Öğrenci</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-lead">Durum</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-lead">Not</th>
               <th className="w-20" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule/70">
             {rows.map((r) => (
               <tr key={r.studentId}>
-                <td className="px-3 py-2 font-mono text-xs text-slate-500">{r.studentNo}</td>
+                <td className="px-3 py-2 num text-xs text-lead">{r.studentNo}</td>
                 <td className="px-3 py-2 font-medium">{r.name}</td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-1">
@@ -91,7 +91,7 @@ export default function StatusEditor({ homeworkId, rows: initial }: { homeworkId
                       <button
                         key={s}
                         onClick={() => r.status !== s && update(r.studentId, { status: s })}
-                        className={`rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ${r.status === s ? STATUS[s].on : "text-slate-500 ring-slate-200 hover:bg-slate-50"}`}
+                        className={`rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ${r.status === s ? STATUS[s].on : "text-lead ring-rule hover:bg-paper"}`}
                       >
                         {STATUS[s].label}
                       </button>
@@ -102,7 +102,7 @@ export default function StatusEditor({ homeworkId, rows: initial }: { homeworkId
                   <NoteInput value={r.note} onSave={(note) => update(r.studentId, { note })} />
                 </td>
                 <td className="px-3 py-2 text-xs">
-                  {state[r.studentId] === "saving" && <span className="text-slate-400">Kaydediliyor…</span>}
+                  {state[r.studentId] === "saving" && <span className="text-lead/70">Kaydediliyor…</span>}
                   {state[r.studentId] === "saved" && <span className="text-emerald-600">Kaydedildi ✓</span>}
                   {state[r.studentId] === "error" && <span className="text-red-600">Hata!</span>}
                 </td>

@@ -21,7 +21,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <div className="text-4xl">🔒</div>
         <h1 className="mt-3 text-xl font-bold">Bağlantı geçersiz</h1>
-        <p className="mt-2 text-sm text-slate-500">Bu karne bağlantısı hatalı ya da kurum tarafından iptal edilmiş. Güncel bağlantı için kurumla iletişime geçin.</p>
+        <p className="mt-2 text-sm text-lead">Bu karne bağlantısı hatalı ya da kurum tarafından iptal edilmiş. Güncel bağlantı için kurumla iletişime geçin.</p>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   return (
     <div className="px-2 py-6 sm:px-4">
       <div className="no-print mx-auto mb-3 flex max-w-[210mm] justify-end">
-        <PrintButton label="🖨️ Yazdır / PDF olarak kaydet" />
+        <PrintButton label="Yazdır / PDF olarak kaydet" />
       </div>
       <VeliKarne r={report} />
     </div>

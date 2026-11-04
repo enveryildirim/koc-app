@@ -42,7 +42,7 @@ export default function PlanItems({ items, holidays, today, startDate }: { items
   return (
     <div className="card overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+        <thead className="bg-paper text-left text-xs text-lead">
           <tr>
             <th className="w-12 px-3 py-2 text-right">#</th>
             <th className="w-40 px-3 py-2">Hafta</th>
@@ -50,7 +50,7 @@ export default function PlanItems({ items, holidays, today, startDate }: { items
             <th className="w-44 px-3 py-2">Durum</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-rule/70">
           {weeks.map((w) => {
             const starting = items.filter((i) => i.week === w);
             const holiday = isHolidayWeek(w, holidays);
@@ -72,7 +72,7 @@ export default function PlanItems({ items, holidays, today, startDate }: { items
                 <tr key={w} className="bg-brand-50/50">
                   <td />
                   <td className="whitespace-nowrap px-3 py-1.5 font-medium text-brand-700">{fmt(w)} – {fmt(addDays(w, 4))}</td>
-                  <td className="px-3 py-1.5 text-slate-500" colSpan={2}>Bu hafta: {ongoing.join(", ") || "—"} (devam)</td>
+                  <td className="px-3 py-1.5 text-lead" colSpan={2}>Bu hafta: {ongoing.join(", ") || "—"} (devam)</td>
                 </tr>
               );
             }
@@ -83,24 +83,24 @@ export default function PlanItems({ items, holidays, today, startDate }: { items
               for (let x = it.week; x <= it.endWeek; x = addDays(x, 7)) if (!isHolidayWeek(x, holidays)) weeksLong++;
               return (
                 <tr key={it.id} className={current ? "bg-brand-50/50" : ""}>
-                  <td className="px-3 py-1.5 text-right text-xs text-slate-400">{n}</td>
-                  <td className={`whitespace-nowrap px-3 py-1.5 ${current ? "font-medium text-brand-700" : "text-slate-500"}`}>
+                  <td className="px-3 py-1.5 text-right text-xs text-lead/70">{n}</td>
+                  <td className={`whitespace-nowrap px-3 py-1.5 ${current ? "font-medium text-brand-700" : "text-lead"}`}>
                     {k === 0 && (
                       <>
                         {fmt(it.week)} – {fmt(addDays(it.endWeek, 4))}
-                        {weeksLong > 1 && <span className="ml-1 text-xs text-slate-400">({weeksLong} hf)</span>}
+                        {weeksLong > 1 && <span className="ml-1 text-xs text-lead/70">({weeksLong} hf)</span>}
                       </>
                     )}
                   </td>
                   <td className="px-3 py-1.5">
                     <label className="flex cursor-pointer items-center gap-2">
                       <input type="checkbox" checked={!!it.doneDate} disabled={pending === it.id} onChange={() => toggle(it)} className="h-4 w-4 accent-emerald-600" />
-                      <span className={it.doneDate ? "text-slate-500 line-through decoration-slate-300" : ""}>{it.topic}</span>
+                      <span className={it.doneDate ? "text-lead line-through decoration-slate-300" : ""}>{it.topic}</span>
                     </label>
                   </td>
                   <td className="px-3 py-1.5">
                     {st.label && <span className={`badge ${st.cls}`}>{st.label}</span>}
-                    {it.doneDate && <span className="ml-1 text-xs text-slate-500">{fmt(it.doneDate)}</span>}
+                    {it.doneDate && <span className="ml-1 text-xs text-lead">{fmt(it.doneDate)}</span>}
                   </td>
                 </tr>
               );

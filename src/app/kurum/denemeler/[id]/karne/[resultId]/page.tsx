@@ -19,7 +19,7 @@ export default async function Page({ params }: { params: Promise<{ id: string; r
       <PageHeader
         title="Öğrenci karnesi"
         back={{ href: `/kurum/denemeler/${id}`, label: report.exam.name }}
-        actions={<PrintButton label="🖨️ Karneyi yazdır" />}
+        actions={<PrintButton label="Karneyi yazdır" />}
       />
       <Karne report={report} row={row} />
     </>

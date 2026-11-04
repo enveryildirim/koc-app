@@ -158,7 +158,7 @@ export default function TestEditor({ initial }: { initial: EditorTest }) {
                   <option key={v} value={v}>{l}</option>
                 ))}
               </select>
-              <label className="flex items-center gap-1 text-sm text-slate-600">
+              <label className="flex items-center gap-1 text-sm text-lead">
                 Puan
                 <input type="number" min={1} className="input w-16" value={q.points} onChange={(e) => updateQ(i, { points: Number(e.target.value) })} />
               </label>
@@ -194,11 +194,11 @@ export default function TestEditor({ initial }: { initial: EditorTest }) {
                   value={q.correctText}
                   onChange={(e) => updateQ(i, { correctText: e.target.value })}
                 />
-                <p className="mt-1 text-xs text-slate-500">Büyük/küçük harf ve fazla boşluklar dikkate alınmaz.</p>
+                <p className="mt-1 text-xs text-lead">Büyük/küçük harf ve fazla boşluklar dikkate alınmaz.</p>
               </div>
             ) : (
               <div className="mt-3 space-y-2">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-lead">
                   {q.type === "MULTI" ? "Doğru olan tüm seçenekleri işaretleyin." : "Doğru seçeneği işaretleyin."}
                 </p>
                 {q.options.map((o, oi) => (
@@ -207,7 +207,7 @@ export default function TestEditor({ initial }: { initial: EditorTest }) {
                       type="button"
                       onClick={() => setCorrect(i, oi)}
                       title="Doğru cevap"
-                      className={`grid h-8 w-8 shrink-0 place-items-center ${q.type === "MULTI" ? "rounded-md" : "rounded-full"} border-2 text-sm font-bold ${o.isCorrect ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 text-slate-400"}`}
+                      className={`grid h-8 w-8 shrink-0 place-items-center ${q.type === "MULTI" ? "rounded-md" : "rounded-full"} border-2 text-sm font-bold ${o.isCorrect ? "border-emerald-500 bg-emerald-500 text-white" : "border-rule text-lead/70"}`}
                     >
                       {o.isCorrect ? "✓" : "ABCDEFGH"[oi]}
                     </button>
@@ -241,7 +241,7 @@ export default function TestEditor({ initial }: { initial: EditorTest }) {
               </div>
             )}
             <details className="mt-3 text-sm">
-              <summary className="cursor-pointer text-slate-500">Açıklama (sonuç ekranında gösterilir)</summary>
+              <summary className="cursor-pointer text-lead">Açıklama (sonuç ekranında gösterilir)</summary>
               <textarea className="input mt-2" rows={2} value={q.explanation} onChange={(e) => updateQ(i, { explanation: e.target.value })} />
             </details>
           </div>
@@ -306,7 +306,7 @@ export default function TestEditor({ initial }: { initial: EditorTest }) {
               <input type="number" min={0} max={100} className="input" value={t.passPercent} onChange={(e) => update({ passPercent: Number(e.target.value) })} />
             </div>
           </div>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-lead">
             {t.questions.length} soru · toplam {totalPoints} puan
           </p>
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -328,7 +328,7 @@ export default function TestEditor({ initial }: { initial: EditorTest }) {
 
 function IconBtn({ children, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800" {...p}>
+    <button type="button" className="grid h-8 w-8 place-items-center rounded-md text-lead hover:bg-mist hover:text-graphite" {...p}>
       {children}
     </button>
   );

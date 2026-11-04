@@ -159,13 +159,13 @@ export default function ImportStudents() {
       <div className="card grid gap-6 p-5 md:grid-cols-2">
         <div>
           <h2 className="font-semibold">1. Dosya seçin</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-lead">
             Excel (.xlsx) veya CSV. İlk satır başlık olmalı: <b>Numara, Ad, Soyad, Sınıf</b> (zorunlu olmayanlar: Telefon, Veli Adı, Veli Telefonu).
             Aynı numaralı öğrenci varsa bilgileri güncellenir, olmayan sınıflar otomatik oluşturulur.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <label className="btn-primary cursor-pointer">
-              📄 Excel / CSV seç
+              Excel / CSV seç
               <input type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
             </label>
             <button className="btn-secondary" onClick={template}>⬇ Şablonu indir</button>
@@ -187,7 +187,7 @@ export default function ImportStudents() {
         </div>
       </div>
 
-      {info && <p className="rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-700">{info}</p>}
+      {info && <p className="rounded-lg bg-mist px-4 py-2 text-sm text-graphite/90">{info}</p>}
       {result && (
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-200">
           {result.created} öğrenci eklendi, {result.updated} öğrenci güncellendi.
@@ -203,7 +203,7 @@ export default function ImportStudents() {
 
       {rows.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule/70 p-4">
             <h2 className="font-semibold">2. Önizleme ({rows.length} öğrenci{bad ? `, ${bad} hatalı satır atlanacak` : ""})</h2>
             <button className="btn-primary" disabled={busy || bad === rows.length} onClick={submit}>
               {busy ? "Yükleniyor…" : `${rows.length - bad} öğrenciyi yükle`}
@@ -211,7 +211,7 @@ export default function ImportStudents() {
           </div>
           <div className="max-h-[480px] overflow-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+              <thead className="sticky top-0 bg-paper text-left text-xs text-lead">
                 <tr>
                   <th className="px-3 py-2">#</th>
                   {FIELDS.map((f) => (
@@ -220,10 +220,10 @@ export default function ImportStudents() {
                   <th className="px-3 py-2">Durum</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-rule/70">
                 {rows.map((r, i) => (
                   <tr key={i} className={errs[i].length ? "bg-red-50" : ""}>
-                    <td className="px-3 py-1.5 text-slate-400">{i + 2}</td>
+                    <td className="px-3 py-1.5 text-lead/70">{i + 2}</td>
                     {FIELDS.map((f) => (
                       <td key={f.key} className="px-3 py-1.5">{r[f.key]}</td>
                     ))}

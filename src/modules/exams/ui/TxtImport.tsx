@@ -146,7 +146,7 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
     <div className="space-y-4">
       <div className="card p-5">
         <h2 className="font-semibold">1. Optik tanımı</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-lead">
           Optik okuyucunuzun ürettiği dosyada her alanın hangi sütundan başladığını girin (ilk karakter = 1). Tanım tarayıcınızda saklanır.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -166,7 +166,7 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
         <h2 className="font-semibold">2. Dosyayı yükleyin</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <label className="btn-primary cursor-pointer">
-            📄 TXT / DAT dosyası seç
+            TXT / DAT dosyası seç
             <input type="file" accept=".txt,.dat,.csv,text/plain" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
           <button className="btn-secondary" onClick={sample}>🧪 Örnek okuyucu dosyası üret</button>
@@ -187,13 +187,13 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-200">
           {result.saved} sonuç kaydedildi.
           {result.skipped.length > 0 && <span className="text-amber-700"> Eşleşmeyen numaralar atlandı: {result.skipped.join(", ")}.</span>}{" "}
-          <Link href={`/kurum/denemeler/${examId}?tab=sonuclar`} className="font-semibold underline">Sıralı listeyi gör →</Link>
+          <Link href={`/kurum/denemeler/${examId}?tab=sonuclar`} className="font-semibold underline">Sıralı listeyi gör</Link>
         </div>
       )}
 
       {parsed.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule/70 p-4">
             <h2 className="font-semibold">
               3. Önizleme · {parsed.length} satır, {matched} öğrenci eşleşti
               {parsed.length - matched > 0 && <span className="text-amber-700"> ({parsed.length - matched} eşleşmeyen atlanacak)</span>}
@@ -202,16 +202,16 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
               {busy ? "Kaydediliyor…" : `${matched} sonucu kaydet`}
             </button>
           </div>
-          <div className="overflow-x-auto border-b border-slate-100 bg-slate-50 p-3 font-mono text-[11px] leading-5">
-            <div className="whitespace-pre text-slate-400">{ruler}</div>
+          <div className="overflow-x-auto border-b border-rule/70 bg-paper p-3 font-mono text-[11px] leading-5">
+            <div className="whitespace-pre text-lead/70">{ruler}</div>
             {lines.slice(0, 3).map((l, i) => (
               <div key={i} className="whitespace-pre">{highlight(l)}</div>
             ))}
-            <div className="mt-1 font-sans text-xs text-slate-500">İlk 3 satır · renkler optik tanımındaki alanları gösterir</div>
+            <div className="mt-1 font-sans text-xs text-lead">İlk 3 satır · renkler optik tanımındaki alanları gösterir</div>
           </div>
           <div className="max-h-[420px] overflow-auto">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-white text-left uppercase text-slate-500">
+              <thead className="sticky top-0 bg-white text-left text-lead">
                 <tr>
                   <th className="px-3 py-2">Dosyadaki ad</th>
                   <th className="px-3 py-2">No</th>
@@ -220,14 +220,14 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
                   <th className="px-3 py-2">Cevaplar</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-rule/70">
                 {parsed.map((p, i) => (
                   <tr key={i} className={p.match ? "" : "bg-amber-50"}>
                     <td className="px-3 py-1.5">{p.name || "—"}</td>
                     <td className="px-3 py-1.5 font-mono">{p.studentNo || "—"}</td>
                     <td className="px-3 py-1.5">{p.match ?? <span className="text-amber-700">Eşleşmedi</span>}</td>
                     {bookletB && <td className={`px-3 py-1.5 font-bold ${p.bookletOk ? "" : "text-red-600"}`}>{p.booklet}</td>}
-                    <td className="max-w-md truncate px-3 py-1.5 font-mono text-slate-500">{p.answers.replace(/ /g, "·")}</td>
+                    <td className="max-w-md truncate px-3 py-1.5 font-mono text-lead">{p.answers.replace(/ /g, "·")}</td>
                   </tr>
                 ))}
               </tbody>

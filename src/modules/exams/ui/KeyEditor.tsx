@@ -161,9 +161,9 @@ export default function KeyEditor({
                   />
                   <div className="mt-2 flex flex-wrap gap-1">
                     {Array.from({ length: s.count }, (_, q) => (
-                      <span key={q} className="flex w-9 flex-col items-center rounded bg-slate-50 py-0.5 text-[10px] text-slate-400">
+                      <span key={q} className="flex w-9 flex-col items-center rounded bg-paper py-0.5 text-[10px] text-lead/70">
                         {q + 1}
-                        <b className={`text-sm ${val[q] ? "text-slate-800" : "text-slate-300"}`}>{val[q] ?? "·"}</b>
+                        <b className={`text-sm ${val[q] ? "text-graphite" : "text-slate-300"}`}>{val[q] ?? "·"}</b>
                       </span>
                     ))}
                   </div>
@@ -171,12 +171,12 @@ export default function KeyEditor({
               );
             })}
 
-            <details className="mt-4 rounded-lg bg-slate-50 p-3" open={covered > 0}>
+            <details className="mt-4 rounded-lg bg-paper p-3" open={covered > 0}>
               <summary className="cursor-pointer text-sm font-medium">
                 Konular / kazanımlar{" "}
-                <span className={`text-xs ${covered === s.count ? "text-emerald-700" : "text-slate-500"}`}>({covered}/{s.count} soruya konu atandı)</span>
+                <span className={`text-xs ${covered === s.count ? "text-emerald-700" : "text-lead"}`}>({covered}/{s.count} soruya konu atandı)</span>
               </summary>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-lead">
                 Her satıra <b>soru aralığı: konu</b> yazın (A kitapçığı numaralarıyla), ör. <code>1-4: Üslü ifadeler</code> veya <code>7: Olasılık</code>.
                 Konu analizi ve karnelerdeki konu başarısı bu bilgiyle hesaplanır.
               </p>
@@ -191,7 +191,7 @@ export default function KeyEditor({
               {v.bookletB && (
                 <>
                   <label className="label mt-3 text-xs">B kitapçığı soru eşlemesi (isteğe bağlı)</label>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-lead">
                     B’deki 1., 2., 3. … sorunun A kitapçığındaki numarası, boşlukla ayrılmış. Girilmezse B kitapçıklı öğrenciler konu analizine katılmaz.
                   </p>
                   <input
@@ -214,7 +214,7 @@ export default function KeyEditor({
             Varsayılan katsayılara dön
           </button>
         </div>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-lead">
           Puan = taban puan + Σ (ders neti × katsayı). Varsayılanlar yaklaşık değerlerdir; resmi puan hesaplaması değildir. Kurumunuzun kullandığı katsayıları girebilirsiniz.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -236,7 +236,7 @@ export default function KeyEditor({
             </div>
           ))}
         </div>
-        <p className="mt-2 text-sm text-slate-600">Tam net yapan öğrencinin puanı: <b>{max.toLocaleString("tr-TR")}</b></p>
+        <p className="mt-2 text-sm text-lead">Tam net yapan öğrencinin puanı: <b>{max.toLocaleString("tr-TR")}</b></p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -245,7 +245,7 @@ export default function KeyEditor({
         {msg && <span className={`text-sm ${msg.ok ? "text-emerald-700" : "text-red-600"}`}>{msg.text}</span>}
         <button className="btn-danger ml-auto" onClick={remove}>Denemeyi sil</button>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-lead">
         Anahtarı yayıncının cevap anahtarından kopyalayıp yapıştırabilirsiniz; harf dışındaki karakterler otomatik temizlenir. Bölüm yapısını değiştirirseniz optik formu yeniden yazdırın.
       </p>
     </div>

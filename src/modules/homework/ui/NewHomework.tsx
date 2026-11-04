@@ -13,7 +13,7 @@ export default function NewHomework(props: { classrooms: { id: string; name: str
       {open && (
         <div className="mt-4">
           <HomeworkForm {...props} />
-          <p className="mt-2 text-xs text-slate-500">Ödev, seçilen sınıftaki tüm öğrencilere “Bekliyor” durumuyla atanır.</p>
+          <p className="mt-2 text-xs text-lead">Ödev, seçilen sınıftaki tüm öğrencilere “Bekliyor” durumuyla atanır.</p>
         </div>
       )}
     </div>

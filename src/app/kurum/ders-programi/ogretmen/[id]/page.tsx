@@ -76,7 +76,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <h2 className="mb-2 text-lg font-semibold">Bu hafta plana göre</h2>
             <div className="card overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-paper">
                   <tr>
                     <th className={th}>Sınıf</th>
                     <th className={th}>Ders</th>
@@ -85,13 +85,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                     <th className={th}>Durum</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-rule/70">
                   {plans.map((p) => (
                     <tr key={`${p.classroomId}|${p.subject}`}>
                       <td className={`${td} font-medium`}>{p.classroom}</td>
                       <td className={td}>{p.subject}</td>
                       {!p.plan ? (
-                        <td className={`${td} text-slate-500`} colSpan={3}>
+                        <td className={`${td} text-lead`} colSpan={3}>
                           Yıllık plan yok.{" "}
                           <Link href={`/kurum/takvim/plan/yeni?sinif=${p.classroomId}&ders=${encodeURIComponent(p.subject)}`} className="text-brand-700 hover:underline">
                             Plan oluştur
@@ -101,10 +101,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                         <>
                           <td className={td}>
                             {p.plan.thisWeek.length === 0 ? (
-                              <span className="text-slate-400">—</span>
+                              <span className="text-lead/70">—</span>
                             ) : (
                               p.plan.thisWeek.map((t) => (
-                                <div key={t.topic} className={t.done ? "text-slate-400 line-through" : ""}>{t.topic}</div>
+                                <div key={t.topic} className={t.done ? "text-lead/70 line-through" : ""}>{t.topic}</div>
                               ))
                             )}
                           </td>
@@ -112,7 +112,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                             {p.plan.next ? (
                               <>
                                 {p.plan.next.topic}
-                                <span className="ml-1 text-xs text-slate-500">({fmt(p.plan.next.week)} haftası)</span>
+                                <span className="ml-1 text-xs text-lead">({fmt(p.plan.next.week)} haftası)</span>
                               </>
                             ) : (
                               <span className="text-emerald-700">Plan tamamlandı</span>
@@ -125,7 +125,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                               ) : (
                                 <span className="badge bg-emerald-50 text-emerald-700">Plana uygun</span>
                               )}
-                              <span className="ml-1 text-xs text-slate-500">{p.plan.progress.done}/{p.plan.progress.total}</span>
+                              <span className="ml-1 text-xs text-lead">{p.plan.progress.done}/{p.plan.progress.total}</span>
                             </Link>
                           </td>
                         </>
@@ -140,7 +140,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <div className="grid gap-6 lg:grid-cols-2">
             <section>
               <h2 className="mb-2 text-lg font-semibold">Haftalık program</h2>
-              <div className="card divide-y divide-slate-100 text-sm">
+              <div className="card divide-y divide-rule/70 text-sm">
                 {[1, 2, 3, 4, 5, 6, 7]
                   .filter((d) => slots.some((s) => s.dayOfWeek === d))
                   .map((d) => (
@@ -151,8 +151,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                           .filter((s) => s.dayOfWeek === d)
                           .map((s) => (
                             <div key={s.id}>
-                              <span className="font-mono text-xs text-slate-500">{s.startTime}–{s.endTime}</span> {s.classroom.name} · {s.subject}
-                              {s.lessonType !== "GRUP" && <span className="text-xs text-slate-500"> · {LESSON_TYPES[s.lessonType]}</span>}
+                              <span className="num text-xs text-lead">{s.startTime}–{s.endTime}</span> {s.classroom.name} · {s.subject}
+                              {s.lessonType !== "GRUP" && <span className="text-xs text-lead"> · {LESSON_TYPES[s.lessonType]}</span>}
                             </div>
                           ))}
                       </div>
@@ -165,18 +165,18 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               {upcoming.length === 0 ? (
                 <Empty>Sınıflarına ait yaklaşan kayıt yok.</Empty>
               ) : (
-                <ul className="card divide-y divide-slate-100 text-sm">
+                <ul className="card divide-y divide-rule/70 text-sm">
                   {upcoming.map((u) => {
                     const k = ALL_KINDS[u.kind] ?? ALL_KINDS.OTHER;
                     return (
                       <li key={u.key} className="flex items-start gap-3 px-4 py-2">
-                        <span className="w-24 shrink-0 text-slate-600">
+                        <span className="w-24 shrink-0 text-lead">
                           {fmt(u.start, { day: "numeric", month: "short", weekday: "short" })}
                         </span>
                         <span className={`badge shrink-0 ring-1 ring-inset ${k.cls}`}>{k.label}</span>
                         <span>
                           {u.title}
-                          {u.classroom && <span className="text-xs text-slate-500"> · {u.classroom}</span>}
+                          {u.classroom && <span className="text-xs text-lead"> · {u.classroom}</span>}
                         </span>
                       </li>
                     );

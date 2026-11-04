@@ -23,7 +23,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         title={`Toplu karne · ${rows.length} öğrenci`}
         sub="Yazdırırken her karne ayrı sayfaya basılır."
         back={{ href: `/kurum/denemeler/${id}${sinif ? `?sinif=${sinif}` : ""}`, label: report.exam.name }}
-        actions={<PrintButton label="🖨️ Tümünü yazdır" />}
+        actions={<PrintButton label="Tümünü yazdır" />}
       />
       <div className="space-y-6 print:space-y-0">
         {rows.map((r) => (

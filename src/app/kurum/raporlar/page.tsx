@@ -38,7 +38,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
   return (
     <div>
-      <PageHeader title="Devam Raporları" sub={rangeLabel} actions={<PrintButton />} />
+      <PageHeader title="Devam raporları" sub={rangeLabel} actions={<PrintButton />} />
       <Tabs tabs={Object.entries(REPORTS).map(([k, label]) => ({ key: k, label, href: qs(k) }))} active={rapor} />
       <form method="get" className="no-print card mb-6 flex flex-wrap items-end gap-3 p-4">
         <input type="hidden" name="rapor" value={rapor} />
@@ -92,9 +92,9 @@ async function Absence({ ownerId, range }: P) {
       <Table head={["#", "Öğrenci", "Sınıf", "Ders", "Gelmedi", "Geç", "İzinli", "Devam %"]}>
         {rows.map((r, i) => (
           <tr key={r.s.id} className={r.rate !== null && r.rate < 80 ? "bg-red-50/50" : ""}>
-            <td className={td + " text-slate-400"}>{i + 1}</td>
+            <td className={td + " text-lead/70"}>{i + 1}</td>
             <td className={td + " font-medium"}>
-              <span className="font-mono text-xs text-slate-400">{r.s.studentNo}</span> {fullName(r.s)}
+              <span className="num text-xs text-lead/70">{r.s.studentNo}</span> {fullName(r.s)}
             </td>
             <td className={td}>{r.s.classroom?.name ?? "—"}</td>
             <td className={td}>{r.total}</td>
@@ -116,7 +116,7 @@ async function Absentees({ ownerId, range }: P) {
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-slate-500">{rows.length} devamsızlık kaydı · {new Set(rows.map((r) => r.studentId)).size} farklı öğrenci</p>
+        <p className="text-sm text-lead">{rows.length} devamsızlık kaydı · {new Set(rows.map((r) => r.studentId)).size} farklı öğrenci</p>
         <ExportButton
           fileName="gelmeyen_ogrenciler"
           headers={["Tarih", "Saat", "Sınıf", "Ders", "Öğretmen", "Öğrenci No", "Öğrenci", "Veli", "Veli telefonu"]}
@@ -127,12 +127,12 @@ async function Absentees({ ownerId, range }: P) {
         {rows.map((r) => (
           <tr key={r.id}>
             <td className={td + " whitespace-nowrap"}>{fmt(r.session.date)}</td>
-            <td className={td + " whitespace-nowrap font-mono text-xs"}>{r.session.startTime}–{r.session.endTime}</td>
+            <td className={td + " whitespace-nowrap num text-xs"}>{r.session.startTime}–{r.session.endTime}</td>
             <td className={td}>{r.session.classroom.name}</td>
-            <td className={td}>{r.session.subject} <span className="text-xs text-slate-400">({r.session.teacher.name})</span></td>
+            <td className={td}>{r.session.subject} <span className="text-xs text-lead/70">({r.session.teacher.name})</span></td>
             <td className={td + " font-medium"}>{fullName(r.student)}</td>
             <td className={td}>{r.student.parentName || "—"}</td>
-            <td className={td + " whitespace-nowrap"}>{r.student.parentPhone ? <a className="text-brand-600" href={`tel:${r.student.parentPhone.replace(/\s/g, "")}`}>{r.student.parentPhone}</a> : "—"}</td>
+            <td className={td + " whitespace-nowrap"}>{r.student.parentPhone ? <a className="num underline decoration-rule underline-offset-4 hover:decoration-graphite" href={`tel:${r.student.parentPhone.replace(/\s/g, "")}`}>{r.student.parentPhone}</a> : "—"}</td>
           </tr>
         ))}
       </Table>
@@ -178,7 +178,7 @@ async function LessonList({ ownerId, range }: P) {
   if (!records) return <Empty>Seçilen aralıkta ders kaydı yok.</Empty>;
   return (
     <>
-      <p className="mb-3 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-lead">
         Planlanan: öğrencinin sınıfına düşen ve yoklaması alınmış ders sayısı · Katıldı: Geldi + Geç kaldı.
         Ders kutularında <b>katıldı/planlanan</b> gösterilir.
       </p>
@@ -211,7 +211,7 @@ async function LessonList({ ownerId, range }: P) {
                 {Object.entries(m.bySubject)
                   .sort((a, b) => a[0].localeCompare(b[0], "tr"))
                   .map(([sub, [p, c]]) => (
-                    <span key={sub} className={`badge ${c < p ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-700"}`}>
+                    <span key={sub} className={`badge ${c < p ? "bg-amber-50 text-amber-800" : "bg-mist text-graphite/90"}`}>
                       {sub} {c}/{p}
                     </span>
                   ))}
@@ -238,10 +238,10 @@ function Table({ head, children }: { head: string[]; children: React.ReactNode }
   return (
     <div className="card overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50">
+        <thead className="bg-paper">
           <tr>{head.map((h) => <th key={h} className={th}>{h}</th>)}</tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">{children}</tbody>
+        <tbody className="divide-y divide-rule/70">{children}</tbody>
       </table>
     </div>
   );
@@ -251,7 +251,7 @@ function RateBar({ v }: { v: number }) {
   const color = v >= 90 ? "bg-emerald-500" : v >= 80 ? "bg-amber-400" : "bg-red-500";
   return (
     <div className="flex items-center gap-2">
-      <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-100">
+      <div className="h-2 w-20 overflow-hidden rounded-full bg-mist">
         <div className={`h-full ${color}`} style={{ width: `${v}%` }} />
       </div>
       <span className={`text-xs font-semibold ${v < 80 ? "text-red-600" : ""}`}>%{v}</span>

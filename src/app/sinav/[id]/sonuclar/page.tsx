@@ -25,7 +25,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   if (attempts.length === 0) {
     return (
-      <div className="card mt-6 p-12 text-center text-slate-500">
+      <div className="card mt-6 p-12 text-center text-lead">
         Henüz katılım yok. Sınav bağlantısını paylaşın veya <b>Optik Form</b> sekmesinden form tarayın.
       </div>
     );
@@ -47,9 +47,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <div className="mt-4 flex h-44 items-end gap-2">
             {buckets.map((b) => (
               <div key={b.label} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-xs text-slate-500">{b.n || ""}</span>
+                <span className="text-xs text-lead">{b.n || ""}</span>
                 <div className="w-full rounded-t bg-brand-500" style={{ height: `${(b.n / maxBucket) * 130}px` }} />
-                <span className="text-[10px] text-slate-500">{b.label}</span>
+                <span className="text-[10px] text-lead">{b.label}</span>
               </div>
             ))}
           </div>
@@ -59,16 +59,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-2">
             {qStats.map((s) => (
               <div key={s.i} className="flex items-center gap-3 text-sm" title={s.text}>
-                <span className="w-8 shrink-0 font-semibold text-slate-500">S{s.i + 1}</span>
-                <div className="flex h-4 flex-1 overflow-hidden rounded bg-slate-100">
+                <span className="w-8 shrink-0 font-semibold text-lead">S{s.i + 1}</span>
+                <div className="flex h-4 flex-1 overflow-hidden rounded bg-mist">
                   <div className="bg-emerald-500" style={{ width: `${(s.correct / attempts.length) * 100}%` }} />
                   <div className="bg-red-400" style={{ width: `${(s.wrong / attempts.length) * 100}%` }} />
                 </div>
-                <span className={`w-12 text-right font-semibold ${s.rate < 40 ? "text-red-600" : "text-slate-700"}`}>%{s.rate}</span>
+                <span className={`w-12 text-right font-semibold ${s.rate < 40 ? "text-red-600" : "text-graphite/90"}`}>%{s.rate}</span>
               </div>
             ))}
           </div>
-          <div className="mt-3 flex gap-4 text-xs text-slate-500">
+          <div className="mt-3 flex gap-4 text-xs text-lead">
             <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-500" />Doğru</span>
             <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-red-400" />Yanlış</span>
             <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-slate-200" />Boş</span>
@@ -97,7 +97,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 function Kpi({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="card p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-xs font-medium text-lead">{label}</div>
       <div className="mt-1 text-2xl font-bold">{value}</div>
     </div>
   );

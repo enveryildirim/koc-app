@@ -28,9 +28,9 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
   const header = (
     <PageHeader
-      title="Ders Programı"
+      title="Ders programı"
       sub="Haftalık zaman planı · derse tıklayarak düzenleyin"
-      actions={<Link href="/kurum/yoklama" className="btn-primary">✅ Yoklama al</Link>}
+      actions={<Link href="/kurum/yoklama" className="btn-primary">Yoklama al</Link>}
     />
   );
 
@@ -72,12 +72,12 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
           <Link
             key={c.id}
             href={c.href}
-            className={`rounded-full px-3 py-1 text-sm font-medium ${c.active ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium ${c.active ? "bg-graphite text-white" : "bg-white text-lead ring-1 ring-rule hover:bg-paper"}`}
           >
             {c.label}
           </Link>
         ))}
-        <span className="ml-auto text-sm text-slate-500">
+        <span className="ml-auto text-sm text-lead">
           Haftalık {slots.length} ders · {(weeklyMinutes / 60).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} saat
         </span>
       </div>

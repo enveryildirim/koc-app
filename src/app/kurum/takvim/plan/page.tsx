@@ -26,7 +26,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
   return (
     <div>
       <PageHeader
-        title="Yıllık Ders Planı"
+        title="Yıllık ders planı"
         sub={`${schoolYearLabel(year)} eğitim yılı · sınıf ve ders bazında konu dağılımı ve işlenme takibi`}
         actions={<Link href={`/kurum/takvim/plan/yeni?yil=${year}${classroomId ? `&sinif=${classroomId}` : ""}`} className="btn-primary">+ Yeni plan</Link>}
       />
@@ -37,9 +37,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
         <span className="font-semibold">{schoolYearLabel(year)}</span>
         <Link href={q({ yil: year + 1 })} className="btn-secondary px-2 py-1">›</Link>
         <div className="flex-1" />
-        <Link href={q({ sinif: "" })} className={`rounded-lg px-3 py-1 ${!classroomId ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-white"}`}>Tümü</Link>
+        <Link href={q({ sinif: "" })} className={`rounded-lg px-3 py-1 ${!classroomId ? "bg-graphite text-white" : "text-lead hover:bg-white"}`}>Tümü</Link>
         {classrooms.map((c) => (
-          <Link key={c.id} href={q({ sinif: c.id })} className={`rounded-lg px-3 py-1 ${classroomId === c.id ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-white"}`}>
+          <Link key={c.id} href={q({ sinif: c.id })} className={`rounded-lg px-3 py-1 ${classroomId === c.id ? "bg-graphite text-white" : "text-lead hover:bg-white"}`}>
             {c.name}
           </Link>
         ))}
@@ -59,7 +59,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-paper">
               <tr>
                 <th className={th}>Sınıf</th>
                 <th className={th}>Ders</th>
@@ -69,32 +69,32 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
                 <th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {rows.map((r) => {
                 const p = r.plan?.progress;
                 return (
-                  <tr key={`${r.classroomId}|${r.subject}`} className="hover:bg-slate-50">
+                  <tr key={`${r.classroomId}|${r.subject}`} className="hover:bg-paper">
                     <td className={`${td} font-medium`}>{r.classroom}</td>
                     <td className={td}>
                       {r.subject}
-                      {r.weekly > 0 && <span className="ml-1 text-xs text-slate-400">{r.weekly} ders/hf</span>}
+                      {r.weekly > 0 && <span className="ml-1 text-xs text-lead/70">{r.weekly} ders/hf</span>}
                     </td>
-                    <td className={`${td} text-slate-600`}>{r.teachers.join(", ") || "—"}</td>
+                    <td className={`${td} text-lead`}>{r.teachers.join(", ") || "—"}</td>
                     <td className={`${td} w-56`}>
                       {p ? (
                         <div className="flex items-center gap-2">
-                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-mist">
                             <div className="h-full bg-emerald-500" style={{ width: `${p.rate}%` }} />
                           </div>
-                          <span className="w-16 text-right text-xs text-slate-600">{p.done}/{p.total}</span>
+                          <span className="w-16 text-right text-xs text-lead">{p.done}/{p.total}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-lead/70">—</span>
                       )}
                     </td>
                     <td className={td}>
                       {!p ? (
-                        <span className="badge bg-slate-100 text-slate-500">Plan yok</span>
+                        <span className="badge bg-mist text-lead">Plan yok</span>
                       ) : p.behindWeeks > 0 ? (
                         <span className="badge bg-red-50 text-red-700">{p.behindWeeks} hafta geride · {p.late} konu</span>
                       ) : p.done === p.total ? (

@@ -22,7 +22,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         title={sp.ogrenci ? "Veli karnesi önizleme" : `Veli karneleri · ${reports.length} öğrenci`}
         sub="Yazdırırken her karne ayrı sayfaya basılır."
         back={{ href: back, label: "Geri" }}
-        actions={<PrintButton label="🖨️ Yazdır" />}
+        actions={<PrintButton label="Yazdır" />}
       />
       <div className="space-y-6 print:space-y-0">
         {reports.map((r) => (

@@ -1,44 +1,101 @@
 @import "tailwindcss";
 
+/*
+ * SınavKur görsel dili: optik form.
+ * Kâğıt zemin, grafit (kurşun kalem) metin ve işaretler, form mürekkebi yalnızca yapı için
+ * (aktif menü halkası, odak, bağlantı). Durum renkleri ayrı ve sönük tutulur.
+ */
 @theme {
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9eaff;
-  --color-brand-500: #2f7cf6;
-  --color-brand-600: #1f63dc;
-  --color-brand-700: #1a4fb2;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-paper: #f4f5f1;
+  --color-graphite: #2a2d31;
+  --color-lead: #6b7078;
+  --color-rule: #dcdfd8;
+  --color-mist: #ebede7;
+  --color-ink: #b8325a;
+  --color-ink-soft: #f6e4ea;
+
+  /* Eski "brand" sınıfları form mürekkebine bağlanır (bağlantılar, aktif sekmeler). */
+  --color-brand-50: #f8edf1;
+  --color-brand-100: #f1d7e0;
+  --color-brand-300: #dc93ab;
+  --color-brand-500: #c74a70;
+  --color-brand-600: #b8325a;
+  --color-brand-700: #962747;
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-head), var(--font-body), ui-sans-serif, sans-serif;
 }
 
 body {
-  background: #f7f8fb;
-  color: #0f172a;
+  background: var(--color-paper);
+  color: var(--color-graphite);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-stretch: 82%;
+  letter-spacing: -0.005em;
+}
+
+/* Sayılar her yerde aynı genişlikte: tablolarda ve özetlerde hizalı dursun. */
+table,
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 @layer components {
+  /* Birincil eylem: kurşun kalemle doldurulmuş baloncuk gibi dolu grafit. */
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm;
+    @apply btn bg-graphite text-white hover:bg-black;
   }
   .btn-secondary {
-    @apply btn bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50;
+    @apply btn bg-white text-graphite ring-1 ring-rule ring-inset hover:ring-lead/60;
   }
   .btn-danger {
-    @apply btn bg-white text-red-600 ring-1 ring-red-200 hover:bg-red-50;
+    @apply btn bg-white text-red-700 ring-1 ring-red-200 ring-inset hover:bg-red-50;
   }
+  /* Bağımsız içerik bloğu. Gölge yok; form kâğıdı üstünde beyaz sayfa. */
   .card {
-    @apply rounded-xl bg-white ring-1 ring-slate-200 shadow-sm;
+    @apply rounded-lg bg-white ring-1 ring-rule;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+    @apply w-full rounded-md border border-rule bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-lead/70 focus:border-graphite;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-700;
+    @apply mb-1 block text-sm font-semibold text-graphite;
   }
+  /* Durum etiketi: önde küçük bir işaret baloncuğu. */
   .badge {
-    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap;
+  }
+  .badge::before {
+    content: "";
+    @apply size-1.5 shrink-0 rounded-full bg-current opacity-70;
+  }
+  .badge-plain::before {
+    display: none;
   }
 }
 
@@ -56,3 +113,15 @@ body {
   aside, header.no-print { display: none !important; }
   .karne { break-inside: avoid; }
 }
+
+/* Açılış sayfası: optik form baloncukları kurşun kalemle doldurulur gibi işaretlenir, sonra net görünür. */
+@keyframes sheet-mark {
+  from { transform: scale(0.2); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes sheet-result {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.sheet-mark { animation: sheet-mark 0.18s ease-out backwards; }
+.sheet-result { animation: sheet-result 0.4s ease-out backwards; }

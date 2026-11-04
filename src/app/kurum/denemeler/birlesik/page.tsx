@@ -91,12 +91,12 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         <button className="btn-primary">Uygula</button>
       </div>
       <div>
-        <div className="label">Dahil edilecek denemeler {picked.length === 0 && <span className="font-normal text-slate-500">(seçim yoksa hepsi)</span>}</div>
+        <div className="label">Dahil edilecek denemeler {picked.length === 0 && <span className="font-normal text-lead">(seçim yoksa hepsi)</span>}</div>
         <div className="flex flex-wrap gap-2">
           {exams.map((e) => (
-            <label key={e.id} className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5 text-sm ring-1 ring-slate-200">
+            <label key={e.id} className="flex items-center gap-1.5 rounded-lg bg-paper px-3 py-1.5 text-sm ring-1 ring-rule">
               <input type="checkbox" name="sinav" value={e.id} defaultChecked={picked.includes(e.id)} className="accent-brand-600" />
-              {e.name} <span className="text-xs text-slate-400">{fmtDate(e.date)}</span>
+              {e.name} <span className="text-xs text-lead/70">{fmtDate(e.date)}</span>
             </label>
           ))}
         </div>
@@ -132,7 +132,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         {header}
         {filters}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-lead">
             {selected.length} deneme · {rows.length} öğrenci. Ortalamalar öğrencinin girdiği denemeler üzerinden hesaplanır.
           </p>
           <ExportButton
@@ -146,7 +146,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         ) : (
           <div className="card overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr>
                   <th className={th}>Sıra</th>
                   <th className={th}>No</th>
@@ -160,11 +160,11 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                   <th className={`${th} text-right`}>Ort. puan</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-rule/70">
                 {rows.map((r, i) => (
-                  <tr key={r.id} className="hover:bg-slate-50">
+                  <tr key={r.id} className="hover:bg-paper">
                     <td className={`${td} font-bold`}>{i + 1}</td>
-                    <td className={`${td} font-mono`}>{r.no}</td>
+                    <td className={`${td} num`}>{r.no}</td>
                     <td className={td}>
                       <Link className="font-medium hover:text-brand-600" href={`/kurum/ogrenciler/${r.id}/birlesik?tur=${tur}`}>{r.name}</Link>
                     </td>
@@ -228,7 +228,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       </div>
       <div className="card mb-6 overflow-x-auto">
         <table className="w-full text-xs">
-          <thead className="bg-slate-50">
+          <thead className="bg-paper">
             <tr>
               <th className={th}>Deneme</th>
               <th className={th}>Tarih</th>
@@ -241,7 +241,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
               <th className={`${th} text-right`}>Ort. puan</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule/70">
             {perExam.map((p, i) => {
               const prev = perExam[i - 1];
               return (
@@ -249,7 +249,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                   <td className={`${td} font-medium`}>
                     <Link href={`/kurum/denemeler/${p.exam.id}?sinif=${cls.id}`} className="hover:text-brand-600">{p.exam.name}</Link>
                   </td>
-                  <td className={`${td} text-slate-500`}>{fmtDate(p.exam.date)}</td>
+                  <td className={`${td} text-lead`}>{fmtDate(p.exam.date)}</td>
                   <td className={`${td} text-right`}>{p.n}</td>
                   {p.sections.map((v, j) => (
                     <td key={j} className={`${td} text-right tabular-nums`}>{fmtNet(v)}</td>
@@ -263,7 +263,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                 </tr>
               );
             })}
-            <tr className="bg-brand-50 font-semibold text-brand-700">
+            <tr className="border-t-2 border-graphite bg-paper font-semibold">
               <td className={td} colSpan={3}>Ortalama</td>
               {sectionNames.map((_, j) => (
                 <td key={j} className={`${td} text-right tabular-nums`}>{fmtNet(avg(perExam.map((p) => p.sections[j])))}</td>
@@ -286,7 +286,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       </div>
       <div className="card overflow-x-auto">
         <table className="w-full text-xs">
-          <thead className="bg-slate-50">
+          <thead className="bg-paper">
             <tr>
               <th className={th}>No</th>
               <th className={th}>Ad Soyad</th>
@@ -297,10 +297,10 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
               <th className={`${th} text-right`}>Değişim</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule/70">
             {matrix.map((m) => (
               <tr key={m.st.id}>
-                <td className={`${td} font-mono`}>{m.st.studentNo}</td>
+                <td className={`${td} num`}>{m.st.studentNo}</td>
                 <td className={td}>
                   <Link className="font-medium hover:text-brand-600" href={`/kurum/ogrenciler/${m.st.id}/birlesik?tur=${tur}`}>{m.st.firstName} {m.st.lastName}</Link>
                 </td>

@@ -83,18 +83,18 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
         </div>
         {periodChanged && <button className="btn-primary" onClick={() => go({})}>Dönemi uygula</button>}
         <div className="ml-auto flex flex-wrap gap-2">
-          <Link className="btn-secondary" href={`/kurum/veli-karnesi/yazdir?sinif=${sinif}&bas=${from}&bit=${to}`}>🖨️ Sınıfın karnelerini yazdır</Link>
+          <Link className="btn-secondary" href={`/kurum/veli-karnesi/yazdir?sinif=${sinif}&bas=${from}&bit=${to}`}>Sınıfın karnelerini yazdır</Link>
         </div>
       </div>
 
       <div className="card overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3">
-          <span className="text-sm text-slate-600">
+        <div className="flex flex-wrap items-center gap-2 border-b border-rule/70 p-3">
+          <span className="text-sm text-lead">
             {students.length} öğrenci · {withLink.length} bağlantı hazır · {students.filter((s) => s.viewedAt).length} veli görüntüledi
           </span>
           <div className="ml-auto flex flex-wrap gap-2">
             <button className="btn-primary" disabled={busy} onClick={() => act("share", (sel.length ? sel : students).map((s) => s.id))}>
-              🔗 {sel.length ? `Seçilen ${sel.length} öğrenciye` : "Tüm sınıfa"} bağlantı oluştur
+              {sel.length ? `Seçilen ${sel.length} öğrenciye` : "Tüm sınıfa"} bağlantı oluştur
             </button>
             <button
               className="btn-secondary"
@@ -109,7 +109,7 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                 )
               }
             >
-              📋 Bağlantı listesini kopyala
+              Bağlantı listesini kopyala
             </button>
             {sel.length > 0 && (
               <button className="btn-danger" disabled={busy} onClick={() => act("revoke", sel.filter((s) => s.token).map((s) => s.id))}>
@@ -121,7 +121,7 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
         {flash && <div className="bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{flash}</div>}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-paper text-left text-xs text-lead">
               <tr>
                 <th className="px-3 py-2">
                   <input
@@ -137,7 +137,7 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                 <th className="px-3 py-2 text-right">İşlemler</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {students.map((s) => {
                 const url = s.token ? reportUrl(s.token, from, to) : "";
                 const msg = s.token ? shareMessage(s, url, from, to, institution) : "";
@@ -159,18 +159,18 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                       </td>
                       <td className="px-3 py-2">
                         <Link href={`/kurum/ogrenciler/${s.id}`} className="font-medium hover:text-brand-600">{s.name}</Link>
-                        <div className="font-mono text-xs text-slate-400">{s.studentNo}</div>
+                        <div className="num text-xs text-lead/70">{s.studentNo}</div>
                       </td>
                       <td className="px-3 py-2">
-                        {s.parentName || <span className="text-slate-400">—</span>}
-                        <div className="text-xs text-slate-500">
+                        {s.parentName || <span className="text-lead/70">—</span>}
+                        <div className="text-xs text-lead">
                           {s.parentPhone || "telefon yok"}
                           {s.parentPhone && !waPhone(s.parentPhone) && <span className="ml-1 text-amber-600">(cep no değil)</span>}
                         </div>
                       </td>
                       <td className="px-3 py-2">
                         {!s.token ? (
-                          <span className="badge bg-slate-100 text-slate-600">Paylaşılmadı</span>
+                          <span className="badge bg-mist text-lead">Paylaşılmadı</span>
                         ) : s.viewedAt ? (
                           <span className="badge bg-emerald-50 text-emerald-700" title={`Bağlantı: ${fmt(s.sharedAt)}`}>👁 Veli gördü · {fmt(s.viewedAt)}</span>
                         ) : (
@@ -189,14 +189,14 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                               <a className="btn-secondary px-2.5 py-1 text-xs" href={url} target="_blank" rel="noreferrer">Önizle</a>
                             </>
                           ) : (
-                            <button className="btn-secondary px-2.5 py-1 text-xs" disabled={busy} onClick={() => act("share", [s.id])}>🔗 Bağlantı oluştur</button>
+                            <button className="btn-secondary px-2.5 py-1 text-xs" disabled={busy} onClick={() => act("share", [s.id])}>Bağlantı oluştur</button>
                           )}
                           <button className="btn-secondary px-2.5 py-1 text-xs" onClick={() => setNoteFor(noteFor === s.id ? null : s.id)}>✎ Görüş</button>
                           {s.token && (
                             <details className="relative">
                               <summary className="btn-secondary cursor-pointer list-none px-2 py-1 text-xs">⋯</summary>
-                              <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg bg-white p-1 text-left shadow-lg ring-1 ring-slate-200">
-                                <button className="block w-full rounded px-3 py-1.5 text-left text-xs hover:bg-slate-50" onClick={() => act("renew", [s.id])}>Yeni bağlantı üret</button>
+                              <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg bg-white p-1 text-left shadow-lg ring-1 ring-rule">
+                                <button className="block w-full rounded px-3 py-1.5 text-left text-xs hover:bg-paper" onClick={() => act("renew", [s.id])}>Yeni bağlantı üret</button>
                                 <button className="block w-full rounded px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50" onClick={() => act("revoke", [s.id])}>Bağlantıyı iptal et</button>
                               </div>
                             </details>
@@ -227,7 +227,7 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
           </table>
         </div>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-lead">
         Bağlantılar tahmin edilemez anahtarlar içerir ve giriş gerektirmez; yalnızca ilgili öğrencinin bilgilerini gösterir.
         WhatsApp düğmesi mesajı velinin numarasıyla hazırlar, gönderimi siz onaylarsınız. Bir bağlantıyı iptal ettiğinizde veya yenilediğinizde eski bağlantı çalışmaz.
       </p>

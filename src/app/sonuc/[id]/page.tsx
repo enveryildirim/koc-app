@@ -18,10 +18,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       {isOwner && (
-        <Link href={`/sinav/${test.id}/sonuclar`} className="text-sm text-slate-500 hover:text-slate-800">← Sonuçlara dön</Link>
+        <Link href={`/sinav/${test.id}/sonuclar`} className="text-sm text-lead hover:text-graphite">← Sonuçlara dön</Link>
       )}
       <h1 className="mt-2 text-2xl font-bold">{test.title}</h1>
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-lead">
         {attempt.participantName}
         {attempt.studentNo && ` · No: ${attempt.studentNo}`}
         {attempt.source === "OMR" && " · Optik form"}

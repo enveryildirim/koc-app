@@ -79,7 +79,7 @@ export default function LineChart({
           );
         })}
       </svg>
-      <div className="mt-1 flex flex-wrap gap-4 text-xs text-slate-600">
+      <div className="mt-1 flex flex-wrap gap-4 text-xs text-lead">
         {series.map((s, si) => (
           <span key={s.name} className="flex items-center gap-1.5">
             <i

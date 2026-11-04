@@ -13,9 +13,9 @@ export default async function Page() {
   return (
     <>
       <PageHeader
-        title="Denemeler & Optik Okuma"
+        title="Denemeler ve optik okuma"
         sub="Deneme sınavı oluşturun, cevap anahtarını girin, optik formları tarayın veya optik okuyucu dosyasını yükleyin."
-        actions={<Link href="/kurum/denemeler/birlesik" className="btn-secondary">📊 Birleştirilmiş raporlar</Link>}
+        actions={<Link href="/kurum/denemeler/birlesik" className="btn-secondary">Birleştirilmiş raporlar</Link>}
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         {exams.length === 0 ? (
@@ -23,7 +23,7 @@ export default async function Page() {
         ) : (
           <div className="card overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr>
                   <th className={th}>Sınav</th>
                   <th className={th}>Tür</th>
@@ -33,21 +33,21 @@ export default async function Page() {
                   <th className={th}>Anahtar</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-rule/70">
                 {exams.map((e) => {
                   const secs = e.secs;
                   const total = totalQuestions(secs);
                   const keyed = secs.every((s) => s.keyA.length === s.count);
                   return (
-                    <tr key={e.id} className="hover:bg-slate-50">
+                    <tr key={e.id} className="hover:bg-paper">
                       <td className={td}>
                         <Link href={`/kurum/denemeler/${e.id}`} className="font-medium hover:text-brand-600">{e.name}</Link>
                       </td>
                       <td className={td}>
-                        <span className="badge bg-brand-50 text-brand-700">{EXAM_TYPES[e.type]?.label ?? e.type}</span>
-                        <span className="ml-1 text-xs text-slate-400">{total} soru</span>
+                        <span className="badge badge-plain bg-mist text-graphite">{EXAM_TYPES[e.type]?.label ?? e.type}</span>
+                        <span className="ml-1 text-xs text-lead/70">{total} soru</span>
                       </td>
-                      <td className={`${td} text-slate-500`}>{fmtDate(e.date)}</td>
+                      <td className={`${td} text-lead`}>{fmtDate(e.date)}</td>
                       <td className={`${td} text-right`}>{e.resultCount}</td>
                       <td className={`${td} text-right font-semibold tabular-nums`}>{e.avgNet === null ? "—" : fmtNet(e.avgNet)}</td>
                       <td className={td}>

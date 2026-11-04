@@ -30,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   return (
     <div>
       <PageHeader
-        title="Analiz & Uyarılar"
+        title="Analiz ve uyarılar"
         sub="Denemeler arası gelişim, risk altındaki öğrenciler ve öğretmen/ders performansı"
         actions={<PrintButton />}
       />
@@ -68,7 +68,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
   return (
     <div className="space-y-4">
       <div className="no-print card flex flex-wrap items-center gap-3 p-4">
-        <span className="text-sm font-medium text-slate-600">Sınav türü</span>
+        <span className="text-sm font-medium text-lead">Sınav türü</span>
         <div className="flex flex-wrap gap-1">
           {types.map((t) => (
             <Link key={t} href={href({ tur: t, ders: "" })} className={t === type ? "btn-primary" : "btn-secondary"}>
@@ -76,7 +76,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
             </Link>
           ))}
         </div>
-        <span className="ml-2 text-sm font-medium text-slate-600">Ders</span>
+        <span className="ml-2 text-sm font-medium text-lead">Ders</span>
         <div className="flex flex-wrap gap-1">
           <Link href={href({ ders: "" })} className={!p.section ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}>Toplam</Link>
           {p.sectionNames.map((n) => (
@@ -96,20 +96,20 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50">
+          <thead className="bg-paper">
             <tr>
               <th className={th}>Sınıf</th>
               {p.exams.map((e) => (
                 <th key={e.id} className={`${th} text-right`}>
                   <Link href={`/kurum/denemeler/${e.id}?tab=siniflar`} className="hover:text-brand-600">{e.name}</Link>
-                  <div className="font-normal normal-case text-slate-400">{fmtDate(e.date)}</div>
+                  <div className="font-normal normal-case text-lead/70">{fmtDate(e.date)}</div>
                 </th>
               ))}
               <th className={`${th} text-right`}>İlk → son</th>
               {!p.section && <th className={`${th} text-right`}>Son ort. puan</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule/70">
             {p.rows.map((r, ri) => {
               const vals = r.cells.map((c) => c?.net ?? null);
               const present = vals.filter((v): v is number => v !== null);
@@ -126,7 +126,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
                         <>
                           <b>{fmtNet(c.net)}</b>
                           <Delta now={c.net} prev={prevValue(vals, i)} />
-                          <div className="text-[10px] text-slate-400">{c.n} öğr.</div>
+                          <div className="text-[10px] text-lead/70">{c.n} öğr.</div>
                         </>
                       )}
                     </td>
@@ -136,7 +136,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
                 </tr>
               );
             })}
-            <tr className="bg-brand-50 font-semibold text-brand-700">
+            <tr className="border-t-2 border-graphite bg-paper font-semibold">
               <td className={td}>Kurum ortalaması</td>
               {p.total.map((c, i) => (
                 <td key={i} className={`${td} text-right tabular-nums`}>
@@ -167,7 +167,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
           ]}
         />
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-lead">
         Hücreler sınıfın o denemedeki ortalama netidir; ▲/▼ bir önceki denemeye göre değişim. Tahmini puan, deneme ayarlarındaki taban puan ve ders katsayılarıyla hesaplanır.
       </p>
     </div>
@@ -182,12 +182,12 @@ function prevValue(vals: (number | null)[], i: number) {
 function Delta({ now, prev }: { now: number; prev: number | null }) {
   if (prev === null) return null;
   const d = now - prev;
-  if (Math.abs(d) < 0.005) return <span className="ml-1 text-xs text-slate-400">=</span>;
+  if (Math.abs(d) < 0.005) return <span className="ml-1 text-xs text-lead/70">=</span>;
   return <span className={`ml-1 text-xs ${d > 0 ? "text-emerald-600" : "text-red-600"}`}>{d > 0 ? "▲" : "▼"}{fmtNet(Math.abs(d))}</span>;
 }
 
 function Signed({ v }: { v: number }) {
-  return <span className={v > 0 ? "font-semibold text-emerald-700" : v < 0 ? "font-semibold text-red-600" : "text-slate-500"}>{v > 0 ? "+" : ""}{fmtNet(v)}</span>;
+  return <span className={v > 0 ? "font-semibold text-emerald-700" : v < 0 ? "font-semibold text-red-600" : "text-lead"}>{v > 0 ? "+" : ""}{fmtNet(v)}</span>;
 }
 
 /* ===================================== Risk ===================================== */
@@ -208,7 +208,7 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
       </div>
 
       <div className="no-print card flex flex-wrap items-center gap-2 p-4">
-        <span className="text-sm font-medium text-slate-600">Sınıf</span>
+        <span className="text-sm font-medium text-lead">Sınıf</span>
         <Link href="/kurum/analiz?tab=risk" className={!cls ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}>Tümü</Link>
         {classes.map((c) => (
           <Link key={c.id} href={`/kurum/analiz?tab=risk&sinif=${c.id}`} className={cls === c.id ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}>
@@ -246,7 +246,7 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
       ) : (
         <div className="card overflow-x-auto print:shadow-none print:ring-0">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-paper">
               <tr>
                 <th className={th}>Risk</th>
                 <th className={th}>Öğrenci</th>
@@ -258,26 +258,26 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
                 <th className={th}>Uyarılar</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {r.risky.map((x) => (
                 <tr key={x.id} className={x.level === "Yüksek" ? "bg-red-50/40" : ""}>
                   <td className={td}>
                     <span
-                      className={`badge font-bold ${x.level === "Yüksek" ? "bg-red-600 text-white" : x.level === "Orta" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"}`}
+                      className={`badge font-bold ${x.level === "Yüksek" ? "bg-red-600 text-white" : x.level === "Orta" ? "bg-amber-100 text-amber-800" : "bg-mist text-lead"}`}
                     >
                       {x.score} · {x.level}
                     </span>
                   </td>
                   <td className={td}>
                     <Link href={`/kurum/ogrenciler/${x.id}`} className="font-medium hover:text-brand-600">{x.name}</Link>
-                    <div className="font-mono text-xs text-slate-400">{x.studentNo}</div>
+                    <div className="num text-xs text-lead/70">{x.studentNo}</div>
                   </td>
                   <td className={td}>{x.className}</td>
                   <td className={td}>
                     {x.parentName || "—"}
                     {x.parentPhone && (
                       <div className="text-xs">
-                        <a className="text-brand-600" href={`tel:${x.parentPhone.replace(/\s/g, "")}`}>{x.parentPhone}</a>
+                        <a className="num underline decoration-rule underline-offset-4 hover:decoration-graphite" href={`tel:${x.parentPhone.replace(/\s/g, "")}`}>{x.parentPhone}</a>
                       </div>
                     )}
                   </td>
@@ -292,7 +292,7 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
                   </td>
                   <td className={`${td} text-right tabular-nums ${x.attRate !== null && x.attRate < RISK_RULES.attendanceMin ? "font-semibold text-red-600" : ""}`}>
                     {x.attRate === null ? "—" : `%${x.attRate}`}
-                    {x.absent > 0 && <div className="text-xs font-normal text-slate-500">{x.absent} ders</div>}
+                    {x.absent > 0 && <div className="text-xs font-normal text-lead">{x.absent} ders</div>}
                   </td>
                   <td className={`${td} text-right tabular-nums ${x.hwRate !== null && x.hwRate < RISK_RULES.homeworkMin ? "font-semibold text-red-600" : ""}`}>
                     {x.hwRate === null ? "—" : `%${x.hwRate}`}
@@ -311,8 +311,8 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
         </div>
       )}
 
-      <div className="card p-4 text-xs text-slate-600">
-        <h3 className="mb-1 font-semibold text-slate-800">Uyarı kuralları</h3>
+      <div className="card p-4 text-xs text-lead">
+        <h3 className="mb-1 font-semibold text-graphite">Uyarı kuralları</h3>
         <ul className="list-disc space-y-0.5 pl-5">
           <li><b>Net düşüşü</b> (ağırlık 2): aynı türdeki son iki denemesi arasında toplam net {RISK_RULES.netDropAbs} veya daha fazla ya da %{RISK_RULES.netDropRel * 100} ve üzeri düştü.</li>
           <li><b>Son denemeye girmedi</b> (ağırlık 1): sınıfının girdiği en son denemede sonucu yok.</li>
@@ -359,11 +359,11 @@ async function Teachers({ ownerId }: { ownerId: string }) {
 
       {teachers.map((t) => (
         <div key={t.id} className="card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule/70 bg-paper px-4 py-3">
             <div>
-              <b>{t.name}</b> <span className="text-sm text-slate-500">· {t.branch}</span>
+              <b>{t.name}</b> <span className="text-sm text-lead">· {t.branch}</span>
             </div>
-            <div className="flex flex-wrap gap-4 text-xs text-slate-600">
+            <div className="flex flex-wrap gap-4 text-xs text-lead">
               <span>Ort. gelişim: {t.avgChange === null ? "—" : <Signed v={t.avgChange} />}</span>
               <span>Kurum ort. farkı: {t.avgDiff === null ? "—" : <Signed v={t.avgDiff} />}</span>
               <span>Ort. başarı: <b>{t.avgSuccess === null ? "—" : `%${t.avgSuccess}`}</b></span>
@@ -383,29 +383,29 @@ async function Teachers({ ownerId }: { ownerId: string }) {
                   <th className={th}>Başarı (net/soru)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-rule/70">
                 {t.rows.map((r, i) => (
                   <tr key={i}>
                     <td className={`${td} font-medium`}>{r.className}</td>
                     <td className={td}>
                       {r.subject}
-                      {r.section !== r.subject && <span className="text-xs text-slate-400"> → {r.section}</span>}
+                      {r.section !== r.subject && <span className="text-xs text-lead/70"> → {r.section}</span>}
                     </td>
                     <td className={td}>{EXAM_TYPES[r.type]?.label ?? r.type}</td>
                     <td className={`${td} text-right tabular-nums`}>
                       {r.first === null ? "—" : fmtNet(r.first)}
-                      <div className="text-[10px] text-slate-400">{r.firstExam}</div>
+                      <div className="text-[10px] text-lead/70">{r.firstExam}</div>
                     </td>
                     <td className={`${td} text-right tabular-nums`}>
                       <b>{r.last === null ? "—" : fmtNet(r.last)}</b>
-                      <div className="text-[10px] text-slate-400">{r.lastExam} · {r.count} soru</div>
+                      <div className="text-[10px] text-lead/70">{r.lastExam} · {r.count} soru</div>
                     </td>
-                    <td className={`${td} text-right tabular-nums`}>{r.change === null ? <span className="text-xs text-slate-400">tek deneme</span> : <Signed v={r.change} />}</td>
+                    <td className={`${td} text-right tabular-nums`}>{r.change === null ? <span className="text-xs text-lead/70">tek deneme</span> : <Signed v={r.change} />}</td>
                     <td className={`${td} text-right tabular-nums`}>{r.diff === null ? "—" : <Signed v={r.diff} />}</td>
                     <td className={`${td} w-44`}>
                       {r.success === null ? "—" : (
                         <div className="flex items-center gap-2">
-                          <div className="h-2 flex-1 overflow-hidden rounded bg-slate-100">
+                          <div className="h-2 flex-1 overflow-hidden rounded bg-mist">
                             <div className={r.success < 40 ? "h-full bg-red-400" : r.success < 60 ? "h-full bg-amber-400" : "h-full bg-emerald-500"} style={{ width: `${Math.max(0, r.success)}%` }} />
                           </div>
                           <span className="w-9 text-right text-xs font-semibold">%{r.success}</span>
@@ -423,19 +423,19 @@ async function Teachers({ ownerId }: { ownerId: string }) {
       {unmatched.length > 0 && (
         <div className="card p-4 text-sm">
           <h3 className="font-semibold">Eşleşmeyen dersler</h3>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-lead">
             Bu derslere karşılık gelen bir deneme bölümü bulunamadı (ders adı ile bölüm adı eşleşmiyor veya sınıf bu derse ait bölüm içeren denemeye girmedi).
           </p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {unmatched.map((u, i) => (
-              <li key={i} className="badge bg-slate-100 text-slate-700">
+              <li key={i} className="badge bg-mist text-graphite/90">
                 {u.teacher} · {u.className} · {u.subject}
               </li>
             ))}
           </ul>
         </div>
       )}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-lead">
         Eşleşme: ders programındaki ders adı ile deneme bölüm adı küçük harfe çevrilip karşılaştırılır; “Temel Matematik” → Matematik, “T.C. İnkılap Tarihi” → İnkılap Tarihi gibi takma adlar tanınır.
         Değişim, sınıfın o türdeki ilk ve son denemesindeki bölüm ortalama neti arasındaki farktır.
       </p>
@@ -469,7 +469,7 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
             ) : (
               <div className="card overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-paper">
                     <tr>
                       <th className={th}>Sınıf</th>
                       <th className={th}>Ders</th>
@@ -480,15 +480,15 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
                       <th />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-rule/70">
                     {a.behind.map((r) => (
                       <tr key={r.plan!.id}>
                         <td className={`${td} font-medium`}>{r.classroom}</td>
                         <td className={td}>{r.subject}</td>
-                        <td className={`${td} text-slate-600`}>{r.teachers.join(", ") || "—"}</td>
+                        <td className={`${td} text-lead`}>{r.teachers.join(", ") || "—"}</td>
                         <td className={`${td} text-right font-semibold text-red-600`}>{r.plan!.progress.behindWeeks} hafta</td>
                         <td className={`${td} text-right`}>{r.plan!.progress.late}</td>
-                        <td className={`${td} text-right text-slate-600`}>{r.plan!.progress.done} / {r.plan!.progress.total}</td>
+                        <td className={`${td} text-right text-lead`}>{r.plan!.progress.done} / {r.plan!.progress.total}</td>
                         <td className={`${td} text-right`}>
                           <Link href={`/kurum/takvim/plan/${r.plan!.id}`} className="text-brand-700 hover:underline">Plan</Link>
                         </td>
@@ -501,7 +501,7 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
           </section>
           <section>
             <h2 className="mb-1 text-lg font-semibold">Gecikme yüzünden denemede işlenmeden sorulan konular</h2>
-            <p className="mb-2 text-sm text-slate-500">
+            <p className="mb-2 text-sm text-lead">
               Plana göre deneme tarihinden önce işlenmiş olması gereken ama işlenmemiş konular. Planda daha sonraya bırakılan konular burada listelenmez; onları
               denemenin &quot;Plan uyumu&quot; sekmesinde görebilirsiniz.
             </p>
@@ -510,7 +510,7 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
             ) : (
               <div className="card overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-paper">
                     <tr>
                       <th className={th}>Deneme</th>
                       <th className={th}>Sınıf</th>
@@ -520,17 +520,17 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
                       <th className={`${th} text-right`}>Doğru oranı</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-rule/70">
                     {a.late.map((e) => (
                       <tr key={`${e.examId}|${e.classroomId}|${e.section}|${e.topic}`}>
                         <td className={td}>
                           <Link href={`/kurum/denemeler/${e.examId}?tab=plan&sinif=${e.classroomId}`} className="hover:text-brand-700">{e.exam}</Link>
-                          <div className="text-xs text-slate-500">{fmtShort(e.date)}</div>
+                          <div className="text-xs text-lead">{fmtShort(e.date)}</div>
                         </td>
                         <td className={`${td} font-medium`}>{e.classroom}</td>
                         <td className={td}>{e.section}</td>
                         <td className={td}>{e.topic}</td>
-                        <td className={`${td} text-slate-600`}>{e.plannedWeek ? `${fmtShort(e.plannedWeek)} haftası` : "—"}</td>
+                        <td className={`${td} text-lead`}>{e.plannedWeek ? `${fmtShort(e.plannedWeek)} haftası` : "—"}</td>
                         <td className={`${td} text-right ${e.rate < 50 ? "font-semibold text-red-600" : ""}`}>%{e.rate}</td>
                       </tr>
                     ))}

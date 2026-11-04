@@ -22,7 +22,7 @@ export default function ExtraLessonForm({ date, classrooms, teachers }: { date: 
   if (!open) {
     return (
       <button className="btn-secondary" onClick={() => setOpen(true)} disabled={!classrooms.length || !teachers.length}>
-        + Ek ders / etüt
+        Ek ders ekle
       </button>
     );
   }
@@ -46,7 +46,7 @@ export default function ExtraLessonForm({ date, classrooms, teachers }: { date: 
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setOpen(false)}>
       <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold">Ek ders ({date})</h2>
-        <p className="text-sm text-slate-500">Haftalık programda olmayan etüt veya özel ders için yoklama alın.</p>
+        <p className="text-sm text-lead">Haftalık programda olmayan etüt veya özel ders için yoklama alın.</p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div>
             <label className="label">Sınıf</label>

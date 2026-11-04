@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <PageHeader
-        title="Veli Karnesi"
+        title="Veli karnesi"
         sub="Seçilen dönemin deneme, ödev ve devam özetini velilere giriş gerektirmeyen bir bağlantıyla gönderin."
       />
       {classes.length === 0 ? (

@@ -70,7 +70,7 @@ export default function CalendarView(p: Props) {
   return (
     <div>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg bg-slate-100 p-1 text-sm">
+        <div className="flex rounded-lg bg-mist p-1 text-sm">
           {(
             [
               ["ay", "Ay"],
@@ -81,7 +81,7 @@ export default function CalendarView(p: Props) {
             <Link
               key={k}
               href={href({ gorunum: k, ay: k === "ay" && p.view !== "ay" ? (schoolYearOf(p.today) === p.year ? p.today.slice(0, 7) : `${p.year}-09`) : undefined })}
-              className={`rounded-md px-3 py-1 font-medium ${p.view === k ? "bg-white shadow-sm" : "text-slate-500"}`}
+              className={`rounded-md px-3 py-1 font-medium ${p.view === k ? "bg-white shadow-sm" : "text-lead"}`}
             >
               {label}
             </Link>
@@ -104,7 +104,7 @@ export default function CalendarView(p: Props) {
         </button>
       </div>
 
-      <div className="no-print mb-4 flex flex-wrap gap-3 text-xs text-slate-600">
+      <div className="no-print mb-4 flex flex-wrap gap-3 text-xs text-lead">
         {Object.entries(ALL_KINDS).map(([k, v]) => (
           <span key={k} className="flex items-center gap-1">
             <span className={`h-2.5 w-2.5 rounded-full ${v.dot}`} />
@@ -143,11 +143,11 @@ function MonthView({ month, today, items, onDay, onItem }: Props & { onDay: (d: 
   const weeks = monthGrid(month);
   return (
     <div className="card overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold uppercase text-slate-500">
+      <div className="grid grid-cols-7 border-b border-rule bg-paper text-center text-xs font-semibold text-lead">
         {WEEKDAYS.map((d) => <div key={d} className="py-2">{d}</div>)}
       </div>
       {weeks.map((w) => (
-        <div key={w[0]} className="grid grid-cols-7 border-b border-slate-100 last:border-0">
+        <div key={w[0]} className="grid grid-cols-7 border-b border-rule/70 last:border-0">
           {w.map((d, i) => {
             const list = items.filter((x) => covers(x, d));
             const holiday = list.some((x) => x.kind === "HOLIDAY" && !x.classroomId);
@@ -156,16 +156,16 @@ function MonthView({ month, today, items, onDay, onItem }: Props & { onDay: (d: 
               <div
                 key={d}
                 onClick={() => onDay(d)}
-                className={`min-h-28 cursor-pointer border-r border-slate-100 p-1.5 last:border-0 hover:bg-slate-50 ${
-                  holiday ? "bg-red-50/60" : i >= 5 ? "bg-slate-50/60" : ""
+                className={`min-h-28 cursor-pointer border-r border-rule/70 p-1.5 last:border-0 hover:bg-paper ${
+                  holiday ? "bg-red-50/60" : i >= 5 ? "bg-paper/60" : ""
                 } ${inMonth ? "" : "opacity-40"}`}
               >
-                <div className={`mb-1 text-right text-xs ${d === today ? "font-bold text-brand-700" : "text-slate-500"}`}>
+                <div className={`mb-1 text-right text-xs ${d === today ? "font-bold text-brand-700" : "text-lead"}`}>
                   {d === today ? <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-white">{Number(d.slice(8))}</span> : Number(d.slice(8))}
                 </div>
                 <div className="space-y-0.5">
                   {list.slice(0, 3).map((x) => <Chip key={x.key} item={x} onClick={() => onItem(x)} />)}
-                  {list.length > 3 && <div className="px-1 text-xs text-slate-500">+{list.length - 3} daha</div>}
+                  {list.length > 3 && <div className="px-1 text-xs text-lead">+{list.length - 3} daha</div>}
                 </div>
               </div>
             );
@@ -185,10 +185,10 @@ function YearView({ year, today, items, monthHref }: Props & { monthHref: (m: st
           <Link key={m} href={monthHref(m)} className="card p-3 transition hover:ring-brand-500">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-semibold capitalize">{monthLabel(m)}</span>
-              {inMonth.length > 0 && <span className="text-xs text-slate-500">{inMonth.length} kayıt</span>}
+              {inMonth.length > 0 && <span className="text-xs text-lead">{inMonth.length} kayıt</span>}
             </div>
             <div className="grid grid-cols-7 gap-0.5 text-center text-[11px]">
-              {WEEKDAYS.map((d) => <div key={d} className="text-slate-400">{d[0]}</div>)}
+              {WEEKDAYS.map((d) => <div key={d} className="text-lead/70">{d[0]}</div>)}
               {monthGrid(m).flat().map((d) => {
                 if (!d.startsWith(m)) return <div key={d} />;
                 const list = inMonth.filter((x) => covers(x, d));
@@ -216,11 +216,11 @@ function YearView({ year, today, items, monthHref }: Props & { monthHref: (m: st
 }
 
 function ListView({ items, year, onItem }: Props & { onItem: (i: CalendarItem) => void }) {
-  if (!items.length) return <div className="card p-10 text-center text-sm text-slate-500">{schoolYearLabel(year)} eğitim yılı için kayıt yok.</div>;
+  if (!items.length) return <div className="card p-10 text-center text-sm text-lead">{schoolYearLabel(year)} eğitim yılı için kayıt yok.</div>;
   return (
     <div className="card overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+        <thead className="bg-paper text-left text-xs text-lead">
           <tr>
             <th className="px-4 py-2">Tarih</th>
             <th className="px-4 py-2">Tür</th>
@@ -228,11 +228,11 @@ function ListView({ items, year, onItem }: Props & { onItem: (i: CalendarItem) =
             <th className="px-4 py-2">Kimin için</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-rule/70">
           {items.map((x) => {
             const k = ALL_KINDS[x.kind] ?? ALL_KINDS.OTHER;
             return (
-              <tr key={x.key} className={x.eventId || x.href ? "cursor-pointer hover:bg-slate-50" : ""} onClick={() => onItem(x)}>
+              <tr key={x.key} className={x.eventId || x.href ? "cursor-pointer hover:bg-paper" : ""} onClick={() => onItem(x)}>
                 <td className="whitespace-nowrap px-4 py-2">
                   {fmtDay(x.start, { day: "numeric", month: "long", weekday: "short" })}
                   {x.end !== x.start && ` – ${fmtDay(x.end)}`}
@@ -240,9 +240,9 @@ function ListView({ items, year, onItem }: Props & { onItem: (i: CalendarItem) =
                 <td className="px-4 py-2"><span className={`badge ring-1 ring-inset ${k.cls}`}>{k.label}</span></td>
                 <td className="px-4 py-2 font-medium">
                   {x.title}
-                  {x.note && x.kind !== "DENEME" && <div className="text-xs font-normal text-slate-500">{x.note}</div>}
+                  {x.note && x.kind !== "DENEME" && <div className="text-xs font-normal text-lead">{x.note}</div>}
                 </td>
-                <td className="px-4 py-2 text-slate-600">
+                <td className="px-4 py-2 text-lead">
                   {x.classroom ?? "Tüm kurum"}
                   {x.eventId && x.parentVisible && <span className="ml-1" title="Velilere gösteriliyor">👪</span>}
                 </td>

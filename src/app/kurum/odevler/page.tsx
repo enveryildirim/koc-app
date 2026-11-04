@@ -34,7 +34,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
 
   return (
     <div>
-      <PageHeader title="Ödev Takip" sub="Sınıflara ödev verin, öğrenci bazında yapılma durumunu izleyin." />
+      <PageHeader title="Ödev takibi" sub="Sınıflara ödev verin, öğrenci bazında yapılma durumunu izleyin." />
       <Tabs tabs={ODEV_TABS} active="list" />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -46,7 +46,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
       <NewHomework classrooms={classrooms.map((c) => ({ id: c.id, name: c.name }))} subjects={subjects} />
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">Ödevler <span className="font-normal text-slate-500">({list.length})</span></h2>
+        <h2 className="font-semibold">Ödevler <span className="font-normal text-lead">({list.length})</span></h2>
         <FilterBar
           filters={[
             { name: "sinif", label: "Sınıf", options: [{ value: "", label: "Tüm sınıflar" }, ...classrooms.map((c) => ({ value: c.id, label: c.name }))] },
@@ -60,7 +60,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-paper">
               <tr>
                 <th className={th}>Sınıf</th>
                 <th className={th}>Ders</th>
@@ -70,32 +70,32 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
                 <th className={th}>Durum</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {list.map((h) => {
                 const c = countStatuses(h.statuses);
                 const total = c.total || 1;
                 const overdue = h.dueDate < startToday;
                 return (
-                  <tr key={h.id} className="hover:bg-slate-50">
+                  <tr key={h.id} className="hover:bg-paper">
                     <td className={`${td} font-semibold`}>{h.classroom.name}</td>
                     <td className={td}>{h.subject}</td>
                     <td className={td}>
                       <Link href={`/kurum/odevler/${h.id}`} className="font-medium hover:text-brand-600">{h.title}</Link>
                     </td>
-                    <td className={`${td} whitespace-nowrap text-slate-500`}>{fmt(h.assignedAt)}</td>
+                    <td className={`${td} whitespace-nowrap text-lead`}>{fmt(h.assignedAt)}</td>
                     <td className={`${td} whitespace-nowrap`}>
                       {fmt(h.dueDate)}{" "}
-                      <span className={`badge ml-1 ${overdue ? "bg-slate-100 text-slate-600" : "bg-brand-50 text-brand-700"}`}>
+                      <span className={`badge ml-1 ${overdue ? "bg-mist text-lead" : "bg-mist text-graphite"}`}>
                         {overdue ? "Süresi doldu" : "Aktif"}
                       </span>
                     </td>
                     <td className={`${td} min-w-56`}>
-                      <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100" title={`Yaptı ${c.DONE} · Eksik ${c.PARTIAL} · Yapmadı ${c.NOT_DONE} · Bekliyor ${c.PENDING}`}>
+                      <div className="flex h-2.5 overflow-hidden rounded-full bg-mist" title={`Yaptı ${c.DONE} · Eksik ${c.PARTIAL} · Yapmadı ${c.NOT_DONE} · Bekliyor ${c.PENDING}`}>
                         <div className="bg-emerald-500" style={{ width: `${(c.DONE / total) * 100}%` }} />
                         <div className="bg-amber-400" style={{ width: `${(c.PARTIAL / total) * 100}%` }} />
                         <div className="bg-red-500" style={{ width: `${(c.NOT_DONE / total) * 100}%` }} />
                       </div>
-                      <div className="mt-1 flex gap-2 text-[11px] text-slate-500">
+                      <div className="mt-1 flex gap-2 text-[11px] text-lead">
                         <span className="text-emerald-700">{c.DONE} yaptı</span>
                         <span className="text-amber-700">{c.PARTIAL} eksik</span>
                         <span className="text-red-700">{c.NOT_DONE} yapmadı</span>

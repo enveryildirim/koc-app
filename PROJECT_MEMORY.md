@@ -254,6 +254,37 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
   - **Gizlilik:** `CalendarEvent.parentVisible` alanı. Varsayılan türe göre belirlenir (`EVENT_KINDS[k].parentDefault`): tatil, deneme planı ve etkinlik açık; toplantı ve diğer kapalı. Etkinlik formunda "Velilere göster" kutusuyla değiştirilir; takvimin liste görünümünde 👪 ile işaretlenir. Velilere açık etkinliğin **notu da velilere görünür**.
 - **Yapılmayanlar:** öğretmen ve öğrenci girişi (rol/yetki sistemi). Bunun yerine öğretmen için yazdırılabilir sayfa, veli için mevcut paylaşım linki kullanılıyor.
 
+## 4e. Tasarım dili (4 Kasım 2026)
+
+Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu. Yeni ekran yazarken şu kurallara uyun:
+
+- **Renkler** (`src/app/globals.css > @theme`):
+  - `paper` #f4f5f1: zemin.
+  - `graphite` #2a2d31: metin, birincil düğme ve dolu işaretler.
+  - `lead` #6b7078: ikincil metin.
+  - `rule` #dcdfd8: çizgiler.
+  - `mist` #ebede7: nötr etiket zemini.
+  - `ink` #b8325a: form mürekkebi. **Yalnızca yapı için** kullanılır: aktif menü halkası, odak, bağlantı, "bu hafta" gibi konum vurguları.
+  - Eski `brand-*` sınıfları mürekkebe bağlı; **geniş yüzeylerde (dolgu, tablo satırı, kutu) kullanmayın**.
+  - Durum renkleri emerald/amber/red ve sönük kalır.
+- **Yazı:**
+  - Başlıklar (h1–h3) Instrument Sans dar kesim (`font-stretch: 82%`); metin Lexend. Lexend okuma akıcılığı için tasarlandı. Atkinson Hyperlegible denendi, çizgili sıfırı tarih ve netlerde rahatsız ettiği için bırakıldı.
+  - Tablolar ve `.num` sınıfı tablo hizalı rakam kullanır. Monospace yalnızca harf hizasının anlam taşıdığı yerlerde var: cevap anahtarı, TXT içeriği, plan editörü.
+- **İmza öğesi, işaretleme baloncuğu:**
+  - logo: cevap satırı `○○●○○` (`shared/ui/Logo.tsx`),
+  - aktif menü maddesi: dolu baloncuk,
+  - `.badge`: önünde küçük bir durum noktası (nokta istenmiyorsa `badge-plain`),
+  - gün çizelgesi (`schedule/ui/LessonDay.tsx`): yoklama alındı ● / bekliyor (mürekkep halka) / tatil (soluk).
+- **Yerleşim:**
+  - Kurum panelinde tek çerçeve kenar çubuğudur; üst bar ve alt bilgi yalnızca herkese açık sayfalarda görünür.
+  - Menü işe göre gruplanır: Bugün, Öğrenciler, Sınavlar, Planlama, Raporlar.
+  - Özet sayıları (`Kpi`) kart değil, üstü grafit çizgili hücredir. Kart (`.card`) yalnızca tablo ve form gibi bağımsız bloklar içindir; gölge yoktur.
+- **Metin:**
+  - Başlıklar ve etiketler cümle düzeninde yazılır.
+  - BÜYÜK HARFLİ etiket, bağlantı sonunda "→" ve düğmelerde emoji kullanılmaz.
+  - Aynı eylem her yerde aynı adla anılır ("Kurum hesabı açın", "Ek ders ekle").
+- **Hareket:** tek bir an var: açılış sayfasındaki optik formun dolması. `prefers-reduced-motion` açıksa bütün animasyonlar kapanır.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

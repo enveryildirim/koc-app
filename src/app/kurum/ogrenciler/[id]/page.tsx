@@ -46,7 +46,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         title={`${st.firstName} ${st.lastName}`}
         sub={`No: ${st.studentNo} · ${st.classroom?.name ?? (st.external ? "Kurum dışı öğrenci" : "Sınıfsız")}`}
         back={{ href: "/kurum/ogrenciler", label: "Öğrenciler" }}
-        actions={<PrintButton label="🖨️ Öğrenci raporunu yazdır" />}
+        actions={<PrintButton label="Öğrenci raporunu yazdır" />}
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -76,7 +76,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Girdiği sınavlar</h2>
-        {results.length === 0 && <div className="card p-6 text-sm text-slate-500">Henüz deneme sonucu yok.</div>}
+        {results.length === 0 && <div className="card p-6 text-sm text-lead">Henüz deneme sonucu yok.</div>}
         {[...byType.entries()].map(([type, results]) => {
           const secs = parseSections(results[results.length - 1].exam.sections);
           const stats = results.map((r) => JSON.parse(r.stats) as { d: number; y: number; b: number; net: number }[]);
@@ -85,18 +85,18 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           const maxNet = secs.reduce((s, x) => s + x.count, 0);
           return (
             <div key={type} className="card mb-4 overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule/70 px-4 py-3">
                 <h3 className="font-semibold">
                   {EXAM_TYPES[type]?.label ?? type} · {results.length} sınav
                   <Link href={`/kurum/ogrenciler/${st.id}/birlesik?tur=${type}`} className="no-print ml-3 text-xs font-medium text-brand-600 hover:underline">
-                    Birleştirilmiş karne →
+                    Birleştirilmiş karne
                   </Link>
                 </h3>
                 <NetTrend values={results.map((r) => r.totalNet)} max={maxNet} />
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-paper">
                     <tr>
                       <th className={th}>Sınav</th>
                       <th className={th}>Tarih</th>
@@ -108,11 +108,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                       <th />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-rule/70">
                     {results.map((r, i) => (
                       <tr key={r.id}>
                         <td className={`${td} font-medium`}>{r.exam.name}</td>
-                        <td className={`${td} text-slate-500`}>{fmtDate(r.exam.date)}</td>
+                        <td className={`${td} text-lead`}>{fmtDate(r.exam.date)}</td>
                         {secs.map((s, si) => (
                           <td key={s.name} className={`${td} text-right tabular-nums`}>{fmtNet(stats[i][si]?.net ?? 0)}</td>
                         ))}
@@ -123,7 +123,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                         </td>
                       </tr>
                     ))}
-                    <tr className="bg-brand-50 font-semibold text-brand-700">
+                    <tr className="border-t-2 border-graphite bg-paper font-semibold">
                       <td className={td} colSpan={2}>Ortalama (birleştirilmiş)</td>
                       {avg.map((a, si) => (
                         <td key={si} className={`${td} text-right tabular-nums`}>{fmtNet(a)}</td>
@@ -142,7 +142,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
       {weakTopics.length > 0 && (
         <section className="card p-4">
-          <h2 className="font-semibold">Konu eksikleri <span className="text-xs font-normal text-slate-500">(tüm denemelerde doğru oranı %50’nin altında)</span></h2>
+          <h2 className="font-semibold">Konu eksikleri <span className="text-xs font-normal text-lead">(tüm denemelerde doğru oranı %50’nin altında)</span></h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {weakTopics.map((t) => (
               <span key={t.section + t.topic} className="rounded-lg bg-red-50 px-2.5 py-1 text-xs text-red-800 ring-1 ring-red-100">
@@ -155,14 +155,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card overflow-hidden">
-          <h2 className="border-b border-slate-100 px-4 py-3 font-semibold">Son ödevler</h2>
+          <h2 className="border-b border-rule/70 px-4 py-3 font-semibold">Son ödevler</h2>
           <table className="w-full text-sm">
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {homeworks.slice(0, 8).map((h) => (
                 <tr key={h.id}>
                   <td className={td}>
                     <Link href={`/kurum/odevler/${h.homeworkId}`} className="hover:text-brand-600">{h.homework.title}</Link>
-                    <div className="text-xs text-slate-500">{h.homework.subject} · teslim {fmtDate(h.homework.dueDate)}</div>
+                    <div className="text-xs text-lead">{h.homework.subject} · teslim {fmtDate(h.homework.dueDate)}</div>
                   </td>
                   <td className={`${td} text-right`}>
                     <span className={`badge ${HOMEWORK[h.status]?.cls}`}>{HOMEWORK[h.status]?.label}</span>
@@ -170,20 +170,20 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 </tr>
               ))}
               {homeworks.length === 0 && (
-                <tr><td className={`${td} text-slate-500`}>Ödev kaydı yok.</td></tr>
+                <tr><td className={`${td} text-lead`}>Ödev kaydı yok.</td></tr>
               )}
             </tbody>
           </table>
         </section>
         <section className="card overflow-hidden">
-          <h2 className="border-b border-slate-100 px-4 py-3 font-semibold">Son devamsızlıklar</h2>
+          <h2 className="border-b border-rule/70 px-4 py-3 font-semibold">Son devamsızlıklar</h2>
           <table className="w-full text-sm">
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {absences.map((a) => (
                 <tr key={a.id}>
                   <td className={td}>
                     {fmtDate(a.session.date)} · {a.session.startTime}
-                    <div className="text-xs text-slate-500">{a.session.subject}</div>
+                    <div className="text-xs text-lead">{a.session.subject}</div>
                   </td>
                   <td className={`${td} text-right`}>
                     <span className={`badge ${ATTENDANCE[a.status]?.cls}`}>{ATTENDANCE[a.status]?.label}</span>
@@ -191,7 +191,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 </tr>
               ))}
               {absences.length === 0 && (
-                <tr><td className={`${td} text-slate-500`}>Devamsızlık yok. 👏</td></tr>
+                <tr><td className={`${td} text-lead`}>Devamsızlık yok. </td></tr>
               )}
             </tbody>
           </table>
@@ -227,7 +227,7 @@ function NetTrend({ values, max }: { values: number[]; max: number }) {
   const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 8) + 4, h - 4 - (Math.max(0, v) / max) * (h - 8)]);
   const up = values[values.length - 1] >= values[0];
   return (
-    <div className="flex items-center gap-2 text-xs text-slate-500">
+    <div className="flex items-center gap-2 text-xs text-lead">
       Net gelişimi
       <svg width={w} height={h} className="overflow-visible">
         <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke={up ? "#059669" : "#dc2626"} strokeWidth={2} />

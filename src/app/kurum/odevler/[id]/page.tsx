@@ -37,7 +37,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           />
         }
       />
-      {hw.description && <p className="card mb-6 whitespace-pre-line p-4 text-sm text-slate-700">{hw.description}</p>}
+      {hw.description && <p className="card mb-6 whitespace-pre-line p-4 text-sm text-graphite/90">{hw.description}</p>}
       <StatusEditor
         homeworkId={hw.id}
         rows={hw.roster.map(({ student: s, status, note }) => ({

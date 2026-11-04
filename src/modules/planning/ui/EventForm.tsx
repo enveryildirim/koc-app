@@ -101,11 +101,11 @@ export default function EventForm({
                 set({ parentVisible: e.target.checked });
               }}
             />
-            Velilere göster <span className="text-xs text-slate-500">(veli karnesinin &quot;Yaklaşanlar&quot; bölümünde, notuyla birlikte)</span>
+            Velilere göster <span className="text-xs text-lead">(veli karnesinin &quot;Yaklaşanlar&quot; bölümünde, notuyla birlikte)</span>
           </label>
         </div>
         {f.kind === "HOLIDAY" && (
-          <p className="mt-3 text-xs text-slate-500">Tatil günlerinde yoklama ekranı, ilgili sınıfların derslerini &quot;tatil&quot; olarak gösterir.</p>
+          <p className="mt-3 text-xs text-lead">Tatil günlerinde yoklama ekranı, ilgili sınıfların derslerini &quot;tatil&quot; olarak gösterir.</p>
         )}
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div className="mt-5 flex items-center gap-2">

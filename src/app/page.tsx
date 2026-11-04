@@ -1,88 +1,109 @@
 import Link from "next/link";
 
-const FEATURES = [
-  { icon: "📝", title: "Kolay sınav oluşturma", text: "Çoktan seçmeli, çok cevaplı, doğru/yanlış ve kısa cevaplı soruları dakikalar içinde hazırlayın." },
-  { icon: "🔗", title: "Link ile paylaşın", text: "Her sınavın kısa bir kodu ve bağlantısı var. Katılımcılar üye olmadan sınava girebilir." },
-  { icon: "⏱️", title: "Süre sınırı", text: "Sınava süre koyun; süre dolduğunda cevaplar otomatik olarak gönderilir." },
-  { icon: "⚡", title: "Otomatik puanlama", text: "Sonuçlar anında hesaplanır. Katılımcı isterseniz doğru cevapları ve açıklamaları görür." },
-  { icon: "📊", title: "Detaylı raporlar", text: "Ortalama, başarı oranı ve soru bazlı analizle hangi konularda eksik olduğunu görün. CSV olarak indirin." },
-  { icon: "🖨️", title: "Optik okuyucuyla formları tarayın", text: "Sınavınız için optik form yazdırın, doldurulan formların fotoğrafını yükleyin; cevaplar otomatik okunup puanlansın." },
+/** Açılış: optik form şeridi doldurulur, net hesaplanır. Sayfanın tek hareketli anı. */
+const SHEET: { section: string; answers: string; key: string }[] = [
+  { section: "Türkçe", answers: "CADBBCACDA", key: "CADBBDACDA" },
+  { section: "Matematik", answers: "BDA CDBAAC", key: "BDACCDBAAD" },
+];
+/** LGS: 4 şık, 3 yanlış 1 doğruyu götürür. */
+const LETTERS = "ABCD";
+const WRONG_PER = 3;
+
+function AnswerSheet() {
+  let n = 0;
+  const stats = SHEET.map((s) => {
+    let d = 0;
+    let y = 0;
+    let b = 0;
+    [...s.answers].forEach((a, i) => (a === " " ? b++ : a === s.key[i] ? d++ : y++));
+    return { d, y, b, net: d - y / WRONG_PER };
+  });
+  const total = stats.reduce((a, s) => a + s.net, 0);
+  const fmt = (x: number) => x.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <figure aria-label="Örnek optik form ve hesaplanan net" className="rounded-lg bg-white p-5 ring-1 ring-rule sm:p-6">
+      <div className="flex items-baseline justify-between border-b border-ink/30 pb-2 text-[13px] text-ink">
+        <span className="font-semibold">LGS Deneme 3, A kitapçığı</span>
+        <span className="num">Öğrenci no 1035</span>
+      </div>
+      <div className="mt-4 grid gap-6 sm:grid-cols-2">
+        {SHEET.map((s, si) => (
+          <div key={s.section}>
+            <div className="mb-2 text-[13px] font-semibold text-ink">{s.section}</div>
+            <ol className="space-y-1.5">
+              {[...s.answers].map((a, qi) => {
+                const delay = 0.25 + n++ * 0.07;
+                return (
+                  <li key={qi} className="flex items-center gap-2">
+                    <span className="num w-5 text-right text-[12px] text-ink/80">{qi + 1}</span>
+                    {[...LETTERS].map((L) => (
+                      <span key={L} className="relative grid size-[18px] place-items-center rounded-full border border-ink/60 text-[9px] text-ink/70">
+                        {L}
+                        {a === L && <span className="sheet-mark absolute inset-[1.5px] rounded-full bg-graphite" style={{ animationDelay: `${delay}s` }} />}
+                      </span>
+                    ))}
+                    {si === 1 && qi === 3 && <span className="text-[11px] text-lead">boş</span>}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        ))}
+      </div>
+      <figcaption className="sheet-result mt-5 flex flex-wrap items-baseline gap-x-5 gap-y-1 border-t border-rule pt-3 text-[15px]" style={{ animationDelay: `${0.35 + n * 0.07}s` }}>
+        {SHEET.map((s, i) => (
+          <span key={s.section} className="num">
+            {s.section} <b>{fmt(stats[i].net)}</b>
+          </span>
+        ))}
+        <span className="num ml-auto">
+          Toplam net <b className="font-display text-2xl [font-stretch:85%]">{fmt(total)}</b>
+        </span>
+      </figcaption>
+    </figure>
+  );
+}
+
+const WEEK: [string, string][] = [
+  ["Deneme sonrası", "Hafta sonu denemesinin optik formlarını telefonla okutun ya da okuyucunun TXT dosyasını yükleyin. Sıralı liste, öğrenci karneleri ve konu analizi hazır olur."],
+  ["Her derste", "Yoklamayı birkaç dokunuşla alın, o derste işlenen konuyu yıllık planda işaretleyin."],
+  ["Hafta ortası", "Plana göre geride kalan dersleri, devamsızlığı artan ve ödev yapmayan öğrencileri tek ekranda görün."],
+  ["Hafta sonu", "Veli karnesini WhatsApp ile paylaşın: deneme sonuçları, ödevler, devam ve yaklaşan sınavlar."],
 ];
 
 export default function Home() {
   return (
     <div>
-      <section className="bg-gradient-to-b from-brand-50 to-transparent">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
-          <div>
-            <span className="badge bg-brand-100 text-brand-700">Ücretsiz · Kurulum gerektirmez</span>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">
-              Online sınavlarınızı <span className="text-brand-600">dakikalar içinde</span> hazırlayın
-            </h1>
-            <p className="mt-4 text-lg text-slate-600">
-              Soru ekleyin, bağlantıyı paylaşın, sonuçları anında görün. Kâğıt sınavlar için optik form yazdırıp
-              telefonla tarayın.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/kayit" className="btn-primary px-6 py-3 text-base">Hemen sınav oluştur</Link>
-              <Link href="/s/GENEL1" className="btn-secondary px-6 py-3 text-base">Örnek sınavı çöz</Link>
-            </div>
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 md:grid-cols-[1fr_minmax(0,30rem)] md:py-20">
+        <div className="max-w-xl">
+          <h1 className="text-[2.6rem] leading-[1.05] font-semibold sm:text-[3.4rem]">Dershanenin günü: deneme, yoklama, plan ve veli karnesi bir arada</h1>
+          <p className="mt-5 max-w-[56ch] text-lg text-lead">
+            SınavKur deneme sınavlarını optik formdan okur, neti ve sıralamayı hesaplar. Yoklamayı, ödevleri ve yıllık ders planını takip eder, velilere karne gönderir.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/giris?demo=1" className="btn-primary px-5 py-2.5 text-base">Demo kurumu gezin</Link>
+            <Link href="/kayit" className="btn-secondary px-5 py-2.5 text-base">Kurum hesabı açın</Link>
           </div>
-          <div className="card p-6">
-            <div className="text-sm font-semibold text-slate-500">Soru 3 / 8</div>
-            <div className="mt-2 text-lg font-semibold">İstanbul hangi yılda fethedilmiştir?</div>
-            <div className="mt-4 space-y-2">
-              {["1071", "1299", "1453", "1517"].map((o, i) => (
-                <div
-                  key={o}
-                  className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${i === 2 ? "border-brand-500 bg-brand-50" : "border-slate-200"}`}
-                >
-                  <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${i === 2 ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-                    {"ABCD"[i]}
-                  </span>
-                  {o}
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full w-3/8 bg-brand-500" style={{ width: "37%" }} />
-            </div>
-          </div>
+          <p className="mt-3 text-sm text-lead">Demo hesabında örnek sınıflar, denemeler ve bir aylık yoklama hazır.</p>
         </div>
+        <AnswerSheet />
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="text-center text-3xl font-bold">İhtiyacınız olan her şey</h2>
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="card p-6">
-              <div className="text-3xl">{f.icon}</div>
-              <h3 className="mt-3 font-semibold">{f.title}</h3>
-              <p className="mt-1 text-sm text-slate-600">{f.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16">
-        <h2 className="text-center text-3xl font-bold">Nasıl çalışır?</h2>
-        <ol className="mt-10 grid gap-5 md:grid-cols-3">
-          {[
-            ["Sınavı oluşturun", "Soruları ekleyin, doğru cevapları işaretleyin, süre ve geçme notunu belirleyin."],
-            ["Paylaşın veya yazdırın", "Bağlantıyı gönderin ya da optik formu yazdırıp sınıfta uygulayın."],
-            ["Sonuçları inceleyin", "Online cevaplar ve taranan formlar aynı raporda toplanır."],
-          ].map(([t, d], i) => (
-            <li key={t} className="card p-6">
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 font-bold text-white">{i + 1}</div>
-              <h3 className="mt-3 font-semibold">{t}</h3>
-              <p className="mt-1 text-sm text-slate-600">{d}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-12 rounded-2xl bg-brand-600 p-10 text-center text-white">
-          <h2 className="text-2xl font-bold">Denemek için hesap açmanıza bile gerek yok</h2>
-          <p className="mt-2 text-brand-100">Demo hesabıyla giriş yapıp hazır sınavları ve sonuçları inceleyin.</p>
-          <Link href="/giris?demo=1" className="btn mt-6 bg-white px-6 py-3 text-brand-700 hover:bg-brand-50">Demo hesabıyla gir</Link>
+      <section className="border-t border-rule bg-white/60">
+        <div className="mx-auto max-w-6xl px-4 py-14">
+          <h2 className="text-3xl font-semibold">Bir haftanız</h2>
+          <ol className="mt-6 divide-y divide-rule border-y border-rule">
+            {WEEK.map(([when, what]) => (
+              <li key={when} className="grid gap-1 py-4 sm:grid-cols-[12rem_1fr] sm:gap-6">
+                <span className="font-display text-xl font-semibold [font-stretch:82%]">{when}</span>
+                <span className="max-w-[68ch] text-[15px]">{what}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-8 max-w-[68ch] text-[15px] text-lead">
+            Öğretmenler için ayrıca online test hazırlama var: soruları ekleyin, bağlantıyı paylaşın, katılımcılar üye olmadan çözsün; kâğıt sınavlar için optik form yazdırıp telefonla okutun.{" "}
+            <Link href="/s/GENEL1" className="font-semibold text-graphite underline decoration-ink/40 underline-offset-4">Örnek testi çözün</Link>.
+          </p>
         </div>
       </section>
     </div>

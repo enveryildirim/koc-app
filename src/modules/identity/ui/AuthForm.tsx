@@ -70,7 +70,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
             Demo hesabıyla gir
           </button>
         )}
-        <p className="mt-6 text-center text-sm text-slate-600">
+        <p className="mt-6 text-center text-sm text-lead">
           {mode === "login" ? (
             <>Hesabınız yok mu? <Link className="font-semibold text-brand-600" href="/kayit">Kayıt olun</Link></>
           ) : (

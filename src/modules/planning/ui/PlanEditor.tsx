@@ -102,14 +102,14 @@ export default function PlanEditor(p: Props) {
             onChange={(e) => set({ source: e.target.value })}
             placeholder={EXAMPLE}
           />
-          <p className="mt-1 text-xs text-slate-500">{PLAN_HELP} Excel&apos;den iki sütun (konu, hafta) kopyalayıp yapıştırabilirsiniz.</p>
+          <p className="mt-1 text-xs text-lead">{PLAN_HELP} Excel&apos;den iki sütun (konu, hafta) kopyalayıp yapıştırabilirsiniz.</p>
         </div>
         {errors.length > 0 && (
           <ul className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
             {errors.slice(0, 5).map((e) => <li key={e}>{e}</li>)}
           </ul>
         )}
-        {editing && <p className="text-xs text-slate-500">Kaydedince konular yeniden dağıtılır; aynı adı taşıyan konuların &quot;işlendi&quot; bilgisi korunur.</p>}
+        {editing && <p className="text-xs text-lead">Kaydedince konular yeniden dağıtılır; aynı adı taşıyan konuların &quot;işlendi&quot; bilgisi korunur.</p>}
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div className="flex justify-end gap-2">
           <button className="btn-secondary" onClick={() => router.back()}>Vazgeç</button>
@@ -120,9 +120,9 @@ export default function PlanEditor(p: Props) {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-rule/70 px-5 py-3">
           <h3 className="font-semibold">Önizleme</h3>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-lead">
             {lines.length} konu · {weeks.filter((w) => !w.holiday).length} ders haftası
           </span>
         </div>
@@ -130,15 +130,15 @@ export default function PlanEditor(p: Props) {
           <p className="bg-amber-50 px-5 py-2 text-sm text-amber-800">Plan eğitim yılının sonunu ({fmt(range.to)}) aşıyor; bazı konuları kısaltın.</p>
         )}
         {weeks.length === 0 ? (
-          <p className="p-8 text-center text-sm text-slate-500">Konuları yazdıkça haftalara dağılımı burada görünür.</p>
+          <p className="p-8 text-center text-sm text-lead">Konuları yazdıkça haftalara dağılımı burada görünür.</p>
         ) : (
           <div className="max-h-[560px] overflow-y-auto">
             <table className="w-full text-sm">
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-rule/70">
                 {weeks.map((w, i) => (
                   <tr key={w.week} className={w.holiday ? "bg-red-50/60 text-red-700" : ""}>
-                    <td className="w-12 px-3 py-1.5 text-right text-xs text-slate-400">{i + 1}.</td>
-                    <td className="w-36 whitespace-nowrap px-3 py-1.5 text-slate-500">{fmt(w.week)} – {fmt(addDays(w.week, 4))}</td>
+                    <td className="w-12 px-3 py-1.5 text-right text-xs text-lead/70">{i + 1}.</td>
+                    <td className="w-36 whitespace-nowrap px-3 py-1.5 text-lead">{fmt(w.week)} – {fmt(addDays(w.week, 4))}</td>
                     <td className="px-3 py-1.5">{w.holiday ? "Tatil haftası" : w.topics.join(" · ")}</td>
                   </tr>
                 ))}

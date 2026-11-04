@@ -42,14 +42,14 @@ export default function PlanActions({ planId, classrooms }: { planId: string; cl
 
   return (
     <>
-      <Link href={`/kurum/takvim/plan/${planId}?duzenle=1`} className="btn-secondary">✏️ Düzenle</Link>
+      <Link href={`/kurum/takvim/plan/${planId}?duzenle=1`} className="btn-secondary">Düzenle</Link>
       <button className="btn-secondary" onClick={() => setCopyOpen(true)} disabled={!classrooms.length}>Diğer sınıflara kopyala</button>
       <button className="btn-danger" onClick={remove} disabled={busy}>Sil</button>
       {copyOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setCopyOpen(false)}>
           <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold">Planı kopyala</h2>
-            <p className="text-sm text-slate-500">Aynı konular, seçilen sınıfların tatillerine göre yeniden dağıtılır. İşlendi bilgileri kopyalanmaz.</p>
+            <p className="text-sm text-lead">Aynı konular, seçilen sınıfların tatillerine göre yeniden dağıtılır. İşlendi bilgileri kopyalanmaz.</p>
             <div className="mt-4 space-y-1">
               {classrooms.map((c) => (
                 <label key={c.id} className="flex items-center gap-2 text-sm">

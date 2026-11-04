@@ -52,7 +52,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <Tabs tabs={tabs} active={tab} />
       {!keyed && tab !== "anahtar" && (
         <p className="no-print mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
-          Cevap anahtarı eksik. Sonuçlar anahtar girildiğinde otomatik yeniden hesaplanır. <Link className="font-semibold underline" href={`${base}?tab=anahtar`}>Anahtarı gir →</Link>
+          Cevap anahtarı eksik. Sonuçlar anahtar girildiğinde otomatik yeniden hesaplanır. <Link className="font-semibold underline" href={`${base}?tab=anahtar`}>Anahtarı gir</Link>
         </p>
       )}
     </>
@@ -106,13 +106,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <aside className="space-y-4">
             <div className="card p-4">
               <h2 className="font-semibold">Optik form</h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-lead">
                 Bu sınava özel form: bölüm başlıkları{exam.bookletB ? ", kitapçık türü" : ""} ve 6 haneli öğrenci numarası alanı.
               </p>
-              <FormSvg info={spec} className="mt-3 w-full rounded ring-1 ring-slate-200" />
-              <Link href={`${base}/form`} target="_blank" className="btn-primary mt-3 w-full">🖨️ Formu yazdır</Link>
+              <FormSvg info={spec} className="mt-3 w-full rounded ring-1 ring-rule" />
+              <Link href={`${base}/form`} target="_blank" className="btn-primary mt-3 w-full">Formu yazdır</Link>
             </div>
-            <div className="card p-4 text-sm text-slate-600">
+            <div className="card p-4 text-sm text-lead">
               Okunan öğrenci numarası kayıtlı öğrencilerle eşleştirilir (baştaki sıfırlar önemsizdir). Aynı öğrenci tekrar okutulursa sonucu güncellenir.
             </div>
           </aside>
@@ -162,15 +162,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             rows={missing.map((s) => [s.studentNo, `${s.firstName} ${s.lastName}`, s.classroom?.name ?? "", s.phone, s.parentName, s.parentPhone])}
           />
         </div>
-        <p className="mb-3 text-sm text-slate-500">
+        <p className="mb-3 text-sm text-lead">
           Sınava girdiği sınıflardaki öğrencilerden sonucu olmayanlar: <b>{missing.length}</b> / {expected} öğrenci.
         </p>
         {missing.length === 0 ? (
-          <Empty>Tüm öğrenciler sınava girmiş. 👏</Empty>
+          <Empty>Tüm öğrenciler sınava girmiş. </Empty>
         ) : (
           <div className="card overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr>
                   <th className={th}>No</th>
                   <th className={th}>Ad Soyad</th>
@@ -179,16 +179,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <th className={th}>Veli telefonu</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-rule/70">
                 {missing.map((s) => (
                   <tr key={s.id}>
-                    <td className={`${td} font-mono`}>{s.studentNo}</td>
+                    <td className={`${td} num`}>{s.studentNo}</td>
                     <td className={td}>
                       <Link href={`/kurum/ogrenciler/${s.id}`} className="font-medium hover:text-brand-600">{s.firstName} {s.lastName}</Link>
                     </td>
                     <td className={td}>{s.classroom?.name}</td>
                     <td className={td}>{s.parentName || "—"}</td>
-                    <td className={td}>{s.parentPhone ? <a className="text-brand-600" href={`tel:${s.parentPhone.replace(/\s/g, "")}`}>{s.parentPhone}</a> : "—"}</td>
+                    <td className={td}>{s.parentPhone ? <a className="num underline decoration-rule underline-offset-4 hover:decoration-graphite" href={`tel:${s.parentPhone.replace(/\s/g, "")}`}>{s.parentPhone}</a> : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -255,10 +255,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 Bazı bölümlerde B kitapçığı soru eşlemesi girilmemiş; bu bölümlerde yalnızca A kitapçıklı öğrenciler hesaba katıldı.
               </p>
             )}
-            <p className="mb-3 text-sm text-slate-500">En zayıf konudan en güçlüye sıralı. %50’nin altındaki konular kırmızıdır; tekrar planlamasında öncelik verilebilir.</p>
+            <p className="mb-3 text-sm text-lead">En zayıf konudan en güçlüye sıralı. %50’nin altındaki konular kırmızıdır; tekrar planlamasında öncelik verilebilir.</p>
             <div className="card overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-paper">
                   <tr>
                     <th className={th}>Ders</th>
                     <th className={th}>Konu</th>
@@ -267,21 +267,21 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                     {sinif && <th className={`${th} text-right`}>Kurum</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-rule/70">
                   {stats.map((t) => (
                     <tr key={t.section + t.topic}>
-                      <td className={`${td} text-slate-500`}>{t.section}</td>
+                      <td className={`${td} text-lead`}>{t.section}</td>
                       <td className={`${td} font-medium`}>{t.topic}</td>
                       <td className={`${td} text-right`}>{t.questions}</td>
                       <td className={`${td} w-64`}>
                         <div className="flex items-center gap-2">
-                          <div className="h-2.5 flex-1 overflow-hidden rounded bg-slate-100">
+                          <div className="h-2.5 flex-1 overflow-hidden rounded bg-mist">
                             <div className={`h-full ${t.rate < 50 ? "bg-red-400" : t.rate < 70 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${t.rate}%` }} />
                           </div>
                           <span className={`w-10 text-right text-xs font-semibold ${t.rate < 50 ? "text-red-600" : ""}`}>%{t.rate}</span>
                         </div>
                       </td>
-                      {sinif && <td className={`${td} text-right text-slate-500`}>%{genRate.get(t.section + "|" + t.topic) ?? "—"}</td>}
+                      {sinif && <td className={`${td} text-right text-lead`}>%{genRate.get(t.section + "|" + t.topic) ?? "—"}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -313,7 +313,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               ))}
             </div>
           )}
-          <span className="text-sm text-slate-500">{list.length} öğrenci</span>
+          <span className="text-sm text-lead">{list.length} öğrenci</span>
           <ExportButton
             fileName={`${fileBase} - soru analizi ${bk}`}
             headers={["Ders", "Soru", "Cevap", ...LETTERS.slice(0, c).split("").map((l) => `${l} %`), "Boş %", "Başarı %"]}
@@ -334,7 +334,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             })()}
           />
         </div>
-        <p className="mb-4 text-sm text-slate-500">
+        <p className="mb-4 text-sm text-lead">
           Her soru için şıkların seçilme oranı. Doğru şık yeşil; başarı oranı %40’ın altındaki sorular kırmızı işaretlidir.
         </p>
         {exam.secs.map((s) => {
@@ -343,9 +343,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           const key = bk === "B" ? s.keyB || s.keyA : s.keyA;
           return (
             <div key={s.name} className="card mb-4 overflow-x-auto">
-              <h3 className="border-b border-slate-100 px-4 py-2 font-semibold">{s.name}</h3>
+              <h3 className="border-b border-rule/70 px-4 py-2 font-semibold">{s.name}</h3>
               <table className="w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-paper">
                   <tr>
                     <th className={th}>Soru</th>
                     <th className={th}>Cevap</th>
@@ -356,7 +356,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                     <th className={th}>Başarı</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-rule/70">
                   {Array.from({ length: s.count }, (_, i) => {
                     const ans = list.map((r) => r.answers[start + i] ?? " ");
                     const n = Math.max(1, ans.length);
@@ -367,12 +367,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         <td className={`${td} font-semibold`}>{i + 1}</td>
                         <td className={`${td} font-bold text-emerald-700`}>{key[i] ?? "?"}</td>
                         {LETTERS.slice(0, c).split("").map((l) => (
-                          <td key={l} className={`${td} text-right tabular-nums ${l === key[i] ? "font-bold text-emerald-700" : "text-slate-600"}`}>%{pctOf(l)}</td>
+                          <td key={l} className={`${td} text-right tabular-nums ${l === key[i] ? "font-bold text-emerald-700" : "text-lead"}`}>%{pctOf(l)}</td>
                         ))}
-                        <td className={`${td} text-right tabular-nums text-slate-400`}>%{pctOf(" ")}</td>
+                        <td className={`${td} text-right tabular-nums text-lead/70`}>%{pctOf(" ")}</td>
                         <td className={`${td} w-40`}>
                           <div className="flex items-center gap-2">
-                            <div className="h-2 flex-1 overflow-hidden rounded bg-slate-100">
+                            <div className="h-2 flex-1 overflow-hidden rounded bg-mist">
                               <div className={ok < 40 ? "h-full bg-red-400" : "h-full bg-emerald-500"} style={{ width: `${ok}%` }} />
                             </div>
                             <span className={`w-9 text-right text-xs font-semibold ${ok < 40 ? "text-red-600" : ""}`}>%{ok}</span>
@@ -399,7 +399,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         {header}
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-paper">
               <tr>
                 <th className={th}>Sınıf</th>
                 <th className={`${th} text-right`}>Öğrenci</th>
@@ -411,7 +411,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <th className={th} />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {list.map((c) => (
                 <tr key={c.name}>
                   <td className={`${td} font-semibold`}>{c.name}</td>
@@ -422,13 +422,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <td className={`${td} text-right font-bold tabular-nums`}>{fmtNet(c.total)}</td>
                   <td className={`${td} text-right tabular-nums`}>{fmtNet(c.score)}</td>
                   <td className={`${td} w-40`}>
-                    <div className="h-2 overflow-hidden rounded bg-slate-100">
-                      <div className="h-full bg-brand-500" style={{ width: `${(c.total / maxTotal) * 100}%` }} />
+                    <div className="h-2 overflow-hidden rounded bg-mist">
+                      <div className="h-full bg-graphite" style={{ width: `${(c.total / maxTotal) * 100}%` }} />
                     </div>
                   </td>
                 </tr>
               ))}
-              <tr className="bg-brand-50 font-semibold text-brand-700">
+              <tr className="border-t-2 border-graphite bg-paper font-semibold">
                 <td className={td}>Kurum geneli</td>
                 <td className={`${td} text-right`}>{report.general.n}</td>
                 {report.general.sections.map((v, i) => (
@@ -442,7 +442,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </table>
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-slate-500">Yeşil: kurum ortalamasının üstü · Kırmızı: altı · Puanlar tahminidir.</p>
+          <p className="text-xs text-lead">Yeşil: kurum ortalamasının üstü · Kırmızı: altı · Puanlar tahminidir.</p>
           <ExportButton
             fileName={`${fileBase} - sınıf ortalamaları`}
             headers={["Sınıf", "Öğrenci", ...exam.secs.map((s) => `${s.name} net`), "Toplam net", "Ort. puan"]}
@@ -469,7 +469,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       </div>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
         <ClassFilter base={base} tab="sonuclar" classes={classes} sinif={sinif} />
-        <Link href={`${base}/karneler${sinif ? `?sinif=${sinif}` : ""}`} className="btn-secondary">📄 Tüm karneleri yazdır</Link>
+        <Link href={`${base}/karneler${sinif ? `?sinif=${sinif}` : ""}`} className="btn-secondary">Tüm karneleri yazdır</Link>
         <ExportButton
           fileName={`${fileBase} - sıralı liste`}
           headers={[
@@ -490,7 +490,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       </div>
       <div className="card overflow-x-auto print:shadow-none print:ring-0">
         <table className="w-full text-xs">
-          <thead className="bg-slate-50">
+          <thead className="bg-paper">
             <tr>
               <th className={th}>Genel</th>
               <th className={th}>Sınıf</th>
@@ -506,7 +506,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <th className={`${th} text-right`} title="Kurum içi yüzdelik dilim">%</th>
               <th className="no-print" />
             </tr>
-            <tr className="text-[10px] text-slate-400">
+            <tr className="text-[10px] text-lead/70">
               <th colSpan={6} />
               {exam.secs.map((s) => (
                 <Sub key={s.name} />
@@ -514,12 +514,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <th colSpan={4} />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule/70">
             {rows.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50">
+              <tr key={r.id} className="hover:bg-paper">
                 <td className={`${td} font-bold`}>{r.rank}</td>
                 <td className={td}>{r.classRank}</td>
-                <td className={`${td} font-mono`}>{r.studentNo}</td>
+                <td className={`${td} num`}>{r.studentNo}</td>
                 <td className={td}>
                   <Link href={`${base}/karne/${r.id}`} className="font-medium hover:text-brand-600">{r.name}</Link>
                 </td>
@@ -530,7 +530,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 ))}
                 <td className={`${td} text-right text-sm font-bold tabular-nums`}>{fmtNet(r.totalNet)}</td>
                 <td className={`${td} text-right tabular-nums`}>{fmtNet(r.score)}</td>
-                <td className={`${td} text-right tabular-nums text-slate-500`}>{r.percentile}</td>
+                <td className={`${td} text-right tabular-nums text-lead`}>{r.percentile}</td>
                 <td className={`${td} no-print text-right`}>
                   <DeleteResult url={`/api/kurum/denemeler/${id}/sonuclar/${r.id}`} />
                 </td>

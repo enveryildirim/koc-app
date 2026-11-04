@@ -48,7 +48,7 @@ export default function NewExam() {
           <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-lead">
         {t.sections.map((s) => `${s.name} (${s.count})`).join(" · ")} — {t.choices} şık
         {t.wrongPer ? `, ${t.wrongPer} yanlış 1 doğruyu götürür` : ""}. Bölümleri sonraki adımda değiştirebilirsiniz.
       </p>
@@ -57,7 +57,7 @@ export default function NewExam() {
         A ve B kitapçık
       </label>
       {err && <p className="text-sm text-red-600">{err}</p>}
-      <button className="btn-primary w-full" disabled={busy}>Oluştur ve cevap anahtarını gir →</button>
+      <button className="btn-primary w-full" disabled={busy}>Oluştur ve cevap anahtarını gir</button>
     </form>
   );
 }

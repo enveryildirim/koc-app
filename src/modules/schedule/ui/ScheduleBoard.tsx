@@ -77,7 +77,7 @@ export default function ScheduleBoard({
             <div key={day} className="card flex flex-col p-3">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-bold">{DAYS[day]}</h3>
-                <span className="text-xs text-slate-400">{list.length} ders</span>
+                <span className="text-xs text-lead/70">{list.length} ders</span>
               </div>
               <div className="flex-1 space-y-2">
                 {list.map((s) => (
@@ -89,13 +89,13 @@ export default function ScheduleBoard({
                     }}
                     className={`w-full rounded-lg border px-2.5 py-2 text-left text-xs transition hover:shadow ${TYPE_STYLE[s.lessonType] ?? TYPE_STYLE.GRUP}`}
                   >
-                    <div className="font-mono font-semibold">{s.startTime}–{s.endTime}</div>
+                    <div className="num font-semibold">{s.startTime}–{s.endTime}</div>
                     <div className="mt-0.5 text-sm font-semibold">{s.subject}</div>
                     <div className="opacity-80">{view === "sinif" ? s.teacherName : `Sınıf ${s.classroomName}`}</div>
                     {s.lessonType !== "GRUP" && <div className="mt-0.5 font-medium">{LESSON_TYPES[s.lessonType]}</div>}
                   </button>
                 ))}
-                {list.length === 0 && <p className="py-4 text-center text-xs text-slate-400">Ders yok</p>}
+                {list.length === 0 && <p className="py-4 text-center text-xs text-lead/70">Ders yok</p>}
               </div>
               <button className="mt-2 rounded-md py-1 text-xs font-medium text-brand-600 hover:bg-brand-50" onClick={() => openNew(day)}>
                 + Ders ekle
@@ -104,7 +104,7 @@ export default function ScheduleBoard({
           );
         })}
       </div>
-      <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+      <div className="mt-3 flex flex-wrap gap-3 text-xs text-lead">
         {Object.entries(LESSON_TYPES).map(([k, v]) => (
           <span key={k} className={`rounded border px-2 py-0.5 ${TYPE_STYLE[k]}`}>{v}</span>
         ))}

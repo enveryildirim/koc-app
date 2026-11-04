@@ -22,7 +22,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     { key: "siniflar", label: "Sınıflar", href: "/kurum/ogrenciler?tab=siniflar" },
   ];
 
-  const header = <PageHeader title="Öğrenci Kayıt" sub="Öğrencileri ekleyin, sınıflara atayın veya Excel ile toplu yükleyin." />;
+  const header = <PageHeader title="Öğrenciler" sub="Öğrencileri ekleyin, sınıflara atayın veya Excel ile toplu yükleyin." />;
 
   if (tab === "yeni") {
     return (
@@ -73,14 +73,14 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         </select>
         <input name="q" defaultValue={q} placeholder="Ad, soyad veya numara…" className="input max-w-xs" />
         <button className="btn-secondary">Filtrele</button>
-        <span className="ml-auto self-center text-sm text-slate-500">{students.length} öğrenci</span>
+        <span className="ml-auto self-center text-sm text-lead">{students.length} öğrenci</span>
       </form>
       {students.length === 0 ? (
         <Empty>Öğrenci bulunamadı.</Empty>
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-paper">
               <tr>
                 <th className={th}>No</th>
                 <th className={th}>Ad Soyad</th>
@@ -90,10 +90,10 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                 <th className={th}>Deneme</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-rule/70">
               {students.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50">
-                  <td className={`${td} font-mono`}>{s.studentNo}</td>
+                <tr key={s.id} className="hover:bg-paper">
+                  <td className={`${td} num`}>{s.studentNo}</td>
                   <td className={td}>
                     <Link href={`/kurum/ogrenciler/${s.id}`} className="font-medium hover:text-brand-600">
                       {s.firstName} {s.lastName}
@@ -102,8 +102,8 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                   <td className={td}>
                     {s.classroom?.name ?? (s.external ? <span className="badge bg-violet-50 text-violet-700">Kurum dışı</span> : "—")}
                   </td>
-                  <td className={`${td} text-slate-500`}>{s.phone || "—"}</td>
-                  <td className={`${td} text-slate-500`}>
+                  <td className={`${td} text-lead`}>{s.phone || "—"}</td>
+                  <td className={`${td} text-lead`}>
                     {s.parentName || "—"} {s.parentPhone && <span className="text-xs">({s.parentPhone})</span>}
                   </td>
                   <td className={td}>{resultCounts.get(s.id) ?? 0}</td>

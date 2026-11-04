@@ -33,7 +33,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-paper text-left text-xs text-lead">
             <tr>
               <th className="px-4 py-3">Öğretmen</th>
               <th className="px-4 py-3">Branş</th>
@@ -41,29 +41,29 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
               <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule/70">
             {teachers.map((t) =>
               edit?.id === t.id ? (
                 <tr key={t.id}>
                   <td className="px-4 py-2"><input className="input" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></td>
                   <td className="px-4 py-2"><input className="input" value={edit.branch} onChange={(e) => setEdit({ ...edit, branch: e.target.value })} /></td>
-                  <td className="px-4 py-2 text-slate-500">{t.slotCount}</td>
+                  <td className="px-4 py-2 text-lead">{t.slotCount}</td>
                   <td className="whitespace-nowrap px-4 py-2 text-right">
                     <button className="btn-primary py-1" disabled={busy} onClick={async () => (await send(`/api/kurum/ogretmenler/${t.id}`, "PUT", edit)) && setEdit(null)}>Kaydet</button>
-                    <button className="btn py-1 text-slate-500" onClick={() => setEdit(null)}>Vazgeç</button>
+                    <button className="btn py-1 text-lead" onClick={() => setEdit(null)}>Vazgeç</button>
                   </td>
                 </tr>
               ) : (
-                <tr key={t.id} className="hover:bg-slate-50">
+                <tr key={t.id} className="hover:bg-paper">
                   <td className="px-4 py-3 font-medium">
                     <Link href={`/kurum/ders-programi/ogretmen/${t.id}`} className="hover:text-brand-700 hover:underline">{t.name}</Link>
                   </td>
                   <td className="px-4 py-3">{t.branch}</td>
-                  <td className="px-4 py-3 text-slate-500">{t.slotCount}</td>
+                  <td className="px-4 py-3 text-lead">{t.slotCount}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button className="text-sm text-slate-500 hover:text-brand-600" onClick={() => setEdit({ id: t.id, name: t.name, branch: t.branch })}>Düzenle</button>
+                    <button className="text-sm text-lead hover:text-brand-600" onClick={() => setEdit({ id: t.id, name: t.name, branch: t.branch })}>Düzenle</button>
                     <button
-                      className="ml-3 text-sm text-slate-400 hover:text-red-600"
+                      className="ml-3 text-sm text-lead/70 hover:text-red-600"
                       onClick={() => {
                         const msg = t.slotCount
                           ? `${t.name} silinirse programdaki ${t.slotCount} dersi ve geçmiş ders kayıtları da silinir. Emin misiniz?`
@@ -79,7 +79,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
             )}
             {teachers.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-500">Henüz öğretmen yok.</td>
+                <td colSpan={4} className="px-4 py-8 text-center text-lead">Henüz öğretmen yok.</td>
               </tr>
             )}
           </tbody>

@@ -24,10 +24,10 @@ export default function VeliCard({ student: initial, institution, from, to }: { 
   return (
     <section className="no-print card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">Veli karnesi <span className="text-xs font-normal text-slate-500">(son 30 gün)</span></h2>
+        <h2 className="font-semibold">Veli karnesi <span className="text-xs font-normal text-lead">(son 30 gün)</span></h2>
         <div className="text-xs">
           {!s.token ? (
-            <span className="badge bg-slate-100 text-slate-600">Paylaşılmadı</span>
+            <span className="badge bg-mist text-lead">Paylaşılmadı</span>
           ) : s.viewedAt ? (
             <span className="badge bg-emerald-50 text-emerald-700">👁 Veli gördü · {new Date(s.viewedAt).toLocaleString("tr-TR")}</span>
           ) : (
@@ -53,7 +53,7 @@ export default function VeliCard({ student: initial, institution, from, to }: { 
             <button className="btn-danger" disabled={busy} onClick={() => act("revoke")}>İptal et</button>
           </>
         ) : (
-          <button className="btn-primary" disabled={busy} onClick={() => act("share")}>🔗 Veli bağlantısı oluştur</button>
+          <button className="btn-primary" disabled={busy} onClick={() => act("share")}>Veli bağlantısı oluştur</button>
         )}
         <button className="btn-secondary" onClick={() => setEditing(!editing)}>✎ Öğretmen görüşü{s.note ? " (var)" : ""}</button>
       </div>

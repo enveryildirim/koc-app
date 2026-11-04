@@ -32,10 +32,10 @@ export default function ClassManager({ classes }: { classes: { id: string; name:
           <div key={c.id} className="card flex items-center justify-between p-4">
             <div>
               <Link href={`/kurum/ogrenciler?sinif=${c.id}`} className="text-lg font-bold hover:text-brand-600">{c.name}</Link>
-              <div className="text-xs text-slate-500">{c.level ? `${c.level}. seviye · ` : ""}{c.students} öğrenci</div>
+              <div className="text-xs text-lead">{c.level ? `${c.level}. seviye · ` : ""}{c.students} öğrenci</div>
             </div>
             {c.students === 0 && (
-              <button className="text-sm text-slate-400 hover:text-red-600" onClick={() => del(c.id)}>Sil</button>
+              <button className="text-sm text-lead/70 hover:text-red-600" onClick={() => del(c.id)}>Sil</button>
             )}
           </div>
         ))}

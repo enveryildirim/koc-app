@@ -30,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   return (
     <div>
       <PageHeader
-        title="Yıllık Takvim"
+        title="Yıllık takvim"
         sub={`${schoolYearLabel(year)} eğitim yılı · ${className ? `${className} ve kurum geneli` : "tüm kurum"} · denemeler ve ödev teslimleri otomatik eklenir`}
         actions={view === "liste" ? <PrintButton /> : undefined}
       />

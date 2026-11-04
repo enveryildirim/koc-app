@@ -49,7 +49,7 @@ export default function AttendanceForm({
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-rule p-4">
         {Object.entries(ATTENDANCE).map(([k, v]) => (
           <span key={k} className={`badge px-3 py-1 text-sm ${v.cls}`}>{v.label}: {counts[k] ?? 0}</span>
         ))}
@@ -57,18 +57,18 @@ export default function AttendanceForm({
           Tümü geldi
         </button>
       </div>
-      <ul className="divide-y divide-slate-100">
+      <ul className="divide-y divide-rule/70">
         {students.map((s, i) => (
           <li key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-            <span className="w-6 text-right text-xs text-slate-400">{i + 1}</span>
-            <span className="w-14 font-mono text-xs text-slate-500">{s.no}</span>
+            <span className="w-6 text-right text-xs text-lead/70">{i + 1}</span>
+            <span className="w-14 num text-xs text-lead">{s.no}</span>
             <span className="min-w-40 flex-1 font-medium">{s.name}</span>
             <div className="flex gap-1">
               {Object.entries(ATTENDANCE).map(([k, v]) => (
                 <button
                   key={k}
                   onClick={() => setSt({ ...st, [s.id]: k })}
-                  className={`rounded-md px-2.5 py-1 text-xs font-semibold ${st[s.id] === k ? v.cls + " ring-2 ring-current" : "text-slate-400 ring-1 ring-slate-200 hover:text-slate-700"}`}
+                  className={`rounded-md px-2.5 py-1 text-xs font-semibold ${st[s.id] === k ? v.cls + " ring-2 ring-current" : "text-lead/70 ring-1 ring-rule hover:text-graphite/90"}`}
                 >
                   {v.label}
                 </button>
@@ -76,9 +76,9 @@ export default function AttendanceForm({
             </div>
           </li>
         ))}
-        {students.length === 0 && <li className="p-8 text-center text-sm text-slate-500">Bu sınıfta öğrenci yok.</li>}
+        {students.length === 0 && <li className="p-8 text-center text-sm text-lead">Bu sınıfta öğrenci yok.</li>}
       </ul>
-      <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 p-4">
+      <div className="flex flex-wrap items-center gap-2 border-t border-rule p-4">
         {deletable && (
           <button
             className="btn-danger"

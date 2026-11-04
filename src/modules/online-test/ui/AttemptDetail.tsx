@@ -34,7 +34,7 @@ export default function AttemptDetail({
                 {i + 1}. <span className="whitespace-pre-line">{q.text}</span>
               </div>
               <span
-                className={`badge shrink-0 ${blank ? "bg-slate-100 text-slate-600" : a?.isCorrect ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                className={`badge shrink-0 ${blank ? "bg-mist text-lead" : a?.isCorrect ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
               >
                 {blank ? "Boş" : a?.isCorrect ? `Doğru +${a.points}` : "Yanlış"}
               </span>
@@ -62,7 +62,7 @@ export default function AttemptDetail({
                 })}
               </ul>
             )}
-            {showAnswers && q.explanation && <p className="mt-3 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">💡 {q.explanation}</p>}
+            {showAnswers && q.explanation && <p className="mt-3 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">{q.explanation}</p>}
           </div>
         );
       })}
@@ -79,11 +79,11 @@ export function ScoreSummary({ score, maxScore, passPercent, correct, wrong, bla
         %{p}
       </div>
       <div className={`mt-3 text-lg font-bold ${passed ? "text-emerald-700" : "text-red-700"}`}>{passed ? "Tebrikler, geçtiniz!" : "Geçme notuna ulaşılamadı"}</div>
-      <div className="text-sm text-slate-500">{score} / {maxScore} puan · geçme notu %{passPercent}</div>
+      <div className="text-sm text-lead">{score} / {maxScore} puan · geçme notu %{passPercent}</div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
         <div className="rounded-lg bg-emerald-50 py-2 text-emerald-700"><b className="block text-lg">{correct}</b>Doğru</div>
         <div className="rounded-lg bg-red-50 py-2 text-red-700"><b className="block text-lg">{wrong}</b>Yanlış</div>
-        <div className="rounded-lg bg-slate-100 py-2 text-slate-600"><b className="block text-lg">{blank}</b>Boş</div>
+        <div className="rounded-lg bg-mist py-2 text-lead"><b className="block text-lg">{blank}</b>Boş</div>
       </div>
     </div>
   );

@@ -31,7 +31,7 @@ export default function HomeworkActions({
   return (
     <>
       <div className="flex gap-2">
-        <button className="btn-secondary" onClick={() => setEditing(!editing)}>{editing ? "Düzenlemeyi kapat" : "✏️ Düzenle"}</button>
+        <button className="btn-secondary" onClick={() => setEditing(!editing)}>{editing ? "Düzenlemeyi kapat" : "Düzenle"}</button>
         <button className="btn-danger" onClick={remove} disabled={busy}>Sil</button>
       </div>
       {editing && (

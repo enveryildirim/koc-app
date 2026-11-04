@@ -7,7 +7,7 @@ export const EVENT_KINDS: Record<string, { label: string; cls: string; dot: stri
   EXAM: { parentDefault: true, label: "Sınav / deneme planı", cls: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-400" },
   MEETING: { parentDefault: false, label: "Toplantı", cls: "bg-sky-50 text-sky-700 ring-sky-200", dot: "bg-sky-500" },
   EVENT: { parentDefault: true, label: "Etkinlik", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
-  OTHER: { parentDefault: false, label: "Diğer", cls: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" },
+  OTHER: { parentDefault: false, label: "Diğer", cls: "bg-mist text-graphite/90 ring-rule", dot: "bg-slate-400" },
 };
 
 /** Diğer modüllerden otomatik gelen kayıtlar (takvimden düzenlenmez). */

@@ -18,12 +18,12 @@ export default async function TestLayout({
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="no-print">
-        <Link href="/panel" className="text-sm text-slate-500 hover:text-slate-800">← Sınavlarım</Link>
+        <Link href="/panel" className="text-sm text-lead hover:text-graphite">← Sınavlarım</Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">{test.title}</h1>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-500">Paylaşım kodu</span>
-            <span className="rounded bg-slate-900 px-2 py-1 font-mono font-bold text-white">{test.shareCode}</span>
+            <span className="text-lead">Paylaşım kodu</span>
+            <span className="rounded bg-graphite px-2 py-1 font-mono font-bold text-white">{test.shareCode}</span>
             {test.isPublished && (
               <Link href={`/s/${test.shareCode}`} target="_blank" className="btn-secondary py-1">Sınavı aç ↗</Link>
             )}

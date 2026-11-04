@@ -141,19 +141,19 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
     <div className="space-y-4">
       <div className="card p-5">
         <h2 className="font-semibold">Doldurulmuş formları tarayın</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-lead">
           Tarayıcıdan aldığınız görüntüleri veya telefonla çektiğiniz fotoğrafları yükleyin. Birden fazla dosya seçebilirsiniz.
           İşleme tamamen tarayıcınızda yapılır.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <label className="btn-primary cursor-pointer">
-            📷 Görüntü yükle / fotoğraf çek
+            Görüntü yükle / fotoğraf çek
             <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} />
           </label>
           <button className="btn-secondary" onClick={() => addSamples(1)}>🧪 Örnek taranmış form üret</button>
           <button className="btn-secondary" onClick={() => addSamples(5)}>🧪 5 örnek üret</button>
         </div>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-lead/70">
           “Örnek” düğmeleri test içindir: rastgele doldurulmuş, hafif döndürülmüş ve gürültülü sahte bir tarama üretip okuyucuya verir.
           {mode === "exam" && " Örnekler kayıtlı öğrencilerin numaralarıyla doldurulur."}
         </p>
@@ -163,7 +163,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-200">
           {saved.n} form kaydedildi.{" "}
           {saved.skipped.length > 0 && <span className="text-amber-700">Eşleşmeyen numaralar atlandı: {saved.skipped.join(", ")}. </span>}
-          <Link href={resultsHref} className="font-semibold underline">Sonuçları görüntüle →</Link>
+          <Link href={resultsHref} className="font-semibold underline">Sonuçları görüntüle</Link>
         </div>
       )}
 
@@ -183,12 +183,12 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
       ))}
 
       {ready.length > 0 && (
-        <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-900 p-4 text-white shadow-lg">
+        <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-graphite p-4 text-white shadow-lg">
           <span className="text-sm">
             {ready.length} form kaydedilmeye hazır
             {unmatched > 0 && <span className="ml-2 text-amber-300">· {unmatched} formun numarası kayıtlı öğrenciyle eşleşmiyor (atlanacak)</span>}
           </span>
-          <button className="btn bg-white text-slate-900 hover:bg-slate-100" disabled={saving} onClick={saveAll}>
+          <button className="btn bg-white text-graphite hover:bg-mist" disabled={saving} onClick={saveAll}>
             {saving ? "Kaydediliyor…" : "Tümünü sonuçlara kaydet"}
           </button>
         </div>
@@ -235,24 +235,24 @@ function SheetCard({
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 text-sm">
+      <div className="flex items-center justify-between border-b border-rule/70 px-4 py-2 text-sm">
         <span className="truncate font-medium">{s.fileName}</span>
-        <button className="text-slate-400 hover:text-red-600" onClick={onRemove}>✕ Kaldır</button>
+        <button className="text-lead/70 hover:text-red-600" onClick={onRemove}>✕ Kaldır</button>
       </div>
-      {s.status === "processing" && <div className="p-6 text-sm text-slate-500">Form okunuyor…</div>}
+      {s.status === "processing" && <div className="p-6 text-sm text-lead">Form okunuyor…</div>}
       {s.status === "error" && (
         <div className="flex gap-4 p-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={s.imageUrl} alt="" className="h-40 rounded object-contain ring-1 ring-slate-200" />
-          <p className="text-sm text-red-700">⚠️ {s.error}</p>
+          <img src={s.imageUrl} alt="" className="h-40 rounded object-contain ring-1 ring-rule" />
+          <p className="text-sm text-red-700">{s.error}</p>
         </div>
       )}
       {s.status === "done" && s.scan && (
         <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr]">
           <div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s.overlay} alt="Okunan form" onClick={() => setZoom(true)} className="w-full cursor-zoom-in rounded ring-1 ring-slate-200" />
-            <p className="mt-1 text-center text-xs text-slate-400">Büyütmek için tıklayın</p>
+            <img src={s.overlay} alt="Okunan form" onClick={() => setZoom(true)} className="w-full cursor-zoom-in rounded ring-1 ring-rule" />
+            <p className="mt-1 text-center text-xs text-lead/70">Büyütmek için tıklayın</p>
           </div>
           <div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -271,7 +271,7 @@ function SheetCard({
               )}
               <div>
                 <label className="label">Öğrenci no (okunan)</label>
-                <input className="input font-mono" value={s.studentNo} onChange={(e) => onPatch({ studentNo: e.target.value })} />
+                <input className="input num" value={s.studentNo} onChange={(e) => onPatch({ studentNo: e.target.value })} />
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
@@ -282,7 +282,7 @@ function SheetCard({
                     <button
                       key={k}
                       onClick={() => onPatch({ booklet: k })}
-                      className={`h-7 w-7 rounded-full text-xs font-bold ${s.booklet === k ? "bg-slate-900 text-white" : "ring-1 ring-slate-300"}`}
+                      className={`h-7 w-7 rounded-full text-xs font-bold ${s.booklet === k ? "bg-graphite text-white" : "ring-1 ring-rule"}`}
                     >
                       {k}
                     </button>
@@ -290,11 +290,11 @@ function SheetCard({
                   {!s.scan.booklet && <span className="text-xs text-amber-600">(okunamadı)</span>}
                 </span>
               )}
-              <span className="badge bg-brand-50 px-3 py-1 text-sm text-brand-700">
+              <span className="badge bg-mist px-3 py-1 text-sm text-graphite">
                 {mode === "exam" ? `${d}D ${y}Y ${b}B · ${net.toFixed(2)} net` : `${score}/${max} puan · ${d} doğru`}
               </span>
               {problems > 0 ? (
-                <span className="badge bg-amber-50 px-3 py-1 text-sm text-amber-700">⚠️ {problems} soruyu kontrol edin</span>
+                <span className="badge bg-amber-50 px-3 py-1 text-sm text-amber-700">{problems} soruyu kontrol edin</span>
               ) : (
                 <span className="badge bg-emerald-50 px-3 py-1 text-sm text-emerald-700">✓ Tüm sorular net okundu</span>
               )}
@@ -308,9 +308,9 @@ function SheetCard({
                 const newSection = k?.section && k.section !== key[qi - 1]?.section;
                 return (
                   <div key={qi} className="contents">
-                    {newSection && <div className="col-span-full mt-2 text-xs font-bold uppercase text-slate-500">{k.section}</div>}
+                    {newSection && <div className="col-span-full mt-2 text-xs font-bold text-lead">{k.section}</div>}
                     <div className={`flex items-center gap-1 rounded px-1 py-0.5 ${flag ? "bg-amber-50" : ""}`}>
-                      <span className="w-7 text-right text-xs font-semibold text-slate-500">{k?.number}.</span>
+                      <span className="w-7 text-right text-xs font-semibold text-lead">{k?.number}.</span>
                       {CHOICES.slice(0, fq.choiceCount).map((c, ci) => {
                         const on = a.includes(ci);
                         const isKey = k?.correct.includes(ci);
@@ -319,7 +319,7 @@ function SheetCard({
                             key={c}
                             onClick={() => onToggle(qi, ci)}
                             className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
-                              on ? (isKey ? "bg-emerald-600 text-white" : "bg-red-500 text-white") : isKey ? "text-emerald-700 ring-1 ring-emerald-400" : "text-slate-400 ring-1 ring-slate-200"
+                              on ? (isKey ? "bg-emerald-600 text-white" : "bg-red-500 text-white") : isKey ? "text-emerald-700 ring-1 ring-emerald-400" : "text-lead/70 ring-1 ring-rule"
                             }`}
                           >
                             {c}
@@ -332,7 +332,7 @@ function SheetCard({
                 );
               })}
             </div>
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-lead/70">
               Okunan cevabı değiştirmek için şıkka tıklayın. Yeşil halka = doğru cevap, kırmızı = yanlış işaretleme.
             </p>
           </div>

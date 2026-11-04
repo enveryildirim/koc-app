@@ -60,7 +60,7 @@ export default function AttemptsTable({ rows, passPercent, testTitle }: { rows: 
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-rule p-4">
         <input className="input max-w-xs" placeholder="Ad veya numara ara…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="input w-auto" value={source} onChange={(e) => setSource(e.target.value)}>
           <option value="ALL">Tüm kaynaklar</option>
@@ -76,7 +76,7 @@ export default function AttemptsTable({ rows, passPercent, testTitle }: { rows: 
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-paper text-left text-xs text-lead">
             <tr>
               <th className="px-4 py-3">Katılımcı</th>
               <th className="px-4 py-3">Kaynak</th>
@@ -87,12 +87,12 @@ export default function AttemptsTable({ rows, passPercent, testTitle }: { rows: 
               <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule/70">
             {shown.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50">
+              <tr key={r.id} className="hover:bg-paper">
                 <td className="px-4 py-3">
                   <Link href={`/sonuc/${r.id}`} className="font-medium hover:text-brand-600">{r.name}</Link>
-                  {r.studentNo && <div className="text-xs text-slate-400">No: {r.studentNo}</div>}
+                  {r.studentNo && <div className="text-xs text-lead/70">No: {r.studentNo}</div>}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`badge ${r.source === "OMR" ? "bg-violet-50 text-violet-700" : "bg-sky-50 text-sky-700"}`}>
@@ -100,17 +100,17 @@ export default function AttemptsTable({ rows, passPercent, testTitle }: { rows: 
                   </span>
                 </td>
                 <td className="px-4 py-3 font-semibold">
-                  {r.score}/{r.maxScore} <span className="font-normal text-slate-500">(%{pct(r)})</span>
+                  {r.score}/{r.maxScore} <span className="font-normal text-lead">(%{pct(r)})</span>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`badge ${pct(r) >= passPercent ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
                     {pct(r) >= passPercent ? "Geçti" : "Kaldı"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-500">{r.source === "OMR" || r.durationMin === null ? "—" : `${r.durationMin} dk`}</td>
-                <td className="px-4 py-3 text-slate-500">{r.finishedAt ? new Date(r.finishedAt).toLocaleString("tr-TR") : "—"}</td>
+                <td className="px-4 py-3 text-lead">{r.source === "OMR" || r.durationMin === null ? "—" : `${r.durationMin} dk`}</td>
+                <td className="px-4 py-3 text-lead">{r.finishedAt ? new Date(r.finishedAt).toLocaleString("tr-TR") : "—"}</td>
                 <td className="px-4 py-3 text-right">
-                  <button className="text-slate-400 hover:text-red-600" title="Sil" onClick={() => del(r.id)}>✕</button>
+                  <button className="text-lead/70 hover:text-red-600" title="Sil" onClick={() => del(r.id)}>✕</button>
                 </td>
               </tr>
             ))}

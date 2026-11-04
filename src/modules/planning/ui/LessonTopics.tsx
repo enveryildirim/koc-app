@@ -26,17 +26,17 @@ export default function LessonTopics({ planId, items, date, sessionId }: { planI
     <div className="card mb-6 p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold">Bu derste işlenen konu</h3>
-        <Link href={`/kurum/takvim/plan/${planId}`} className="text-sm text-brand-700 hover:underline">Yıllık plan →</Link>
+        <Link href={`/kurum/takvim/plan/${planId}`} className="text-sm text-brand-700 hover:underline">Yıllık plan</Link>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500">Plandaki tüm konular işlendi.</p>
+        <p className="text-sm text-lead">Plandaki tüm konular işlendi.</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {items.map((t) => (
             <label
               key={t.id}
               className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 ${
-                t.doneDate ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : t.state === "late" ? "ring-red-200" : t.state === "current" ? "ring-brand-300" : "ring-slate-200"
+                t.doneDate ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : t.state === "late" ? "ring-red-200" : t.state === "current" ? "ring-brand-300" : "ring-rule"
               }`}
             >
               <input type="checkbox" checked={!!t.doneDate} disabled={pending === t.id} onChange={() => toggle(t)} className="accent-emerald-600" />

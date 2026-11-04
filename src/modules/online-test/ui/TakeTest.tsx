@@ -60,8 +60,8 @@ export default function TakeTest({ test }: { test: PublicTest }) {
       <div className="mx-auto max-w-xl px-4 py-16">
         <div className="card p-8">
           <h1 className="text-2xl font-bold">{test.title}</h1>
-          {test.description && <p className="mt-2 whitespace-pre-line text-slate-600">{test.description}</p>}
-          <div className="mt-4 flex gap-4 text-sm text-slate-500">
+          {test.description && <p className="mt-2 whitespace-pre-line text-lead">{test.description}</p>}
+          <div className="mt-4 flex gap-4 text-sm text-lead">
             <span>📝 {test.questions.length} soru</span>
             <span>⏱️ {test.timeLimitMin ? `${test.timeLimitMin} dakika` : "Süre sınırı yok"}</span>
           </div>
@@ -98,11 +98,11 @@ export default function TakeTest({ test }: { test: PublicTest }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="flex items-center justify-between gap-4">
-        <div className="text-sm text-slate-500">
-          <span className="font-semibold text-slate-800">{test.title}</span> · {answered}/{test.questions.length} cevaplandı
+        <div className="text-sm text-lead">
+          <span className="font-semibold text-graphite">{test.title}</span> · {answered}/{test.questions.length} cevaplandı
         </div>
         {left !== null && (
-          <div className={`rounded-lg px-3 py-1 font-mono text-lg font-bold ${left < 60 ? "bg-red-100 text-red-700" : "bg-slate-900 text-white"}`}>
+          <div className={`rounded-lg px-3 py-1 font-mono text-lg font-bold ${left < 60 ? "bg-red-100 text-red-700" : "bg-graphite text-white"}`}>
             {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
           </div>
         )}
@@ -112,12 +112,12 @@ export default function TakeTest({ test }: { test: PublicTest }) {
       </div>
 
       <div className="card mt-6 p-6">
-        <div className="flex justify-between text-sm text-slate-500">
+        <div className="flex justify-between text-sm text-lead">
           <span>Soru {current + 1} / {test.questions.length}</span>
           <span>{q.points} puan</span>
         </div>
         <h2 className="mt-2 whitespace-pre-line text-xl font-semibold">{q.text}</h2>
-        {q.type === "MULTI" && <p className="mt-1 text-sm text-slate-500">Birden fazla seçenek işaretleyebilirsiniz.</p>}
+        {q.type === "MULTI" && <p className="mt-1 text-sm text-lead">Birden fazla seçenek işaretleyebilirsiniz.</p>}
 
         <div className="mt-5 space-y-2">
           {q.type === "SHORT" ? (
@@ -136,10 +136,10 @@ export default function TakeTest({ test }: { test: PublicTest }) {
                       setA({ optionIds: [...cur] });
                     } else setA({ optionIds: [o.id] });
                   }}
-                  className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition ${sel ? "border-brand-500 bg-brand-50" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
+                  className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition ${sel ? "border-brand-500 bg-brand-50" : "border-rule hover:border-rule hover:bg-paper"}`}
                 >
                   <span
-                    className={`grid h-7 w-7 shrink-0 place-items-center ${q.type === "MULTI" ? "rounded-md" : "rounded-full"} text-xs font-bold ${sel ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600"}`}
+                    className={`grid h-7 w-7 shrink-0 place-items-center ${q.type === "MULTI" ? "rounded-md" : "rounded-full"} text-xs font-bold ${sel ? "bg-brand-600 text-white" : "bg-mist text-lead"}`}
                   >
                     {"ABCDEFGH"[i]}
                   </span>
@@ -154,7 +154,7 @@ export default function TakeTest({ test }: { test: PublicTest }) {
       <div className="mt-4 flex items-center justify-between">
         <button className="btn-secondary" disabled={current === 0} onClick={() => setCurrent(current - 1)}>← Önceki</button>
         {current < test.questions.length - 1 ? (
-          <button className="btn-primary" onClick={() => setCurrent(current + 1)}>Sonraki →</button>
+          <button className="btn-primary" onClick={() => setCurrent(current + 1)}>Sonraki</button>
         ) : (
           <button
             className="btn-primary bg-emerald-600 hover:bg-emerald-700"
@@ -179,7 +179,7 @@ export default function TakeTest({ test }: { test: PublicTest }) {
             <button
               key={x.id}
               onClick={() => setCurrent(i)}
-              className={`h-9 w-9 rounded-lg text-sm font-semibold ${i === current ? "ring-2 ring-brand-500" : ""} ${done ? "bg-brand-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200"}`}
+              className={`h-9 w-9 rounded-lg text-sm font-semibold ${i === current ? "ring-2 ring-brand-500" : ""} ${done ? "bg-brand-600 text-white" : "bg-white text-lead ring-1 ring-rule"}`}
             >
               {i + 1}
             </button>
