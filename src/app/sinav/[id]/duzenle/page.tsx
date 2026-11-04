@@ -1,0 +1,34 @@
+import { prisma } from "@/lib/db";
+import TestEditor, { EditorTest } from "@/components/TestEditor";
+
+export const dynamic = "force-dynamic";
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const t = await prisma.test.findUniqueOrThrow({
+    where: { id },
+    include: { questions: { orderBy: { order: "asc" }, include: { options: { orderBy: { order: "asc" } } } } },
+  });
+  const initial: EditorTest = {
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    shareCode: t.shareCode,
+    timeLimitMin: t.timeLimitMin ?? "",
+    passPercent: t.passPercent,
+    shuffleQuestions: t.shuffleQuestions,
+    showAnswers: t.showAnswers,
+    isPublished: t.isPublished,
+    questions: t.questions.map((q) => ({
+      id: q.id,
+      key: q.id,
+      type: q.type,
+      text: q.text,
+      points: q.points,
+      correctText: q.correctText,
+      explanation: q.explanation,
+      options: q.options.map((o) => ({ id: o.id, key: o.id, text: o.text, isCorrect: o.isCorrect })),
+    })),
+  };
+  return <TestEditor initial={initial} />;
+}

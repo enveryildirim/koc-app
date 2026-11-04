@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SınavKur
 
-## Getting Started
+Online sınav hazırlama, paylaşma, otomatik puanlama ve optik form okuma uygulaması.
+Next.js 15 + TypeScript + Tailwind + Prisma (SQLite).
 
-First, run the development server:
+## Hızlı başlangıç
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env
+npm run db:setup   # SQLite veritabanını oluşturur ve demo verileri yükler
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Demo hesap: **demo@sinavkur.com / demo1234** (giriş sayfasında “Demo hesabıyla gir” düğmesi de var).
+Demo verilerini sıfırlamak için: `npm run db:seed`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo veriler
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Kod | Sınav | Not |
+|---|---|---|
+| `MAT801` | 8. Sınıf Matematik | 20 dk süreli |
+| `GENEL1` | Genel Kültür | Tüm soru tipleri (tek/çok cevap, D/Y, kısa cevap) |
+| `ENGA20` | İngilizce A2 | 10 dk süreli |
+| `FEN020` | Fen Bilimleri – Optik Form | 20 soru, optik form testi için |
 
-## Learn More
+Her sınavda rastgele 8–17 katılım bulunur. Sınavı çözmek için: `/s/<KOD>` (ör. `/s/GENEL1`).
 
-To learn more about Next.js, take a look at the following resources:
+## Optik form
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`Sınav → Optik Form` sekmesi:
+1. **Formu yazdır**: köşe işaretli A4 cevap formu (en fazla 60 soru, A–E; öğrenci no 6 hane).
+2. **Görüntü yükle**: taranmış veya telefonla çekilmiş form fotoğrafları. Okuma tamamen tarayıcıda yapılır.
+3. **Örnek taranmış form üret**: test için rastgele doldurulmuş, döndürülmüş ve gürültülü sahte bir tarama oluşturur.
+4. Okunan cevapları gerekirse düzeltin → **Tümünü sonuçlara kaydet**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Optik formda yalnızca tek cevaplı çoktan seçmeli ve doğru/yanlış sorular yer alır.
+Algoritma (`src/lib/omr/scan.ts`): uyarlamalı eşikleme → köşe karelerini bulma → homografi → baloncuk doluluk oranı.
