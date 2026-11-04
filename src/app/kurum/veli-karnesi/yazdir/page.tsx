@@ -1,6 +1,5 @@
-import { prisma } from "@/shared/db";
 import { requireOwner } from "@/modules/identity/server";
-import { buildParentReport, normalizePeriod } from "@/modules/reporting/server";
+import { normalizePeriod, parentReports } from "@/modules/reporting/server";
 import VeliKarne from "@/modules/reporting/ui/veli/VeliKarne";
 import { PageHeader } from "@/shared/ui/kurum";
 import PrintButton from "@/shared/ui/PrintButton";
@@ -14,15 +13,8 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
   const { from, to } = normalizePeriod(sp.bas, sp.bit);
-  const students = await prisma.student.findMany({
-    where: {
-      ownerId,
-      ...(sp.ogrenci ? { id: sp.ogrenci } : sp.sinif === "_dis" ? { external: true } : { classroomId: sp.sinif ?? "" }),
-    },
-    orderBy: { studentNo: "asc" },
-    select: { id: true },
-  });
-  const reports = await Promise.all(students.map((s) => buildParentReport(s.id, from, to)));
+  const filter = sp.ogrenci ? { ids: [sp.ogrenci] } : sp.sinif === "_dis" ? { external: true } : { classroomId: sp.sinif ?? "" };
+  const reports = await parentReports(ownerId, filter, from, to);
   const back = sp.ogrenci ? `/kurum/ogrenciler/${sp.ogrenci}` : `/kurum/veli-karnesi?sinif=${sp.sinif ?? ""}&bas=${from}&bit=${to}`;
   return (
     <>

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/shared/db";
 import { fullName } from "@/modules/enrollment";
 import { requireOwner } from "@/modules/identity/server";
+import { findHomework, homeworkSubjects } from "@/modules/homework/server";
 import { PageHeader } from "@/shared/ui/kurum";
 import StatusEditor from "@/modules/homework/ui/StatusEditor";
 import HomeworkActions from "@/modules/homework/ui/HomeworkActions";
@@ -14,19 +14,9 @@ const fmt = (d: Date) => d.toLocaleDateString("tr-TR", { day: "2-digit", month: 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const ownerId = await requireOwner();
   const { id } = await params;
-  const hw = await prisma.homework.findFirst({
-    where: { id, ownerId },
-    include: { classroom: true, statuses: true },
-  });
+  const hw = await findHomework(ownerId, id);
   if (!hw) notFound();
-
-  // Sınıfın güncel öğrencileri + (sınıftan ayrılmış olsa da) durum kaydı olan öğrenciler
-  const students = await prisma.student.findMany({
-    where: { ownerId, OR: [{ classroomId: hw.classroomId }, { id: { in: hw.statuses.map((s) => s.studentId) } }] },
-    orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
-  });
-  const byStudent = new Map(hw.statuses.map((s) => [s.studentId, s]));
-  const subjects = (await prisma.homework.findMany({ where: { ownerId }, distinct: ["subject"], select: { subject: true } })).map((s) => s.subject);
+  const subjects = await homeworkSubjects(ownerId);
   const overdue = hw.dueDate < new Date();
 
   return (
@@ -50,12 +40,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       {hw.description && <p className="card mb-6 whitespace-pre-line p-4 text-sm text-slate-700">{hw.description}</p>}
       <StatusEditor
         homeworkId={hw.id}
-        rows={students.map((s) => ({
+        rows={hw.roster.map(({ student: s, status, note }) => ({
           studentId: s.id,
           studentNo: s.studentNo,
           name: fullName(s),
-          status: byStudent.get(s.id)?.status ?? "PENDING",
-          note: byStudent.get(s.id)?.note ?? "",
+          status,
+          note,
         }))}
       />
     </div>

@@ -1,29 +1,14 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { dayOfWeek, ymd } from "@/shared/date";
 import { DAYS, LESSON_TYPES } from "@/modules/schedule";
 import { requireOwner } from "@/modules/identity/server";
+import { lessonsOn, listTeachers } from "@/modules/schedule/server";
 import { Empty, Kpi, PageHeader } from "@/shared/ui/kurum";
 import DateNav from "@/modules/schedule/ui/DateNav";
 import ExtraLessonForm from "@/modules/schedule/ui/ExtraLessonForm";
 
 export const dynamic = "force-dynamic";
-
-type Row = {
-  key: string;
-  href: string;
-  classroom: string;
-  subject: string;
-  teacher: string;
-  lessonType: string;
-  startTime: string;
-  endTime: string;
-  taken: boolean;
-  absent: number;
-  total: number;
-  extra: boolean;
-};
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ tarih?: string }> }) {
   const ownerId = await requireOwner();
@@ -32,56 +17,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
   const date = tarih && /^\d{4}-\d{2}-\d{2}$/.test(tarih) ? tarih : today;
   const dow = dayOfWeek(date);
 
-  const [slots, sessions, classrooms, teachers] = await Promise.all([
-    prisma.scheduleSlot.findMany({
-      where: { ownerId, dayOfWeek: dow },
-      include: { classroom: { include: { _count: { select: { students: true } } } }, teacher: true },
-    }),
-    prisma.lessonSession.findMany({
-      where: { ownerId, date },
-      include: { classroom: { include: { _count: { select: { students: true } } } }, teacher: true, attendances: { select: { status: true } } },
-    }),
-    classroomsOf(ownerId),
-    prisma.teacher.findMany({ where: { ownerId }, orderBy: { name: "asc" } }),
-  ]);
-
-  const bySlot = new Map(sessions.filter((s) => s.slotId).map((s) => [s.slotId!, s]));
-  const rows: Row[] = [
-    ...slots.map((sl) => {
-      const s = bySlot.get(sl.id);
-      return {
-        key: sl.id,
-        href: `/kurum/yoklama/al?program=${sl.id}&tarih=${date}`,
-        classroom: sl.classroom.name,
-        subject: sl.subject,
-        teacher: sl.teacher.name,
-        lessonType: sl.lessonType,
-        startTime: sl.startTime,
-        endTime: sl.endTime,
-        taken: !!s && s.attendances.length > 0,
-        absent: s?.attendances.filter((a) => a.status === "ABSENT").length ?? 0,
-        total: sl.classroom._count.students,
-        extra: false,
-      };
-    }),
-    // Programdan silinmiş ya da ek dersler
-    ...sessions
-      .filter((s) => !s.slotId || !slots.some((sl) => sl.id === s.slotId))
-      .map((s) => ({
-        key: s.id,
-        href: `/kurum/yoklama/al?ders=${s.id}`,
-        classroom: s.classroom.name,
-        subject: s.subject,
-        teacher: s.teacher.name,
-        lessonType: s.lessonType,
-        startTime: s.startTime,
-        endTime: s.endTime,
-        taken: s.attendances.length > 0,
-        absent: s.attendances.filter((a) => a.status === "ABSENT").length,
-        total: s.classroom._count.students,
-        extra: true,
-      })),
-  ].sort((a, b) => a.startTime.localeCompare(b.startTime) || a.classroom.localeCompare(b.classroom, "tr"));
+  const [lessons, classrooms, teachers] = await Promise.all([lessonsOn(ownerId, date), classroomsOf(ownerId), listTeachers(ownerId)]);
+  const rows = lessons.map((l) => ({
+    ...l,
+    key: l.extra ? l.sessionId! : l.slotId!,
+    href: l.extra ? `/kurum/yoklama/al?ders=${l.sessionId}` : `/kurum/yoklama/al?program=${l.slotId}&tarih=${date}`,
+  }));
 
   const taken = rows.filter((r) => r.taken).length;
   const absent = rows.reduce((s, r) => s + r.absent, 0);

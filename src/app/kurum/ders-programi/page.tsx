@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
+import { listSlots, listTeachers } from "@/modules/schedule/server";
 import { Empty, PageHeader, Tabs } from "@/shared/ui/kurum";
 import ScheduleBoard from "@/modules/schedule/ui/ScheduleBoard";
 import TeacherManager from "@/modules/schedule/ui/TeacherManager";
@@ -17,7 +17,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
   const [classrooms, teachers] = await Promise.all([
     classroomsOf(ownerId),
-    prisma.teacher.findMany({ where: { ownerId }, orderBy: { name: "asc" }, include: { _count: { select: { slots: true } } } }),
+    listTeachers(ownerId),
   ]);
 
   const tabs = [
@@ -39,7 +39,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       <div>
         {header}
         <Tabs tabs={tabs} active={tab} />
-        <TeacherManager teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch, slotCount: t._count.slots }))} />
+        <TeacherManager teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch, slotCount: t.slotCount }))} />
       </div>
     );
   }
@@ -56,11 +56,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const selClass = tab === "sinif" ? classrooms.find((c) => c.id === sp.sinif) ?? classrooms[0] : null;
   const selTeacher = tab === "ogretmen" ? teachers.find((t) => t.id === sp.ogretmen) ?? teachers[0] : null;
 
-  const slots = await prisma.scheduleSlot.findMany({
-    where: { ownerId, ...(selClass ? { classroomId: selClass.id } : { teacherId: selTeacher?.id ?? "-" }) },
-    include: { classroom: true, teacher: true },
-    orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
-  });
+  const slots = await listSlots(ownerId, selClass ? { classroomId: selClass.id } : { teacherId: selTeacher?.id ?? "-" });
   const weeklyMinutes = slots.reduce((s, x) => s + minutes(x.startTime, x.endTime), 0);
 
   const chips = tab === "sinif"

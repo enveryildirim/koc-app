@@ -1,22 +1,13 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
-import { requireUser } from "@/modules/identity/server";
+import { requireOwner } from "@/modules/identity/server";
+import { listTests } from "@/modules/online-test/server";
 import NewTestButton from "@/modules/online-test/ui/NewTestButton";
-import { pct } from "@/modules/online-test";
 
 export const dynamic = "force-dynamic";
 
 export default async function Panel() {
-  const user = await requireUser();
-  const tests = await prisma.test.findMany({
-    where: { ownerId: user.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { questions: true } },
-      attempts: { select: { score: true, maxScore: true } },
-    },
-  });
-  const totalAttempts = tests.reduce((s, t) => s + t.attempts.length, 0);
+  const tests = await listTests(await requireOwner());
+  const totalAttempts = tests.reduce((s, t) => s + t.attemptCount, 0);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -35,9 +26,7 @@ export default async function Panel() {
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {tests.map((t) => {
-            const avg = t.attempts.length
-              ? Math.round(t.attempts.reduce((s, a) => s + pct(a.score, a.maxScore), 0) / t.attempts.length)
-              : null;
+            const avg = t.avgPercent;
             return (
               <div key={t.id} className="card flex flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
@@ -50,8 +39,8 @@ export default async function Panel() {
                 </div>
                 <p className="mt-1 line-clamp-2 text-sm text-slate-500">{t.description || "Açıklama yok"}</p>
                 <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <Stat label="Soru" value={t._count.questions} />
-                  <Stat label="Katılım" value={t.attempts.length} />
+                  <Stat label="Soru" value={t.questionCount} />
+                  <Stat label="Katılım" value={t.attemptCount} />
                   <Stat label="Ortalama" value={avg === null ? "–" : `%${avg}`} />
                 </dl>
                 <div className="mt-4 flex flex-wrap gap-2">

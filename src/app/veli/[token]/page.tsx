@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { prisma } from "@/shared/db";
 import { getUser } from "@/modules/identity/server";
-import { buildParentReport, normalizePeriod } from "@/modules/reporting/server";
+import { normalizePeriod, parentReportByToken } from "@/modules/reporting/server";
 import VeliKarne from "@/modules/reporting/ui/veli/VeliKarne";
 import PrintButton from "@/shared/ui/PrintButton";
 
@@ -14,8 +13,10 @@ type SP = Promise<{ bas?: string; bit?: string }>;
 export default async function Page({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: SP }) {
   const { token } = await params;
   const sp = await searchParams;
-  const student = token.length >= 20 ? await prisma.student.findUnique({ where: { parentToken: token } }) : null;
-  if (!student) {
+  const { from, to } = normalizePeriod(sp.bas, sp.bit);
+  const viewer = await getUser();
+  const report = await parentReportByToken(token, from, to, viewer?.id ?? null);
+  if (!report) {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <div className="text-4xl">🔒</div>
@@ -25,14 +26,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     );
   }
 
-  // Kurum yetkilisinin kendi önizlemesi "veli gördü" sayılmaz.
-  const viewer = await getUser();
-  if (viewer?.id !== student.ownerId) {
-    await prisma.student.update({ where: { id: student.id }, data: { parentViewedAt: new Date() } });
-  }
-
-  const { from, to } = normalizePeriod(sp.bas, sp.bit);
-  const report = await buildParentReport(student.id, from, to);
   return (
     <div className="px-2 py-6 sm:px-4">
       <div className="no-print mx-auto mb-3 flex max-w-[210mm] justify-end">

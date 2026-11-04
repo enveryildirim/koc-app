@@ -1,7 +1,6 @@
 import { EXAM_TYPES, fmtDate, fmtNet, topicStats } from "../domain";
-import type { examReport } from "../internal/results";
+import type { ExamReport as Report } from "../internal/results";
 
-type Report = Awaited<ReturnType<typeof examReport>>;
 type Row = Report["rows"][number];
 
 /** Yazdırılabilir öğrenci karnesi (A4). */

@@ -24,7 +24,7 @@ const MODULES = {
   "online-test": ["identity"],
   reporting: ["identity", "enrollment", "exams", "homework", "schedule"],
 };
-const DB_IN_APP = "warn"; // geçiş bitince "error"
+const DB_IN_APP = "error";
 
 const internalOf = (m) => ({
   group: [`@/modules/${m}/internal`, `@/modules/${m}/internal/*`],

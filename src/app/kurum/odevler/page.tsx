@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
+import { countStatuses, doneRate } from "@/modules/homework";
+import { listHomework } from "@/modules/homework/server";
 import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
 import FilterBar from "@/modules/homework/ui/FilterBar";
 import NewHomework from "@/modules/homework/ui/NewHomework";
@@ -16,11 +17,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   const { sinif, ders } = await searchParams;
   const classrooms = await classroomsOf(ownerId);
 
-  const all = await prisma.homework.findMany({
-    where: { ownerId },
-    orderBy: { dueDate: "desc" },
-    include: { classroom: { select: { name: true } }, statuses: { select: { status: true } } },
-  });
+  const all = await listHomework(ownerId);
   const subjects = [...new Set(all.map((h) => h.subject))].sort((a, b) => a.localeCompare(b, "tr"));
   const list = all.filter((h) => (!sinif || h.classroomId === sinif) && (!ders || h.subject === ders));
 
@@ -33,16 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
 
   const active = list.filter((h) => h.dueDate >= startToday).length;
   const thisWeek = list.filter((h) => h.dueDate >= monday && h.dueDate < nextMonday).length;
-  let done = 0;
-  let evaluated = 0;
-  for (const h of list) {
-    for (const s of h.statuses) {
-      if (s.status === "PENDING") continue;
-      evaluated++;
-      if (s.status === "DONE") done++;
-    }
-  }
-  const rate = evaluated ? Math.round((done / evaluated) * 100) : null;
+  const rate = doneRate(countStatuses(list.flatMap((h) => h.statuses)));
 
   return (
     <div>
@@ -84,9 +72,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
             </thead>
             <tbody className="divide-y divide-slate-100">
               {list.map((h) => {
-                const c = { DONE: 0, PARTIAL: 0, NOT_DONE: 0, PENDING: 0 } as Record<string, number>;
-                for (const s of h.statuses) c[s.status] = (c[s.status] ?? 0) + 1;
-                const total = h.statuses.length || 1;
+                const c = countStatuses(h.statuses);
+                const total = c.total || 1;
                 const overdue = h.dueDate < startToday;
                 return (
                   <tr key={h.id} className="hover:bg-slate-50">

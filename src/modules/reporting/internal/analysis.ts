@@ -2,6 +2,7 @@
 import { prisma } from "@/shared/db";
 import { ExamSection, parseSections, round2 } from "@/modules/exams";
 import { ymd } from "@/shared/date";
+import { RISK_FLAGS, RISK_RULES, type RiskFlag } from "../risk";
 
 type Stat = { d: number; y: number; b: number; net: number };
 
@@ -69,22 +70,6 @@ export async function classProgress(ownerId: string, type: string, section: stri
 }
 
 /* ================================== 2. Risk ================================== */
-
-export const RISK_FLAGS = {
-  NET_DROP: { label: "Net düşüşü", weight: 2, cls: "bg-red-50 text-red-700" },
-  MISSED_EXAM: { label: "Son denemeye girmedi", weight: 1, cls: "bg-violet-50 text-violet-700" },
-  ATTENDANCE: { label: "Devam düşük", weight: 2, cls: "bg-orange-50 text-orange-700" },
-  HOMEWORK: { label: "Ödev yapmıyor", weight: 1, cls: "bg-amber-50 text-amber-800" },
-} as const;
-export type RiskFlag = keyof typeof RISK_FLAGS;
-
-export const RISK_RULES = {
-  netDropAbs: 5,
-  netDropRel: 0.1,
-  attendanceMin: 85,
-  homeworkMin: 60,
-  days: 30,
-};
 
 export async function riskList(ownerId: string, classroomId?: string) {
   const since = new Date(Date.now() - RISK_RULES.days * 86400000);

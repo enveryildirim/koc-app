@@ -65,3 +65,8 @@ export function shareCode() {
 
 export const pct = (score: number, max: number) =>
   max > 0 ? Math.round((score / max) * 100) : 0;
+
+/** Kaydedilmiş bir cevap boş mu? (şık seçilmemiş ve metin girilmemiş ya da hiç cevap yok) */
+export function isBlankAnswer(a: { optionIds: string; text: string } | undefined) {
+  return !a || (JSON.parse(a.optionIds).length === 0 && !a.text.trim());
+}

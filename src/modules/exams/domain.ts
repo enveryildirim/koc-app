@@ -143,8 +143,8 @@ export function gradeExam(sections: ExamSection[], answers: string, booklet: str
 
 export const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Öğrenci numaralarını karşılaştırmak için baştaki sıfırları atar. */
-export const normNo = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "") || "0";
+/** Öğrenci numaralarını karşılaştırmak için baştaki sıfırları atar (kural enrollment modülünde). */
+export { normStudentNo as normNo } from "@/modules/enrollment";
 
 /** Deterministik karıştırma permütasyonu: perm[j] = B'deki j. sorunun A'daki indeksi. */
 export function shufflePerm(count: number, seed: number) {

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
-import { classroomsOf } from "@/modules/enrollment/server";
+import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { fullName } from "@/modules/enrollment";
 import { requireOwner } from "@/modules/identity/server";
+import { doneRate, emptyCounts } from "@/modules/homework";
+import { homeworkCountsByStudent } from "@/modules/homework/server";
 import { Empty, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
 import PrintButton from "@/shared/ui/PrintButton";
 import ExportButton from "@/shared/ui/ExportButton";
@@ -19,26 +20,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   const sort = (["oran", "oran-desc", "ad", "no"].includes(sirala ?? "") ? sirala : "oran") as Sort;
   const classrooms = await classroomsOf(ownerId);
 
-  const students = await prisma.student.findMany({
-    where: { ownerId, external: false, ...(sinif ? { classroomId: sinif } : {}) },
-    include: {
-      classroom: { select: { name: true } },
-      homeworks: { where: { homework: { ownerId } }, select: { status: true } },
-    },
-  });
+  const students = await listStudents(ownerId, { external: false, ...(sinif ? { classroomId: sinif } : {}) });
+  const counts = await homeworkCountsByStudent(ownerId, students.map((s) => s.id));
 
   const rows = students.map((s) => {
-    const c = { DONE: 0, PARTIAL: 0, NOT_DONE: 0, PENDING: 0 };
-    for (const h of s.homeworks) if (h.status in c) c[h.status as keyof typeof c]++;
-    const evaluated = c.DONE + c.PARTIAL + c.NOT_DONE;
+    const c = counts.get(s.id) ?? emptyCounts();
     return {
       id: s.id,
       no: s.studentNo,
       name: fullName(s),
       cls: s.classroom?.name ?? "—",
-      total: s.homeworks.length,
       ...c,
-      rate: evaluated ? Math.round((c.DONE / evaluated) * 100) : null,
+      rate: doneRate(c),
     };
   });
   rows.sort((a, b) => {

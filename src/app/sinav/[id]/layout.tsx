@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOwnedTest } from "@/modules/online-test/server";
-import { requireUser } from "@/modules/identity/server";
+import { findTest } from "@/modules/online-test/server";
+import { requireOwner } from "@/modules/identity/server";
 import TestTabs from "@/modules/online-test/ui/TestTabs";
 
 export default async function TestLayout({
@@ -11,9 +11,9 @@ export default async function TestLayout({
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireUser();
+  const ownerId = await requireOwner();
   const { id } = await params;
-  const test = await getOwnedTest(id, user.id);
+  const test = await findTest(ownerId, id);
   if (!test) notFound();
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">

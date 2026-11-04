@@ -28,3 +28,6 @@ export function cleanStudent(b: Record<string, unknown>): { data?: StudentInput;
     },
   };
 }
+
+/** Öğrenci numarasını karşılaştırma için normalize eder: rakam dışını ve baştaki sıfırları atar ("00123" → "123"). */
+export const normStudentNo = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "") || "0";

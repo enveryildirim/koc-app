@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
-import { loadExam } from "@/modules/exams/server";
+import { findExam } from "@/modules/exams/server";
 import { examFormSpec } from "@/modules/exams";
 import FormSvg from "@/shared/omr/FormSvg";
 import PrintButton from "@/shared/ui/PrintButton";
@@ -8,7 +8,7 @@ import PrintButton from "@/shared/ui/PrintButton";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const ownerId = await requireOwner();
   const { id } = await params;
-  const exam = await loadExam(ownerId, id);
+  const exam = await findExam(ownerId, id);
   if (!exam) notFound();
   const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.bookletB);
   return (

@@ -1,57 +1,44 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/shared/db";
 import { ATTENDANCE } from "@/modules/schedule";
-import { classroomsOf } from "@/modules/enrollment/server";
+import { classroomsOf, findStudent } from "@/modules/enrollment/server";
 import { HOMEWORK } from "@/modules/homework";
-import { requireOwner } from "@/modules/identity/server";
+import { institutionName, requireOwner } from "@/modules/identity/server";
 import { EXAM_TYPES, fmtDate, fmtNet, parseSections } from "@/modules/exams";
 import { Kpi, PageHeader, th, td } from "@/shared/ui/kurum";
 import StudentForm from "@/modules/enrollment/ui/StudentForm";
 import PrintButton from "@/shared/ui/PrintButton";
 import VeliCard from "@/modules/reporting/ui/veli/VeliCard";
 import { combinedTopics } from "@/modules/exams";
-import { defaultPeriod } from "@/modules/reporting/server";
+import { defaultPeriod, studentOverview } from "@/modules/reporting/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const ownerId = await requireOwner();
   const { id } = await params;
-  const st = await prisma.student.findUnique({
-    where: { id },
-    include: {
-      classroom: true,
-      results: { include: { exam: true }, orderBy: { exam: { date: "asc" } } },
-      homeworks: { include: { homework: true }, orderBy: { homework: { dueDate: "desc" } } },
-      attendances: { include: { session: true } },
-    },
-  });
-  if (!st || st.ownerId !== ownerId) notFound();
-  const classes = await classroomsOf(ownerId);
-  const owner = await prisma.user.findUniqueOrThrow({ where: { id: ownerId }, select: { name: true } });
+  const st = await findStudent(ownerId, id);
+  if (!st) notFound();
+  const [{ results, homework, attendance }, classes, institution] = await Promise.all([
+    studentOverview(ownerId, st.id),
+    classroomsOf(ownerId),
+    institutionName(ownerId),
+  ]);
   const period = defaultPeriod();
 
   // Sınav türüne göre gruplanmış sonuçlar (birleştirilmiş karne)
-  const byType = new Map<string, typeof st.results>();
-  for (const r of st.results) byType.set(r.exam.type, [...(byType.get(r.exam.type) ?? []), r]);
+  const byType = new Map<string, typeof results>();
+  for (const r of results) byType.set(r.exam.type, [...(byType.get(r.exam.type) ?? []), r]);
 
-  const weakTopics = combinedTopics(st.results)
+  const weakTopics = combinedTopics(results)
     .filter((t) => t.rate < 50)
     .sort((a, b) => a.rate - b.rate)
     .slice(0, 15);
 
-  const hw = { DONE: 0, PARTIAL: 0, NOT_DONE: 0, PENDING: 0 } as Record<string, number>;
-  st.homeworks.forEach((h) => (hw[h.status] = (hw[h.status] ?? 0) + 1));
-  const hwGraded = hw.DONE + hw.PARTIAL + hw.NOT_DONE;
-
-  const att = { PRESENT: 0, ABSENT: 0, LATE: 0, EXCUSED: 0 } as Record<string, number>;
-  st.attendances.forEach((a) => (att[a.status] = (att[a.status] ?? 0) + 1));
-  const attTotal = st.attendances.length;
-  const absences = st.attendances
-    .filter((a) => a.status !== "PRESENT")
-    .sort((a, b) => b.session.date.localeCompare(a.session.date))
-    .slice(0, 8);
+  const hw = homework.counts;
+  const homeworks = homework.list;
+  const att = attendance.counts;
+  const absences = attendance.absences.slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -63,14 +50,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Kpi label="Girdiği deneme" value={st.results.length} />
-        <Kpi label="Ödev yapma" value={hwGraded ? `%${Math.round((hw.DONE / hwGraded) * 100)}` : "—"} hint={`${hw.DONE} yaptı · ${hw.PARTIAL} eksik · ${hw.NOT_DONE} yapmadı`} />
-        <Kpi label="Devam" value={attTotal ? `%${Math.round(((att.PRESENT + att.LATE) / attTotal) * 100)}` : "—"} hint={`${att.ABSENT} gelmedi · ${att.LATE} geç · ${att.EXCUSED} izinli`} />
+        <Kpi label="Girdiği deneme" value={results.length} />
+        <Kpi label="Ödev yapma" value={homework.rate === null ? "—" : `%${homework.rate}`} hint={`${hw.DONE} yaptı · ${hw.PARTIAL} eksik · ${hw.NOT_DONE} yapmadı`} />
+        <Kpi label="Devam" value={attendance.rate === null ? "—" : `%${attendance.rate}`} hint={`${att.ABSENT} gelmedi · ${att.LATE} geç · ${att.EXCUSED} izinli`} />
         <Kpi label="Veli" value={<span className="text-base">{st.parentName || "—"}</span>} hint={st.parentPhone} />
       </div>
 
       <VeliCard
-        institution={owner.name}
+        institution={institution}
         from={period.from}
         to={period.to}
         student={{
@@ -89,7 +76,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Girdiği sınavlar</h2>
-        {st.results.length === 0 && <div className="card p-6 text-sm text-slate-500">Henüz deneme sonucu yok.</div>}
+        {results.length === 0 && <div className="card p-6 text-sm text-slate-500">Henüz deneme sonucu yok.</div>}
         {[...byType.entries()].map(([type, results]) => {
           const secs = parseSections(results[results.length - 1].exam.sections);
           const stats = results.map((r) => JSON.parse(r.stats) as { d: number; y: number; b: number; net: number }[]);
@@ -171,7 +158,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <h2 className="border-b border-slate-100 px-4 py-3 font-semibold">Son ödevler</h2>
           <table className="w-full text-sm">
             <tbody className="divide-y divide-slate-100">
-              {st.homeworks.slice(0, 8).map((h) => (
+              {homeworks.slice(0, 8).map((h) => (
                 <tr key={h.id}>
                   <td className={td}>
                     <Link href={`/kurum/odevler/${h.homeworkId}`} className="hover:text-brand-600">{h.homework.title}</Link>
@@ -182,7 +169,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   </td>
                 </tr>
               ))}
-              {st.homeworks.length === 0 && (
+              {homeworks.length === 0 && (
                 <tr><td className={`${td} text-slate-500`}>Ödev kaydı yok.</td></tr>
               )}
             </tbody>

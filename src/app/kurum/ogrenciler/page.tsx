@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
-import { classroomsOf } from "@/modules/enrollment/server";
+import { classroomsOf, listStudents, type StudentFilter } from "@/modules/enrollment/server";
+import { resultCountsByStudent } from "@/modules/exams/server";
 import { requireOwner } from "@/modules/identity/server";
 import { PageHeader, Tabs, th, td, Empty } from "@/shared/ui/kurum";
 import StudentForm from "@/modules/enrollment/ui/StudentForm";
@@ -45,29 +45,18 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     );
   }
   if (tab === "siniflar") {
-    const counts = await prisma.student.groupBy({ by: ["classroomId"], where: { ownerId }, _count: true });
-    const cnt = new Map(counts.map((c) => [c.classroomId, c._count]));
     return (
       <>
         {header}
         <Tabs tabs={tabs} active={tab} />
-        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, level: c.level, students: cnt.get(c.id) ?? 0 }))} />
+        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, level: c.level, students: c.studentCount }))} />
       </>
     );
   }
 
-  const where = {
-    ownerId,
-    ...(sinif === "_dis" ? { external: true } : sinif === "_yok" ? { classroomId: null, external: false } : sinif ? { classroomId: sinif } : {}),
-    ...(q
-      ? { OR: [{ firstName: { contains: q } }, { lastName: { contains: q } }, { studentNo: { contains: q } }] }
-      : {}),
-  };
-  const students = await prisma.student.findMany({
-    where,
-    include: { classroom: true, _count: { select: { results: true } } },
-    orderBy: [{ classroom: { name: "asc" } }, { studentNo: "asc" }],
-  });
+  const filter: StudentFilter =
+    sinif === "_dis" ? { external: true } : sinif === "_yok" ? { classroomId: null, external: false } : sinif ? { classroomId: sinif } : {};
+  const [students, resultCounts] = await Promise.all([listStudents(ownerId, { ...filter, q }), resultCountsByStudent(ownerId)]);
 
   return (
     <>
@@ -117,7 +106,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                   <td className={`${td} text-slate-500`}>
                     {s.parentName || "—"} {s.parentPhone && <span className="text-xs">({s.parentPhone})</span>}
                   </td>
-                  <td className={td}>{s._count.results}</td>
+                  <td className={td}>{resultCounts.get(s.id) ?? 0}</td>
                 </tr>
               ))}
             </tbody>

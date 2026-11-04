@@ -1,13 +1,17 @@
 import Link from "next/link";
 import FormSvg from "@/shared/omr/FormSvg";
 import OmrScanner from "@/shared/omr/OmrScanner";
-import { loadOmrData } from "@/modules/online-test/server";
+import { notFound } from "next/navigation";
+import { requireOwner } from "@/modules/identity/server";
+import { omrForm } from "@/modules/online-test/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { info, key, skipped } = await loadOmrData(id);
+  const form = await omrForm(await requireOwner(), id);
+  if (!form) notFound();
+  const { info, key, skipped } = form;
 
   if (info.questions.length === 0) {
     return (

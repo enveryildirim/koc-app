@@ -1,10 +1,14 @@
 import FormSvg from "@/shared/omr/FormSvg";
 import PrintButton from "@/shared/ui/PrintButton";
-import { loadOmrData } from "@/modules/online-test/server";
+import { notFound } from "next/navigation";
+import { requireOwner } from "@/modules/identity/server";
+import { omrForm } from "@/modules/online-test/server";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { info } = await loadOmrData(id);
+  const form = await omrForm(await requireOwner(), id);
+  if (!form) notFound();
+  const { info } = form;
   return (
     <div className="mt-6">
       <div className="no-print mb-4 flex items-center gap-3">

@@ -1,12 +1,8 @@
 import { prisma } from "@/shared/db";
-import { ExamSection, gradeExam, LETTERS, maxScore, normNo, parseSections, resolveScoring } from "../domain";
-
-export async function loadExam(ownerId: string, id: string) {
-  const exam = await prisma.exam.findUnique({ where: { id } });
-  if (!exam || exam.ownerId !== ownerId) return null;
-  const secs = parseSections(exam.sections);
-  return { ...exam, secs, scoringResolved: resolveScoring(exam.type, secs, exam.scoring) };
-}
+import { invalid, notFound } from "@/shared/errors";
+import { listStudents, studentNoMatcher } from "@/modules/enrollment/server";
+import { gradeExam, LETTERS, maxScore, parseSections, resolveScoring, round2 } from "../domain";
+import { getExam } from "./exams";
 
 export type IncomingRow = { studentNo: string; booklet: string; answers: string };
 
@@ -15,27 +11,43 @@ export function marksToAnswers(marks: number[][]) {
   return marks.map((m) => (m.length === 0 ? " " : m.length > 1 ? "*" : LETTERS[m[0]] ?? " ")).join("");
 }
 
-/** Sonuçları öğrenci numarasıyla eşleştirip kaydeder (aynı öğrencinin eski sonucu güncellenir). */
-export async function saveResults(
-  exam: { id: string; ownerId: string; type: string; scoring: string; secs: ExamSection[]; wrongPer: number },
-  rows: IncomingRow[],
-  source: string,
-) {
-  const students = await prisma.student.findMany({ where: { ownerId: exam.ownerId }, select: { id: true, studentNo: true } });
-  const byNo = new Map(students.map((s) => [normNo(s.studentNo), s.id]));
+/**
+ * Sonuç kaydı. İki biçim kabul edilir:
+ *  - Optik tarama: { sheets: [{ studentNo, booklet, answers: number[][] }] }
+ *  - TXT / elle:   { rows: [{ studentNo, booklet, answers: "ABC D*..." }], source: "TXT" | "MANUAL" }
+ * Öğrenci numarasıyla eşleşmeyen satırlar `skipped` listesine düşer.
+ */
+export async function importResults(ownerId: string, examId: string, body: Record<string, unknown>) {
+  const exam = await getExam(ownerId, examId);
+  let rows: IncomingRow[];
+  let source: string;
+  if (Array.isArray(body.sheets)) {
+    rows = (body.sheets as { studentNo: string; booklet: string; answers: number[][] }[]).map((s) => ({
+      studentNo: String(s.studentNo ?? ""),
+      booklet: s.booklet,
+      answers: marksToAnswers(s.answers ?? []),
+    }));
+    source = "OMR";
+  } else if (Array.isArray(body.rows)) {
+    rows = (body.rows as IncomingRow[]).map((r) => ({ studentNo: String(r.studentNo ?? ""), booklet: r.booklet, answers: String(r.answers ?? "") }));
+    source = body.source === "MANUAL" ? "MANUAL" : "TXT";
+  } else {
+    throw invalid("Geçersiz istek.");
+  }
+
+  const studentIdOf = await studentNoMatcher(ownerId);
   const total = exam.secs.reduce((s, x) => s + x.count, 0);
-  const scoring = resolveScoring(exam.type, exam.secs, exam.scoring);
   let saved = 0;
   const skipped: string[] = [];
   for (const r of rows) {
-    const studentId = byNo.get(normNo(r.studentNo));
+    const studentId = studentIdOf(r.studentNo);
     if (!studentId) {
       skipped.push(r.studentNo || "(boş)");
       continue;
     }
     const booklet = r.booklet === "B" ? "B" : "A";
     const answers = r.answers.toUpperCase().padEnd(total, " ").slice(0, total);
-    const g = gradeExam(exam.secs, answers, booklet, exam.wrongPer, scoring);
+    const g = gradeExam(exam.secs, answers, booklet, exam.wrongPer, exam.scoringResolved);
     const data = { booklet, answers, stats: JSON.stringify(g.stats), totalNet: g.totalNet, score: g.score, source };
     await prisma.examResult.upsert({
       where: { examId_studentId: { examId: exam.id, studentId } },
@@ -47,23 +59,20 @@ export async function saveResults(
   return { saved, skipped };
 }
 
-/** Cevap anahtarı değişince tüm sonuçları yeniden hesaplar. */
-export async function regrade(examId: string) {
-  const exam = await prisma.exam.findUniqueOrThrow({ where: { id: examId }, include: { results: true } });
-  const secs = parseSections(exam.sections);
-  const scoring = resolveScoring(exam.type, secs, exam.scoring);
-  for (const r of exam.results) {
-    const g = gradeExam(secs, r.answers, r.booklet, exam.wrongPer, scoring);
-    await prisma.examResult.update({ where: { id: r.id }, data: { stats: JSON.stringify(g.stats), totalNet: g.totalNet, score: g.score } });
-  }
+/** Denemedeki bir sonucu siler; sonuç bu denemeye / kuruma ait değilse notFound. */
+export async function deleteResult(ownerId: string, examId: string, resultId: string) {
+  const r = await prisma.examResult.findFirst({ where: { id: resultId, examId, exam: { ownerId } }, select: { id: true } });
+  if (!r) throw notFound();
+  await prisma.examResult.delete({ where: { id: resultId } });
 }
 
-/** Sıralı liste ve karneler için: sonuçlar + sıralamalar + sınıf/genel ortalamalar. */
-export async function examReport(examId: string) {
-  const exam = await prisma.exam.findUniqueOrThrow({
-    where: { id: examId },
+/** Sıralı liste ve karneler için: sonuçlar + sıralamalar + sınıf/genel ortalamalar. Deneme yoksa / başka kurumunsa null. */
+export async function examReport(ownerId: string, examId: string) {
+  const exam = await prisma.exam.findFirst({
+    where: { id: examId, ownerId },
     include: { results: { include: { student: { include: { classroom: true } } } } },
   });
+  if (!exam) return null;
   const secs = parseSections(exam.sections);
   const scoring = resolveScoring(exam.type, secs, exam.scoring);
   const rows = exam.results
@@ -104,6 +113,56 @@ export async function examReport(examId: string) {
   });
   const classAvg = new Map([...byClass.entries()].map(([k, list]) => [k, { name: list[0].className, size: list.length, ...avg(list) }]));
   return { exam, secs, scoring, maxScore: maxScore(secs, scoring), rows, general: avg(rows), classAvg };
+}
+
+export type ExamReport = NonNullable<Awaited<ReturnType<typeof examReport>>>;
+
+/**
+ * Denemeye girmeyenler: sınava en az bir öğrencisi giren sınıfların (ya da verilen sınıfın)
+ * kurum içi öğrencilerinden sonucu olmayanlar. `expected` beklenen katılımcı sayısıdır.
+ */
+export async function examAbsentees(ownerId: string, examId: string, classroomId?: string) {
+  await getExam(ownerId, examId);
+  const taken = await prisma.examResult.findMany({ where: { examId }, select: { studentId: true, student: { select: { classroomId: true } } } });
+  const takenIds = new Set(taken.map((r) => r.studentId));
+  const classIds = classroomId ? [classroomId] : [...new Set(taken.map((r) => r.student.classroomId).filter((c): c is string => !!c))];
+  const expected = await listStudents(ownerId, { external: false, classroomId: classIds }, "class");
+  return { expected: expected.length, missing: expected.filter((s) => !takenIds.has(s.id)) };
+}
+
+/** Verilen denemelerin (yalnızca kurumun kendi denemeleri) tüm sonuçları, öğrenci ve sınıfıyla. */
+export async function examResults(ownerId: string, examIds: string[]) {
+  return prisma.examResult.findMany({
+    where: { examId: { in: examIds }, exam: { ownerId } },
+    include: { student: { include: { classroom: true } } },
+  });
+}
+
+/** Öğrencinin tüm deneme sonuçları (deneme bilgisiyle), deneme tarihine göre eskiden yeniye. Başka kurumun öğrencisi → []. */
+export async function studentResults(ownerId: string, studentId: string) {
+  return prisma.examResult.findMany({
+    where: { studentId, exam: { ownerId } },
+    include: { exam: true },
+    orderBy: { exam: { date: "asc" } },
+  });
+}
+
+/**
+ * Öğrencinin her denemedeki sınıf içi durumu (examId → { classAvg, rank, peers }).
+ * Karşılaştırma grubu öğrencinin sınıfı; sınıfı yoksa denemeye giren herkes. Sıra tahmini puana göredir.
+ */
+export async function classStandings(ownerId: string, classroomId: string | null, results: { examId: string; score: number }[]) {
+  const peers = await prisma.examResult.findMany({
+    where: { examId: { in: results.map((r) => r.examId) }, exam: { ownerId }, ...(classroomId ? { student: { classroomId } } : {}) },
+    select: { examId: true, totalNet: true, score: true },
+  });
+  return new Map(
+    results.map((r) => {
+      const list = peers.filter((p) => p.examId === r.examId);
+      const classAvg = list.length ? round2(list.reduce((s, p) => s + p.totalNet, 0) / list.length) : 0;
+      return [r.examId, { classAvg, rank: list.filter((p) => p.score > r.score).length + 1, peers: list.length }];
+    }),
+  );
 }
 
 const mean = (a: number[]) => (a.length ? Math.round((a.reduce((s, x) => s + x, 0) / a.length) * 100) / 100 : 0);

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
-import { classroomsOf } from "@/modules/enrollment/server";
+import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
-import { EXAM_TYPES, fmtDate, fmtNet, parseSections, round2 } from "@/modules/exams";
+import { examResults, listExams } from "@/modules/exams/server";
+import { EXAM_TYPES, fmtDate, fmtNet, round2 } from "@/modules/exams";
 import { Empty, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
 import ExportButton from "@/shared/ui/ExportButton";
 import PrintButton from "@/shared/ui/PrintButton";
@@ -18,7 +18,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
   const tab = sp.tab === "sinif" ? "sinif" : "secili";
-  const allExams = await prisma.exam.findMany({ where: { ownerId }, orderBy: { date: "asc" } });
+  const allExams = await listExams(ownerId, "asc");
   const types = [...new Set(allExams.map((e) => e.type))];
   const tur = sp.tur && types.includes(sp.tur) ? sp.tur : types[0];
   const exams = allExams.filter((e) => e.type === tur);
@@ -53,13 +53,10 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
   // Bölüm adları (sıralı birleşim)
   const sectionNames: string[] = [];
-  for (const e of selected) for (const s of parseSections(e.sections)) if (!sectionNames.includes(s.name)) sectionNames.push(s.name);
+  for (const e of selected) for (const s of e.secs) if (!sectionNames.includes(s.name)) sectionNames.push(s.name);
 
-  const results = await prisma.examResult.findMany({
-    where: { examId: { in: selected.map((e) => e.id) } },
-    include: { student: { include: { classroom: true } } },
-  });
-  const secIndex = new Map(selected.map((e) => [e.id, parseSections(e.sections).map((s) => s.name)]));
+  const results = await examResults(ownerId, selected.map((e) => e.id));
+  const secIndex = new Map(selected.map((e) => [e.id, e.secs.map((s) => s.name)]));
   const netsOf = (r: (typeof results)[number]) => {
     const st = JSON.parse(r.stats) as { net: number }[];
     const names = secIndex.get(r.examId)!;
@@ -205,7 +202,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       kurumNet: avg(all.map((r) => r.totalNet)),
     };
   });
-  const students = await prisma.student.findMany({ where: { ownerId, classroomId: cls.id }, orderBy: { studentNo: "asc" } });
+  const students = await listStudents(ownerId, { classroomId: cls.id }, "number");
   const matrix = students
     .map((st) => {
       const nets = selected.map((e) => results.find((r) => r.examId === e.id && r.studentId === st.id)?.totalNet ?? null);

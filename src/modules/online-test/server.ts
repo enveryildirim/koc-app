@@ -1,3 +1,6 @@
 import "server-only";
-export * from "./internal/access";
-export * from "./internal/omrData";
+/** online-test sunucu arayüzü. Kurum fonksiyonları ownerId alır; public.ts giriş gerektirmeyen akışlardır. */
+export * from "./internal/tests";
+export * from "./internal/results";
+export * from "./internal/omr";
+export * from "./internal/public";

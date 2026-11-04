@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/shared/db";
-import { requireOwner } from "@/modules/identity/server";
+import { findStudent } from "@/modules/enrollment/server";
+import { institutionName, requireOwner } from "@/modules/identity/server";
+import { classStandings, studentResults } from "@/modules/exams/server";
 import { EXAM_TYPES, fmtDate, fmtNet, parseSections, round2 } from "@/modules/exams";
 import { combinedTopics } from "@/modules/exams";
 import { PageHeader } from "@/shared/ui/kurum";
@@ -16,15 +17,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const ownerId = await requireOwner();
   const { id } = await params;
   const { tur } = await searchParams;
-  const st = await prisma.student.findUnique({
-    where: { id },
-    include: { classroom: true, results: { include: { exam: true }, orderBy: { exam: { date: "asc" } } } },
-  });
-  if (!st || st.ownerId !== ownerId) notFound();
-  const owner = await prisma.user.findUniqueOrThrow({ where: { id: ownerId }, select: { name: true } });
-  const types = [...new Set(st.results.map((r) => r.exam.type))];
+  const st = await findStudent(ownerId, id);
+  if (!st) notFound();
+  const [allResults, institution] = await Promise.all([studentResults(ownerId, st.id), institutionName(ownerId)]);
+  const types = [...new Set(allResults.map((r) => r.exam.type))];
   const type = tur && types.includes(tur) ? tur : types[0];
-  const results = st.results.filter((r) => r.exam.type === type);
+  const results = allResults.filter((r) => r.exam.type === type);
 
   const header = (
     <PageHeader
@@ -46,22 +44,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   for (const r of results) for (const s of parseSections(r.exam.sections)) if (!secNames.includes(s.name)) secNames.push(s.name);
 
   // Her deneme için sınıf ortalaması ve sınıf sırası
-  const rows: { r: (typeof results)[number]; nets: (number | null)[]; classAvg: number; rank: number; peers: number }[] = [];
-  for (const r of results) {
+  const standings = await classStandings(ownerId, st.classroomId, results);
+  const rows = results.map((r) => {
     const names = parseSections(r.exam.sections).map((s) => s.name);
     const stats = JSON.parse(r.stats) as { d: number; y: number; b: number; net: number }[];
-    const peers = await prisma.examResult.findMany({
-      where: { examId: r.examId, ...(st.classroomId ? { student: { classroomId: st.classroomId } } : {}) },
-      select: { totalNet: true, score: true },
-    });
-    rows.push({
+    return {
       r,
       nets: secNames.map((n) => (names.includes(n) ? stats[names.indexOf(n)]?.net ?? 0 : null)),
-      classAvg: avg(peers.map((p) => p.totalNet)),
-      rank: peers.filter((p) => p.score > r.score).length + 1,
-      peers: peers.length,
-    });
-  }
+      ...standings.get(r.examId)!,
+    };
+  });
   const topics = combinedTopics(results).sort((a, b) => a.rate - b.rate);
   const weak = topics.filter((t) => t.rate < 50);
   const strong = [...topics].reverse().filter((t) => t.rate >= 75).slice(0, 6);
@@ -73,7 +65,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-slate-200 print:p-6 print:shadow-none print:ring-0">
         <header className="flex items-start justify-between border-b-4 border-brand-600 pb-3">
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-brand-600">{owner.name} · Birleştirilmiş Karne</div>
+            <div className="text-xs font-bold uppercase tracking-widest text-brand-600">{institution} · Birleştirilmiş Karne</div>
             <h1 className="text-xl font-extrabold">{st.firstName} {st.lastName}</h1>
             <div className="text-xs text-slate-500">
               No: {st.studentNo} · Sınıf: {st.classroom?.name ?? "—"} · {EXAM_TYPES[type]?.label ?? type} · {results.length} deneme

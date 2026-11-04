@@ -1,14 +1,14 @@
-import { prisma } from "@/shared/db";
+import { notFound } from "next/navigation";
+import { requireOwner } from "@/modules/identity/server";
+import { testWithQuestions } from "@/modules/online-test/server";
 import TestEditor, { EditorTest } from "@/modules/online-test/ui/TestEditor";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const t = await prisma.test.findUniqueOrThrow({
-    where: { id },
-    include: { questions: { orderBy: { order: "asc" }, include: { options: { orderBy: { order: "asc" } } } } },
-  });
+  const t = await testWithQuestions(await requireOwner(), id);
+  if (!t) notFound();
   const initial: EditorTest = {
     id: t.id,
     title: t.title,

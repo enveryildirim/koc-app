@@ -1,14 +1,6 @@
-import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/shared/db";
-import { createSession } from "@/modules/identity/server";
+import { api } from "@/shared/http";
+import { login } from "@/modules/identity/server";
 
-export async function POST(req: Request) {
-  const { email, password } = await req.json();
-  const user = await prisma.user.findUnique({ where: { email: String(email ?? "").toLowerCase().trim() } });
-  if (!user || !(await bcrypt.compare(String(password ?? ""), user.passwordHash))) {
-    return NextResponse.json({ error: "E-posta veya şifre hatalı." }, { status: 401 });
-  }
-  await createSession(user.id);
-  return NextResponse.json({ ok: true });
-}
+export const POST = api(async (req) => {
+  await login(await req.json());
+});

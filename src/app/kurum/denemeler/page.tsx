@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/shared/db";
 import { requireOwner } from "@/modules/identity/server";
-import { EXAM_TYPES, fmtDate, fmtNet, parseSections, totalQuestions } from "@/modules/exams";
+import { listExams } from "@/modules/exams/server";
+import { EXAM_TYPES, fmtDate, fmtNet, totalQuestions } from "@/modules/exams";
 import { Empty, PageHeader, th, td } from "@/shared/ui/kurum";
 import NewExam from "@/modules/exams/ui/NewExam";
 
@@ -9,11 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const ownerId = await requireOwner();
-  const exams = await prisma.exam.findMany({
-    where: { ownerId },
-    orderBy: { date: "desc" },
-    include: { results: { select: { totalNet: true } } },
-  });
+  const exams = await listExams(ownerId);
   return (
     <>
       <PageHeader
@@ -39,10 +35,9 @@ export default async function Page() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {exams.map((e) => {
-                  const secs = parseSections(e.sections);
+                  const secs = e.secs;
                   const total = totalQuestions(secs);
                   const keyed = secs.every((s) => s.keyA.length === s.count);
-                  const avg = e.results.length ? e.results.reduce((s, r) => s + r.totalNet, 0) / e.results.length : null;
                   return (
                     <tr key={e.id} className="hover:bg-slate-50">
                       <td className={td}>
@@ -53,8 +48,8 @@ export default async function Page() {
                         <span className="ml-1 text-xs text-slate-400">{total} soru</span>
                       </td>
                       <td className={`${td} text-slate-500`}>{fmtDate(e.date)}</td>
-                      <td className={`${td} text-right`}>{e.results.length}</td>
-                      <td className={`${td} text-right font-semibold tabular-nums`}>{avg === null ? "—" : fmtNet(avg)}</td>
+                      <td className={`${td} text-right`}>{e.resultCount}</td>
+                      <td className={`${td} text-right font-semibold tabular-nums`}>{e.avgNet === null ? "—" : fmtNet(e.avgNet)}</td>
                       <td className={td}>
                         {keyed ? <span className="badge bg-emerald-50 text-emerald-700">Hazır</span> : <span className="badge bg-amber-50 text-amber-700">Eksik</span>}
                       </td>

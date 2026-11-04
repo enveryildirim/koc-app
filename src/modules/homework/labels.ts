@@ -10,3 +10,23 @@ export const STATUS_ORDER = ["DONE", "PARTIAL", "NOT_DONE", "PENDING"] as const;
 
 /** Rozet için kısa biçim (STATUS ile aynı kaynak). */
 export const HOMEWORK: Record<string, { label: string; cls: string }> = STATUS;
+
+/** Öğrenci durumlarının dağılımı; `total` tüm kayıtlar. */
+export type StatusCounts = { DONE: number; PARTIAL: number; NOT_DONE: number; PENDING: number; total: number };
+
+export const emptyCounts = (): StatusCounts => ({ DONE: 0, PARTIAL: 0, NOT_DONE: 0, PENDING: 0, total: 0 });
+
+/** Bir durumu sayaca ekler. */
+export function tally(c: StatusCounts, status: string) {
+  c.total++;
+  if (status === "DONE" || status === "PARTIAL" || status === "NOT_DONE" || status === "PENDING") c[status]++;
+  return c;
+}
+
+export const countStatuses = (statuses: { status: string }[]) => statuses.reduce((c, s) => tally(c, s.status), emptyCounts());
+
+/** Yapma oranı (%) = Yaptı / (Yaptı + Eksik + Yapmadı); "Bekliyor" orana katılmaz. Değerlendirme yoksa null. */
+export function doneRate(c: Pick<StatusCounts, "DONE" | "PARTIAL" | "NOT_DONE">) {
+  const evaluated = c.DONE + c.PARTIAL + c.NOT_DONE;
+  return evaluated ? Math.round((c.DONE / evaluated) * 100) : null;
+}

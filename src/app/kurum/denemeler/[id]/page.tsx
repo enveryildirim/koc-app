@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/shared/db";
-import { classroomsOf } from "@/modules/enrollment/server";
+import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, LETTERS, normNo, topicStats, totalQuestions } from "@/modules/exams";
-import { examReport, loadExam } from "@/modules/exams/server";
+import { examAbsentees, examReport, findExam } from "@/modules/exams/server";
 import { examFormSpec, examKeys } from "@/modules/exams";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
 import KeyEditor from "@/modules/exams/ui/KeyEditor";
@@ -23,7 +22,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const ownerId = await requireOwner();
   const { id } = await params;
   const sp = await searchParams;
-  const exam = await loadExam(ownerId, id);
+  const exam = await findExam(ownerId, id);
   if (!exam) notFound();
   const keyed = exam.secs.every((s) => s.keyA.length === s.count && (!exam.bookletB || s.keyB.length === s.count));
   const tab = sp.tab ?? (keyed ? "sonuclar" : "anahtar");
@@ -67,7 +66,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           scoring={exam.scoringResolved}
           initial={{ name: exam.name, date: exam.date.toISOString().slice(0, 10), bookletB: exam.bookletB, wrongPer: exam.wrongPer, sections: exam.secs }}
           choices={choicesFor(exam.type)}
-          hasResults={(await prisma.examResult.count({ where: { examId: id } })) > 0}
+          hasResults={exam.resultCount > 0}
         />
       </>
     );
@@ -75,7 +74,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   /* ------------------------------- Optik okuma -------------------------------- */
   if (tab === "optik" || tab === "txt") {
-    const students = await prisma.student.findMany({ where: { ownerId }, include: { classroom: true } });
+    const students = await listStudents(ownerId);
     const map = Object.fromEntries(
       students.map((s) => [normNo(s.studentNo), `${s.firstName} ${s.lastName} (${s.classroom?.name ?? (s.external ? "Kurum dışı" : "—")})`]),
     );
@@ -128,7 +127,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     );
   }
 
-  const report = await examReport(id);
+  const report = await examReport(ownerId, id);
+  if (!report) notFound();
   const classes = (await classroomsOf(ownerId)).filter((c) => report.classAvg.has(c.id));
   const sinif = sp.sinif ?? "";
   const rows = sinif ? report.rows.filter((r) => r.classId === sinif) : report.rows;
@@ -147,15 +147,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   /* -------------------------------- Girmeyenler -------------------------------- */
   if (tab === "girmeyenler") {
-    // Beklenen katılımcılar: sınava en az bir öğrencisi giren sınıfların kurum içi öğrencileri
-    const takenIds = new Set(report.rows.map((r) => r.studentId));
-    const classIds = [...new Set(report.rows.map((r) => r.classId))].filter((c) => c !== "_");
-    const expected = await prisma.student.findMany({
-      where: { ownerId, external: false, classroomId: { in: sinif ? [sinif] : classIds } },
-      include: { classroom: true },
-      orderBy: [{ classroom: { name: "asc" } }, { studentNo: "asc" }],
-    });
-    const missing = expected.filter((s) => !takenIds.has(s.id));
+    const { expected, missing } = await examAbsentees(ownerId, id, sinif || undefined);
     return (
       <>
         {header}
@@ -168,7 +160,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           />
         </div>
         <p className="mb-3 text-sm text-slate-500">
-          Sınava girdiği sınıflardaki öğrencilerden sonucu olmayanlar: <b>{missing.length}</b> / {expected.length} öğrenci.
+          Sınava girdiği sınıflardaki öğrencilerden sonucu olmayanlar: <b>{missing.length}</b> / {expected} öğrenci.
         </p>
         {missing.length === 0 ? (
           <Empty>Tüm öğrenciler sınava girmiş. 👏</Empty>

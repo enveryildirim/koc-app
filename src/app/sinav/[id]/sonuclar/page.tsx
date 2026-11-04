@@ -1,4 +1,6 @@
-import { prisma } from "@/shared/db";
+import { notFound } from "next/navigation";
+import { requireOwner } from "@/modules/identity/server";
+import { testResults } from "@/modules/online-test/server";
 import { pct } from "@/modules/online-test";
 import AttemptsTable from "@/modules/online-test/ui/AttemptsTable";
 
@@ -6,14 +8,9 @@ export const dynamic = "force-dynamic";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const test = await prisma.test.findUniqueOrThrow({
-    where: { id },
-    include: {
-      questions: { orderBy: { order: "asc" }, include: { answers: { select: { isCorrect: true, optionIds: true, text: true } } } },
-      attempts: { orderBy: { finishedAt: "desc" } },
-    },
-  });
-  const attempts = test.attempts;
+  const results = await testResults(await requireOwner(), id);
+  if (!results) notFound();
+  const { test, attempts, questionStats } = results;
   const percents = attempts.map((a) => pct(a.score, a.maxScore));
   const avg = percents.length ? Math.round(percents.reduce((a, b) => a + b, 0) / percents.length) : 0;
   const passed = percents.filter((p) => p >= test.passPercent).length;
@@ -24,12 +21,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }));
   const maxBucket = Math.max(1, ...buckets.map((b) => b.n));
 
-  const qStats = test.questions.map((q, i) => {
-    const total = attempts.length;
-    const correct = q.answers.filter((a) => a.isCorrect).length;
-    const blank = total - q.answers.filter((a) => JSON.parse(a.optionIds).length > 0 || a.text.trim()).length;
-    return { i, text: q.text, correct, wrong: total - correct - blank, blank, rate: total ? Math.round((correct / total) * 100) : 0 };
-  });
+  const qStats = questionStats.map((s, i) => ({ i, ...s }));
 
   if (attempts.length === 0) {
     return (
