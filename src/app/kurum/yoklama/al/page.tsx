@@ -3,6 +3,8 @@ import { fullName } from "@/modules/enrollment";
 import { LESSON_TYPES } from "@/modules/schedule";
 import { requireOwner } from "@/modules/identity/server";
 import { attendanceSheet } from "@/modules/schedule/server";
+import { topicsForLesson } from "@/modules/planning/server";
+import LessonTopics from "@/modules/planning/ui/LessonTopics";
 import { PageHeader } from "@/shared/ui/kurum";
 import AttendanceForm from "@/modules/schedule/ui/AttendanceForm";
 
@@ -24,6 +26,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const target = sp.ders ? { sessionId: sp.ders } : { slotId: sp.program };
   const { lesson: info, sessionId, extra, students, marks: initial } = sheet;
   const taken = Object.keys(initial).length > 0;
+  const topics = await topicsForLesson(ownerId, info.classroomId, info.subject, info.date);
   const dateLabel = new Date(info.date + "T12:00:00").toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -33,6 +36,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         title={`${info.subject} · ${info.classroom}`}
         sub={`${dateLabel} · ${info.startTime}–${info.endTime} · ${info.teacher} · ${LESSON_TYPES[info.lessonType] ?? info.lessonType}${taken ? " · yoklama daha önce alınmış, güncelleyebilirsiniz" : ""}`}
       />
+      {topics && <LessonTopics planId={topics.planId} items={topics.items} date={info.date} sessionId={sessionId} />}
       <AttendanceForm
         students={students.map((s) => ({ id: s.id, no: s.studentNo, name: fullName(s) }))}
         initial={initial}

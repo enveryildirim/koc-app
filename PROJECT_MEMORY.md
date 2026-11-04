@@ -215,7 +215,7 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - Girmeyen sayısı ve seçili sınav ortalaması veritabanıyla aynı.
 - Hatalı B eşlemesi 400 döndü; özel katsayı sonrası yeniden puanlama beklenen değeri verdi, varsayılana dönüş eski değerleri geri getirdi.
 
-## 4d. Yıllık takvim (4 Kasım 2026, aşama 1)
+## 4d. Yıllık takvim ve yıllık ders planı (4 Kasım 2026, aşama 1–2)
 
 - **Sayfa:** `/kurum/takvim`. Ay, yıl ve liste görünümü var; liste yazdırılabilir. Sınıf filtresi seçilen sınıfın kayıtlarını ve kurum geneli kayıtları birlikte gösterir.
 - **Veri:** `CalendarEvent` (planning modülü). Türler: HOLIDAY, EXAM (deneme planı), MEETING, EVENT, OTHER. `classroomId` boşsa etkinlik tüm kuruma aittir. Tarihler `YYYY-MM-DD` biçiminde tutulur, iki uç dahildir.
@@ -223,7 +223,15 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - **Eğitim yılı:** Eylül–Ağustos arası. `schoolYearOf("2026-11-04") = 2026`.
 - **Resmî tatiller:** "Resmî tatilleri ekle" düğmesi yalnızca tarihi sabit olanları ekler (29 Ekim, 1 Ocak, 23 Nisan, 1 Mayıs, 19 Mayıs, 15 Temmuz, 30 Ağustos). **Dinî bayramlar ve MEB ara tatilleri her yıl değiştiği için elle eklenir.** Arife yarım günleri yok.
 - **Yoklama ile bağlantı:** `/kurum/yoklama`, o günü kapsayan tatili kırmızı bir uyarıyla gösterir. Etkilenen sınıfların henüz yoklaması alınmamış dersleri "Tatil" olarak işaretlenir ve "yoklaması alınan" sayısına girmez. Bu birleştirme app katmanında yapılır, schedule modülü planning'e bağımlı değildir.
-- **Sonraki aşamalar** (bkz. 5. bölüm): 2) sınıf + ders için yıllık ders planı (yönetici girer), 3) plan ile gerçekleşenin karşılaştırılması ve deneme konularıyla eşleştirme, 4) öğretmen görünümü ve veli linkine takvim bölümü.
+- **Yıllık ders planı** (`/kurum/takvim/plan`, aşama 2). Planı **yönetici** girer; öğretmen girişi yok.
+  - **Veri:** `LessonPlan` (sınıf + ders + eğitim yılı başına tek plan; girilen metin `source` alanında saklanır) ve `PlanItem` (konu, `week`/`endWeek` Pazartesi tarihleri, `doneDate`, `sessionId`).
+  - **Metin biçimi** (`planning/plan.ts > parsePlan`): her satır bir konu; `Konu | 3` → 3 hafta; `+ Konu` → önceki konuyla aynı hafta. Sekme de ayırıcı sayılır (Excel'den yapıştırma).
+  - **Dağıtım** (`layoutPlan`): ilk haftanın Pazartesi'sinden başlar. Pzt–Cum'un tamamı tatil olan haftalar atlanır; sınıfa özel tatiller de hesaba katılır. Editör bu hesabı tarayıcıda canlı önizler.
+  - **Düzenleme:** konular yeniden dağıtılır; aynı adı taşıyan konuların "işlendi" bilgisi korunur. Tatil sonradan eklenirse mevcut planlar kendiliğinden yeniden dağıtılmaz; planı açıp kaydetmek gerekir.
+  - **İşlendi işareti:** plan sayfasından veya yoklama alma ekranındaki "Bu derste işlenen konu" kartından (`topicsForLesson`) konulur. Eşleşme sınıf + ders adının **tam aynı** olmasına dayanır.
+  - **İlerleme** (`planProgress`): bitiş haftası geçmiş ama işlenmemiş konu varsa, en eskisinin bitiş haftasından bu yana geçen hafta sayısı "N hafta geride" olarak gösterilir.
+  - **Kopyalama:** plan başka sınıflara kopyalanabilir; dağıtım her sınıfın kendi tatillerine göre yapılır. Planı zaten olan sınıf atlanır.
+- **Sonraki aşamalar:** 3) plan ile deneme konularını eşleştirme ("denemede çıkan konu henüz işlenmedi") ve analiz merkezine "plana göre geride" uyarısı; 4) öğretmen görünümü ve veli linkine takvim bölümü.
 
 ## 5. Özellik durumu
 

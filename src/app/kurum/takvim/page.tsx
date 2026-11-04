@@ -4,7 +4,8 @@ import { schoolYearLabel, schoolYearOf, schoolYearRange } from "@/modules/planni
 import { calendarFeed } from "@/modules/planning/server";
 import CalendarView, { type CalendarViewMode } from "@/modules/planning/ui/CalendarView";
 import { monthGrid, ymd } from "@/shared/date";
-import { PageHeader } from "@/shared/ui/kurum";
+import { PageHeader, Tabs } from "@/shared/ui/kurum";
+import { PLANNING_TABS } from "@/modules/planning/ui/tabs";
 import PrintButton from "@/shared/ui/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         sub={`${schoolYearLabel(year)} eğitim yılı · ${className ? `${className} ve kurum geneli` : "tüm kurum"} · denemeler ve ödev teslimleri otomatik eklenir`}
         actions={view === "liste" ? <PrintButton /> : undefined}
       />
+      <Tabs tabs={PLANNING_TABS} active="takvim" />
       <h1 className="mb-4 hidden text-xl font-bold print:block">
         {schoolYearLabel(year)} Yıllık Takvim{className ? ` — ${className}` : ""}
       </h1>

@@ -101,6 +101,7 @@ model Classroom {
   slots     ScheduleSlot[]
   sessions  LessonSession[]
   events    CalendarEvent[]
+  plans     LessonPlan[]
 
   @@unique([ownerId, name])
 }
@@ -274,4 +275,41 @@ model CalendarEvent {
   createdAt   DateTime   @default(now())
 
   @@index([ownerId, startDate])
+}
+
+/// Sınıf + ders için yıllık ders planı (planning modülü). Yönetici girer.
+model LessonPlan {
+  id          String     @id @default(cuid())
+  ownerId     String
+  classroomId String
+  classroom   Classroom  @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  subject     String
+  /// Eğitim yılı (2026 = 2026–2027)
+  year        Int
+  /// İlk haftanın herhangi bir günü (YYYY-MM-DD); dağıtım o haftanın Pazartesi'sinden başlar
+  startDate   String
+  /// Yöneticinin girdiği metin (satır başına konu; "| n" hafta, "+" aynı hafta)
+  source      String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  items       PlanItem[]
+
+  @@unique([ownerId, classroomId, subject, year])
+}
+
+model PlanItem {
+  id        String     @id @default(cuid())
+  planId    String
+  plan      LessonPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  order     Int
+  topic     String
+  /// Başlangıç ve bitiş haftasının Pazartesi'si (YYYY-MM-DD)
+  week      String
+  endWeek   String
+  /// İşlendiği tarih; null = işlenmedi
+  doneDate  String?
+  /// İşaretlendiği ders oturumu (yoklama ekranından işaretlendiyse)
+  sessionId String?
+
+  @@index([planId, order])
 }

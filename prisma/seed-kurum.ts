@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { EXAM_TYPES, gradeExam, LETTERS, makeBooklet, randomKey, resolveScoring } from "../src/modules/exams/domain";
 import { nationalHolidays, schoolYearOf } from "../src/modules/planning/calendar";
+import { defaultPlanStart, layoutPlan, mondayOf, parsePlan } from "../src/modules/planning/plan";
+import { addDays } from "../src/shared/date";
 
 const FIRST = [
   "Ahmet", "Ayşe", "Mehmet", "Zeynep", "Mustafa", "Elif", "Emre", "Esra", "Burak", "Merve", "Can", "Selin", "Kerem", "Nil",
@@ -26,6 +28,7 @@ const phone = () =>
 
 export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   // Kurum tabloları kullanıcıya ilişkili olmadığından elle temizlenir
+  await prisma.lessonPlan.deleteMany();
   await prisma.calendarEvent.deleteMany();
   await prisma.attendance.deleteMany();
   await prisma.lessonSession.deleteMany();
@@ -314,15 +317,63 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   /* ---------------------------------- Takvim ---------------------------------- */
   const year = schoolYearOf(ymd(daysAgo(0)));
   const day = (n: number) => ymd(daysAgo(-n));
-  await prisma.calendarEvent.createMany({
-    data: [
+  const events = [
       ...nationalHolidays(year).map((h) => ({ ownerId, kind: "HOLIDAY", title: h.title, startDate: h.date, endDate: h.date })),
       { ownerId, kind: "MEETING", title: "Veli toplantısı", startDate: day(9), endDate: day(9), note: "18:30, konferans salonu" },
       { ownerId, kind: "EXAM", title: "LGS kurum denemesi (plan)", startDate: day(16), endDate: day(16), classroomId: classes[0].id },
       { ownerId, kind: "EXAM", title: "LGS kurum denemesi (plan)", startDate: day(16), endDate: day(16), classroomId: classes[1].id },
       { ownerId, kind: "EVENT", title: "Üniversite tanıtım gezisi", startDate: day(23), endDate: day(23), classroomId: classes[2].id },
-      { ownerId, kind: "HOLIDAY", title: "Ara tatil (örnek)", startDate: day(30), endDate: day(34) },
+      { ownerId, kind: "HOLIDAY", title: "Ara tatil (örnek)", startDate: mondayOf(day(28)), endDate: addDays(mondayOf(day(28)), 4) },
       { ownerId, kind: "MEETING", title: "Öğretmenler kurulu", startDate: day(2), endDate: day(2) },
-    ],
-  });
+  ];
+  await prisma.calendarEvent.createMany({ data: events });
+
+  /* ------------------------------ Yıllık ders planları ------------------------------ */
+  const holidays = events.filter((e) => e.kind === "HOLIDAY" && !("classroomId" in e)).map((e) => ({ start: e.startDate, end: e.endDate }));
+  const thisWeek = mondayOf(day(0));
+  const PLANS: { cls: number; subject: string; behind: number; source: string }[] = [
+    {
+      cls: 0,
+      subject: "Matematik",
+      behind: 0,
+      source: "Çarpanlar ve Katlar | 3\nÜslü İfadeler | 3\nKareköklü İfadeler | 4\n+ Kareköklü ifadelerde problemler\nVeri Analizi | 2\nBasit Olayların Olma Olasılığı | 2\nCebirsel İfadeler ve Özdeşlikler | 3\nDoğrusal Denklemler | 3\nEşitsizlikler | 2\nÜçgenler | 3\nEşlik ve Benzerlik | 2\nDönüşüm Geometrisi | 2\nGeometrik Cisimler | 3\nGenel tekrar ve LGS denemeleri | 4",
+    },
+    {
+      cls: 1,
+      subject: "Matematik",
+      behind: 2,
+      source: "Çarpanlar ve Katlar | 3\nÜslü İfadeler | 3\nKareköklü İfadeler | 4\n+ Kareköklü ifadelerde problemler\nVeri Analizi | 2\nBasit Olayların Olma Olasılığı | 2\nCebirsel İfadeler ve Özdeşlikler | 3\nDoğrusal Denklemler | 3\nEşitsizlikler | 2\nÜçgenler | 3\nEşlik ve Benzerlik | 2\nDönüşüm Geometrisi | 2\nGeometrik Cisimler | 3\nGenel tekrar ve LGS denemeleri | 4",
+    },
+    {
+      cls: 0,
+      subject: "Türkçe",
+      behind: 0,
+      source: "Sözcükte Anlam | 2\nCümlede Anlam | 2\nParagrafta Anlam | 3\nFiilimsiler | 2\nCümlenin Ögeleri | 2\nFiillerde Çatı | 2\nCümle Türleri | 2\nYazım Kuralları | 2\nNoktalama İşaretleri | 2\nSöz Sanatları | 1\nMetin Türleri | 2\nAnlatım Bozuklukları | 2\nSözel Mantık ve Görsel Okuma | 3",
+    },
+    {
+      cls: 2,
+      subject: "Fizik",
+      behind: 1,
+      source: "Çembersel Hareket | 3\nBasit Harmonik Hareket | 2\nDalga Mekaniği | 3\nAtom Fiziğine Giriş ve Radyoaktivite | 3\nModern Fizik | 3\nModern Fiziğin Teknolojideki Uygulamaları | 2\nAYT genel tekrar | 6",
+    },
+  ];
+  for (const pl of PLANS) {
+    const startDate = defaultPlanStart(year);
+    const slots = layoutPlan(parsePlan(pl.source).lines, startDate, holidays);
+    const plan = await prisma.lessonPlan.create({
+      data: { ownerId, classroomId: classes[pl.cls].id, subject: pl.subject, year, startDate, source: pl.source },
+    });
+    const due = slots.filter((s) => s.endWeek < thisWeek);
+    const doneUpTo = due.length - pl.behind;
+    await prisma.planItem.createMany({
+      data: slots.map((s, i) => ({
+        planId: plan.id,
+        order: s.order,
+        topic: s.topic,
+        week: s.week,
+        endWeek: s.endWeek,
+        doneDate: i < doneUpTo ? ymd(new Date(new Date(s.endWeek + "T12:00:00").getTime() + 3 * 86400000)) : null,
+      })),
+    });
+  }
 }
