@@ -120,6 +120,7 @@ export async function lessonsOn(ownerId: string, date: string) {
       return {
         slotId: sl.id as string | null,
         sessionId: s?.id ?? null,
+        classroomId: sl.classroomId,
         classroom: sl.classroom.name,
         subject: sl.subject,
         teacher: sl.teacher.name,
@@ -136,6 +137,7 @@ export async function lessonsOn(ownerId: string, date: string) {
       .map((s) => ({
         slotId: s.slotId,
         sessionId: s.id as string | null,
+        classroomId: s.classroomId,
         classroom: s.classroom.name,
         subject: s.subject,
         teacher: s.teacher.name,

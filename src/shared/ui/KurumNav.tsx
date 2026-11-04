@@ -8,6 +8,7 @@ const LINKS = [
   ["/kurum/denemeler", "📝", "Denemeler & Optik"],
   ["/kurum/analiz", "🔎", "Analiz & Uyarılar"],
   ["/kurum/odevler", "📚", "Ödev Takip"],
+  ["/kurum/takvim", "📅", "Yıllık Takvim"],
   ["/kurum/ders-programi", "🗓️", "Ders Programı"],
   ["/kurum/yoklama", "✅", "Yoklama"],
   ["/kurum/raporlar", "📈", "Devam Raporları"],

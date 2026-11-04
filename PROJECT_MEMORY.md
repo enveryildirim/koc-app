@@ -76,6 +76,7 @@ src/modules/
   homework/              # ödevler + durumlar; labels.ts (STATUS, doneRate)
   schedule/              # öğretmen, program, yoklama: listSlots, takeAttendance, attendanceSheet…
   online-test/           # testler, public akış (publicTestByCode, submitPublicAttempt), OMR kaydetme
+  planning/              # yıllık takvim: CalendarEvent, calendarFeed (etkinlik + deneme + ödev), holidaysOn, addNationalHolidays
   reporting/             # institutionDashboard, analiz (riskList…), devam raporları, veli karnesi, studentOverview
 src/app/                 # sayfa + route dosyaları (ince katman)
 ```
@@ -213,6 +214,16 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - Konu analizi (B kitapçıklılar dahil) 28/28 konuda bağımsız hesapla aynı çıktı.
 - Girmeyen sayısı ve seçili sınav ortalaması veritabanıyla aynı.
 - Hatalı B eşlemesi 400 döndü; özel katsayı sonrası yeniden puanlama beklenen değeri verdi, varsayılana dönüş eski değerleri geri getirdi.
+
+## 4d. Yıllık takvim (4 Kasım 2026, aşama 1)
+
+- **Sayfa:** `/kurum/takvim`. Ay, yıl ve liste görünümü var; liste yazdırılabilir. Sınıf filtresi seçilen sınıfın kayıtlarını ve kurum geneli kayıtları birlikte gösterir.
+- **Veri:** `CalendarEvent` (planning modülü). Türler: HOLIDAY, EXAM (deneme planı), MEETING, EVENT, OTHER. `classroomId` boşsa etkinlik tüm kuruma aittir. Tarihler `YYYY-MM-DD` biçiminde tutulur, iki uç dahildir.
+- **Otomatik kayıtlar:** denemeler ve ödev teslimleri takvimde düzenlenemez, tıklanınca kendi sayfasına gider. Bunları `exams/internal/for-planning.ts` ve `homework/internal/for-planning.ts` sağlar.
+- **Eğitim yılı:** Eylül–Ağustos arası. `schoolYearOf("2026-11-04") = 2026`.
+- **Resmî tatiller:** "Resmî tatilleri ekle" düğmesi yalnızca tarihi sabit olanları ekler (29 Ekim, 1 Ocak, 23 Nisan, 1 Mayıs, 19 Mayıs, 15 Temmuz, 30 Ağustos). **Dinî bayramlar ve MEB ara tatilleri her yıl değiştiği için elle eklenir.** Arife yarım günleri yok.
+- **Yoklama ile bağlantı:** `/kurum/yoklama`, o günü kapsayan tatili kırmızı bir uyarıyla gösterir. Etkilenen sınıfların henüz yoklaması alınmamış dersleri "Tatil" olarak işaretlenir ve "yoklaması alınan" sayısına girmez. Bu birleştirme app katmanında yapılır, schedule modülü planning'e bağımlı değildir.
+- **Sonraki aşamalar** (bkz. 5. bölüm): 2) sınıf + ders için yıllık ders planı (yönetici girer), 3) plan ile gerçekleşenin karşılaştırılması ve deneme konularıyla eşleştirme, 4) öğretmen görünümü ve veli linkine takvim bölümü.
 
 ## 5. Özellik durumu
 

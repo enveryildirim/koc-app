@@ -2,6 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { EXAM_TYPES, gradeExam, LETTERS, makeBooklet, randomKey, resolveScoring } from "../src/modules/exams/domain";
+import { nationalHolidays, schoolYearOf } from "../src/modules/planning/calendar";
 
 const FIRST = [
   "Ahmet", "Ayşe", "Mehmet", "Zeynep", "Mustafa", "Elif", "Emre", "Esra", "Burak", "Merve", "Can", "Selin", "Kerem", "Nil",
@@ -25,6 +26,7 @@ const phone = () =>
 
 export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   // Kurum tabloları kullanıcıya ilişkili olmadığından elle temizlenir
+  await prisma.calendarEvent.deleteMany();
   await prisma.attendance.deleteMany();
   await prisma.lessonSession.deleteMany();
   await prisma.scheduleSlot.deleteMany();
@@ -308,4 +310,19 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       },
     });
   }
+
+  /* ---------------------------------- Takvim ---------------------------------- */
+  const year = schoolYearOf(ymd(daysAgo(0)));
+  const day = (n: number) => ymd(daysAgo(-n));
+  await prisma.calendarEvent.createMany({
+    data: [
+      ...nationalHolidays(year).map((h) => ({ ownerId, kind: "HOLIDAY", title: h.title, startDate: h.date, endDate: h.date })),
+      { ownerId, kind: "MEETING", title: "Veli toplantısı", startDate: day(9), endDate: day(9), note: "18:30, konferans salonu" },
+      { ownerId, kind: "EXAM", title: "LGS kurum denemesi (plan)", startDate: day(16), endDate: day(16), classroomId: classes[0].id },
+      { ownerId, kind: "EXAM", title: "LGS kurum denemesi (plan)", startDate: day(16), endDate: day(16), classroomId: classes[1].id },
+      { ownerId, kind: "EVENT", title: "Üniversite tanıtım gezisi", startDate: day(23), endDate: day(23), classroomId: classes[2].id },
+      { ownerId, kind: "HOLIDAY", title: "Ara tatil (örnek)", startDate: day(30), endDate: day(34) },
+      { ownerId, kind: "MEETING", title: "Öğretmenler kurulu", startDate: day(2), endDate: day(2) },
+    ],
+  });
 }

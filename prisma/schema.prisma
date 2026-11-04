@@ -100,6 +100,7 @@ model Classroom {
   homeworks Homework[]
   slots     ScheduleSlot[]
   sessions  LessonSession[]
+  events    CalendarEvent[]
 
   @@unique([ownerId, name])
 }
@@ -255,4 +256,22 @@ model Attendance {
   status    String
 
   @@unique([sessionId, studentId])
+}
+
+/// Yıllık takvim etkinliği (planning modülü). classroomId boş = tüm kurum
+model CalendarEvent {
+  id          String     @id @default(cuid())
+  ownerId     String
+  title       String
+  /// HOLIDAY | EXAM | MEETING | EVENT | OTHER
+  kind        String     @default("EVENT")
+  /// YYYY-MM-DD, iki uç dahil
+  startDate   String
+  endDate     String
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  note        String     @default("")
+  createdAt   DateTime   @default(now())
+
+  @@index([ownerId, startDate])
 }
