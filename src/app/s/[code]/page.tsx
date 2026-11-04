@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import TakeTest, { PublicTest } from "@/components/TakeTest";
+import { prisma } from "@/shared/db";
+import TakeTest, { PublicTest } from "@/modules/online-test/ui/TakeTest";
 
 export const dynamic = "force-dynamic";
 

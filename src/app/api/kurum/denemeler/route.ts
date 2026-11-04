@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner } from "@/lib/kurum";
-import { EXAM_TYPES } from "@/lib/exam";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
+import { EXAM_TYPES } from "@/modules/exams";
 
 export async function POST(req: Request) {
   const ownerId = await apiOwner();

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { headers } from "next/headers";
-import SiteHeader from "@/components/SiteHeader";
+import SiteHeader from "@/shared/ui/SiteHeader";
 
 export const metadata: Metadata = {
   title: "SınavKur – Online sınav ve test oluşturma",

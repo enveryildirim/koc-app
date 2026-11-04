@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { classroomsOf, requireOwner } from "@/lib/kurum";
-import { Empty, PageHeader, Tabs } from "@/components/kurum/ui";
-import ScheduleBoard from "@/components/kurum/program/ScheduleBoard";
-import TeacherManager from "@/components/kurum/program/TeacherManager";
+import { prisma } from "@/shared/db";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { requireOwner } from "@/modules/identity/server";
+import { Empty, PageHeader, Tabs } from "@/shared/ui/kurum";
+import ScheduleBoard from "@/modules/schedule/ui/ScheduleBoard";
+import TeacherManager from "@/modules/schedule/ui/TeacherManager";
 
 export const dynamic = "force-dynamic";
 

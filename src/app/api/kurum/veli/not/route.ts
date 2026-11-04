@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner } from "@/lib/kurum";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
 
 /** Veli karnesindeki öğretmen görüşünü kaydeder. body: { studentId, note } */
 export async function POST(req: Request) {

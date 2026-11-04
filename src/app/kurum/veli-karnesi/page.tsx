@@ -1,8 +1,9 @@
-import { prisma } from "@/lib/db";
-import { classroomsOf, requireOwner } from "@/lib/kurum";
-import { normalizePeriod } from "@/lib/parentReport";
-import { Empty, PageHeader } from "@/components/kurum/ui";
-import VeliPanel from "@/components/kurum/veli/VeliPanel";
+import { prisma } from "@/shared/db";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { requireOwner } from "@/modules/identity/server";
+import { normalizePeriod } from "@/modules/reporting/server";
+import { Empty, PageHeader } from "@/shared/ui/kurum";
+import VeliPanel from "@/modules/reporting/ui/veli/VeliPanel";
 
 export const dynamic = "force-dynamic";
 

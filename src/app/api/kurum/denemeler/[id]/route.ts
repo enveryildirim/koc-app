@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner } from "@/lib/kurum";
-import { loadExam, regrade } from "@/lib/examServer";
-import { choicesFor, LETTERS } from "@/lib/exam";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
+import { loadExam, regrade } from "@/modules/exams/server";
+import { choicesFor, LETTERS } from "@/modules/exams";
 
 type Ctx = { params: Promise<{ id: string }> };
 

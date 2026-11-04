@@ -1,8 +1,12 @@
-import { prisma } from "@/lib/db";
-import { classroomsOf, fullName, LESSON_TYPES, requireOwner, ymd } from "@/lib/kurum";
-import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/components/kurum/ui";
-import PrintButton from "@/components/PrintButton";
-import ExportButton from "@/components/ExportButton";
+import { prisma } from "@/shared/db";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { fullName } from "@/modules/enrollment";
+import { LESSON_TYPES } from "@/modules/schedule";
+import { requireOwner } from "@/modules/identity/server";
+import { ymd } from "@/shared/date";
+import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
+import PrintButton from "@/shared/ui/PrintButton";
+import ExportButton from "@/shared/ui/ExportButton";
 
 export const dynamic = "force-dynamic";
 

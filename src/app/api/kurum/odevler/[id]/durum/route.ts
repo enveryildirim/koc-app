@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner, HOMEWORK } from "@/lib/kurum";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
+import { HOMEWORK } from "@/modules/homework";
 
 type Update = { studentId: string; status?: string; note?: string };
 

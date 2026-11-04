@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { requireOwner } from "@/lib/kurum";
-import { examReport, loadExam } from "@/lib/examServer";
-import Karne from "@/components/kurum/sinav/Karne";
-import { PageHeader } from "@/components/kurum/ui";
-import PrintButton from "@/components/PrintButton";
+import { requireOwner } from "@/modules/identity/server";
+import { examReport, loadExam } from "@/modules/exams/server";
+import Karne from "@/modules/exams/ui/Karne";
+import { PageHeader } from "@/shared/ui/kurum";
+import PrintButton from "@/shared/ui/PrintButton";
 
 export const dynamic = "force-dynamic";
 

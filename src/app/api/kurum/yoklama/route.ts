@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner } from "@/lib/kurum";
-import { parseSlot } from "../program/validate";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
+import { parseSlot } from "@/modules/schedule/server";
 
 const STATUSES = ["PRESENT", "ABSENT", "LATE", "EXCUSED"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

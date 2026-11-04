@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { ATTENDANCE, classroomsOf, HOMEWORK, requireOwner } from "@/lib/kurum";
-import { EXAM_TYPES, fmtDate, fmtNet, parseSections } from "@/lib/exam";
-import { Kpi, PageHeader, th, td } from "@/components/kurum/ui";
-import StudentForm from "@/components/kurum/kayit/StudentForm";
-import PrintButton from "@/components/PrintButton";
-import VeliCard from "@/components/kurum/veli/VeliCard";
-import { combinedTopics } from "@/lib/studentTopics";
-import { defaultPeriod } from "@/lib/parentReport";
+import { prisma } from "@/shared/db";
+import { ATTENDANCE } from "@/modules/schedule";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { HOMEWORK } from "@/modules/homework";
+import { requireOwner } from "@/modules/identity/server";
+import { EXAM_TYPES, fmtDate, fmtNet, parseSections } from "@/modules/exams";
+import { Kpi, PageHeader, th, td } from "@/shared/ui/kurum";
+import StudentForm from "@/modules/enrollment/ui/StudentForm";
+import PrintButton from "@/shared/ui/PrintButton";
+import VeliCard from "@/modules/reporting/ui/veli/VeliCard";
+import { combinedTopics } from "@/modules/exams";
+import { defaultPeriod } from "@/modules/reporting/server";
 
 export const dynamic = "force-dynamic";
 

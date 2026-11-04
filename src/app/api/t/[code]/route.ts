@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { gradeAll, SubmittedAnswer } from "@/lib/grading";
+import { prisma } from "@/shared/db";
+import { gradeAll, SubmittedAnswer } from "@/modules/online-test";
 
 /** Katılımcının sınavı göndermesi. */
 export async function POST(req: Request, ctx: { params: Promise<{ code: string }> }) {

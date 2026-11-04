@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner } from "@/lib/kurum";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
 
 /** Yeni ödev: sınıfın tüm öğrencileri için PENDING durum kaydı oluşturur. */
 export async function POST(req: Request) {

@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { classroomsOf, requireOwner } from "@/lib/kurum";
-import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, LETTERS, normNo, topicStats, totalQuestions } from "@/lib/exam";
-import { examReport, loadExam } from "@/lib/examServer";
-import { examFormSpec, examKeys } from "@/lib/examOmr";
-import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/components/kurum/ui";
-import KeyEditor from "@/components/kurum/sinav/KeyEditor";
-import TxtImport from "@/components/kurum/sinav/TxtImport";
-import DeleteResult from "@/components/kurum/sinav/DeleteResult";
-import OmrScanner from "@/components/OmrScanner";
-import FormSvg from "@/components/FormSvg";
-import PrintButton from "@/components/PrintButton";
-import ExportButton from "@/components/ExportButton";
+import { prisma } from "@/shared/db";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { requireOwner } from "@/modules/identity/server";
+import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, LETTERS, normNo, topicStats, totalQuestions } from "@/modules/exams";
+import { examReport, loadExam } from "@/modules/exams/server";
+import { examFormSpec, examKeys } from "@/modules/exams";
+import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
+import KeyEditor from "@/modules/exams/ui/KeyEditor";
+import TxtImport from "@/modules/exams/ui/TxtImport";
+import DeleteResult from "@/modules/exams/ui/DeleteResult";
+import OmrScanner from "@/shared/omr/OmrScanner";
+import FormSvg from "@/shared/omr/FormSvg";
+import PrintButton from "@/shared/ui/PrintButton";
+import ExportButton from "@/shared/ui/ExportButton";
 
 export const dynamic = "force-dynamic";
 

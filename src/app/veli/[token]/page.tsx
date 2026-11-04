@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/db";
-import { getUser } from "@/lib/auth";
-import { buildParentReport, normalizePeriod } from "@/lib/parentReport";
-import VeliKarne from "@/components/kurum/veli/VeliKarne";
-import PrintButton from "@/components/PrintButton";
+import { prisma } from "@/shared/db";
+import { getUser } from "@/modules/identity/server";
+import { buildParentReport, normalizePeriod } from "@/modules/reporting/server";
+import VeliKarne from "@/modules/reporting/ui/veli/VeliKarne";
+import PrintButton from "@/shared/ui/PrintButton";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Veli Karnesi", robots: { index: false, follow: false } };

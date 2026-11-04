@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getOwnedTest, getUser } from "@/lib/auth";
-import { gradeAll, SubmittedAnswer } from "@/lib/grading";
-import { choiceCountFor } from "@/lib/omr/layout";
+import { prisma } from "@/shared/db";
+import { getOwnedTest } from "@/modules/online-test/server";
+import { getUser } from "@/modules/identity/server";
+import { gradeAll, SubmittedAnswer } from "@/modules/online-test";
+import { choiceCountFor } from "@/shared/omr/layout";
 
 type Sheet = { name: string; studentNo: string; answers: number[][] };
 

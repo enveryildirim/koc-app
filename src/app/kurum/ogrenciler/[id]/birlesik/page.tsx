@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { requireOwner } from "@/lib/kurum";
-import { EXAM_TYPES, fmtDate, fmtNet, parseSections, round2 } from "@/lib/exam";
-import { combinedTopics } from "@/lib/studentTopics";
-import { PageHeader } from "@/components/kurum/ui";
-import PrintButton from "@/components/PrintButton";
+import { prisma } from "@/shared/db";
+import { requireOwner } from "@/modules/identity/server";
+import { EXAM_TYPES, fmtDate, fmtNet, parseSections, round2 } from "@/modules/exams";
+import { combinedTopics } from "@/modules/exams";
+import { PageHeader } from "@/shared/ui/kurum";
+import PrintButton from "@/shared/ui/PrintButton";
 
 export const dynamic = "force-dynamic";
 

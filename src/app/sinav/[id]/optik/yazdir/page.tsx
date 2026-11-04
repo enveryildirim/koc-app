@@ -1,6 +1,6 @@
-import FormSvg from "@/components/FormSvg";
-import PrintButton from "@/components/PrintButton";
-import { loadOmrData } from "@/lib/omr/testForm";
+import FormSvg from "@/shared/omr/FormSvg";
+import PrintButton from "@/shared/ui/PrintButton";
+import { loadOmrData } from "@/modules/online-test/server";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

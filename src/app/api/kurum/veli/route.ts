@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner } from "@/lib/kurum";
-import { newParentToken } from "@/lib/parentReport";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
+import { newParentToken } from "@/modules/reporting/server";
 
 /**
  * Veli karnesi linklerini yönetir.

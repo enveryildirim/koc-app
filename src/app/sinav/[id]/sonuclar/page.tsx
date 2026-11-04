@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/db";
-import { pct } from "@/lib/grading";
-import AttemptsTable from "@/components/AttemptsTable";
+import { prisma } from "@/shared/db";
+import { pct } from "@/modules/online-test";
+import AttemptsTable from "@/modules/online-test/ui/AttemptsTable";
 
 export const dynamic = "force-dynamic";
 

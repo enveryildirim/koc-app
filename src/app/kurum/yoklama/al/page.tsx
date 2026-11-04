@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { fullName, LESSON_TYPES, requireOwner } from "@/lib/kurum";
-import { PageHeader } from "@/components/kurum/ui";
-import AttendanceForm from "@/components/kurum/program/AttendanceForm";
+import { prisma } from "@/shared/db";
+import { fullName } from "@/modules/enrollment";
+import { LESSON_TYPES } from "@/modules/schedule";
+import { requireOwner } from "@/modules/identity/server";
+import { PageHeader } from "@/shared/ui/kurum";
+import AttendanceForm from "@/modules/schedule/ui/AttendanceForm";
 
 export const dynamic = "force-dynamic";
 

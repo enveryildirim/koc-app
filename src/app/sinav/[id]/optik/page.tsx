@@ -1,7 +1,7 @@
 import Link from "next/link";
-import FormSvg from "@/components/FormSvg";
-import OmrScanner from "@/components/OmrScanner";
-import { loadOmrData } from "@/lib/omr/testForm";
+import FormSvg from "@/shared/omr/FormSvg";
+import OmrScanner from "@/shared/omr/OmrScanner";
+import { loadOmrData } from "@/modules/online-test/server";
 
 export const dynamic = "force-dynamic";
 

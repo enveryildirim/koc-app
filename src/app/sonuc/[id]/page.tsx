@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { getUser } from "@/lib/auth";
-import AttemptDetail, { ScoreSummary } from "@/components/AttemptDetail";
+import { prisma } from "@/shared/db";
+import { getUser } from "@/modules/identity/server";
+import AttemptDetail, { ScoreSummary } from "@/modules/online-test/ui/AttemptDetail";
 
 export const dynamic = "force-dynamic";
 

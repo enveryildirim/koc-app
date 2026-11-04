@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { fullName, requireOwner } from "@/lib/kurum";
-import { PageHeader } from "@/components/kurum/ui";
-import StatusEditor from "@/components/kurum/odev/StatusEditor";
-import HomeworkActions from "@/components/kurum/odev/HomeworkActions";
-import { toInputDate } from "@/components/kurum/odev/labels";
+import { prisma } from "@/shared/db";
+import { fullName } from "@/modules/enrollment";
+import { requireOwner } from "@/modules/identity/server";
+import { PageHeader } from "@/shared/ui/kurum";
+import StatusEditor from "@/modules/homework/ui/StatusEditor";
+import HomeworkActions from "@/modules/homework/ui/HomeworkActions";
+import { toInputDate } from "@/shared/date";
 
 export const dynamic = "force-dynamic";
 

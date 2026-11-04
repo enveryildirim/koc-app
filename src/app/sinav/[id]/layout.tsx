@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOwnedTest, requireUser } from "@/lib/auth";
-import TestTabs from "@/components/TestTabs";
+import { getOwnedTest } from "@/modules/online-test/server";
+import { requireUser } from "@/modules/identity/server";
+import TestTabs from "@/modules/online-test/ui/TestTabs";
 
 export default async function TestLayout({
   children,

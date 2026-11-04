@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { requireOwner } from "@/lib/kurum";
-import { loadExam } from "@/lib/examServer";
-import { examFormSpec } from "@/lib/examOmr";
-import FormSvg from "@/components/FormSvg";
-import PrintButton from "@/components/PrintButton";
+import { requireOwner } from "@/modules/identity/server";
+import { loadExam } from "@/modules/exams/server";
+import { examFormSpec } from "@/modules/exams";
+import FormSvg from "@/shared/omr/FormSvg";
+import PrintButton from "@/shared/ui/PrintButton";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const ownerId = await requireOwner();

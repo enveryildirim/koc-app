@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { apiOwner } from "@/lib/kurum";
-import { cleanStudent } from "@/lib/studentInput";
+import { prisma } from "@/shared/db";
+import { apiOwner } from "@/modules/identity/server";
+import { cleanStudent } from "@/modules/enrollment";
 
 type Ctx = { params: Promise<{ id: string }> };
 

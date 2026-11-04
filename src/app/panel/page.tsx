@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
-import NewTestButton from "@/components/NewTestButton";
-import { pct } from "@/lib/grading";
+import { prisma } from "@/shared/db";
+import { requireUser } from "@/modules/identity/server";
+import NewTestButton from "@/modules/online-test/ui/NewTestButton";
+import { pct } from "@/modules/online-test";
 
 export const dynamic = "force-dynamic";
 

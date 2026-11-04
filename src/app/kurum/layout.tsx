@@ -1,5 +1,5 @@
-import KurumNav from "@/components/kurum/KurumNav";
-import { requireOwner } from "@/lib/kurum";
+import KurumNav from "@/shared/ui/KurumNav";
+import { requireOwner } from "@/modules/identity/server";
 
 export default async function KurumLayout({ children }: { children: React.ReactNode }) {
   await requireOwner();

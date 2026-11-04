@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { gradeAll } from "../src/lib/grading";
+import { gradeAll } from "../src/modules/online-test/grading";
 import { seedKurum } from "./seed-kurum";
 
 const prisma = new PrismaClient();

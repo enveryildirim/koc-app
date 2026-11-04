@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { requireOwner } from "@/lib/kurum";
-import { EXAM_TYPES, fmtDate, fmtNet, parseSections, totalQuestions } from "@/lib/exam";
-import { Empty, PageHeader, th, td } from "@/components/kurum/ui";
-import NewExam from "@/components/kurum/sinav/NewExam";
+import { prisma } from "@/shared/db";
+import { requireOwner } from "@/modules/identity/server";
+import { EXAM_TYPES, fmtDate, fmtNet, parseSections, totalQuestions } from "@/modules/exams";
+import { Empty, PageHeader, th, td } from "@/shared/ui/kurum";
+import NewExam from "@/modules/exams/ui/NewExam";
 
 export const dynamic = "force-dynamic";
 

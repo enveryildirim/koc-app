@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { classroomsOf, requireOwner } from "@/lib/kurum";
-import { EXAM_TYPES, fmtDate, fmtNet } from "@/lib/exam";
-import { classProgress, examTypesOf, RISK_FLAGS, RISK_RULES, RiskFlag, riskList, teacherPerformance } from "@/lib/analysis";
-import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/components/kurum/ui";
-import ExportButton from "@/components/ExportButton";
-import PrintButton from "@/components/PrintButton";
-import LineChart, { SERIES_COLORS } from "@/components/kurum/analiz/LineChart";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { requireOwner } from "@/modules/identity/server";
+import { EXAM_TYPES, fmtDate, fmtNet } from "@/modules/exams";
+import { classProgress, examTypesOf, RISK_FLAGS, RISK_RULES, RiskFlag, riskList, teacherPerformance } from "@/modules/reporting/server";
+import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
+import ExportButton from "@/shared/ui/ExportButton";
+import PrintButton from "@/shared/ui/PrintButton";
+import LineChart, { SERIES_COLORS } from "@/modules/reporting/ui/LineChart";
 
 export const dynamic = "force-dynamic";
 

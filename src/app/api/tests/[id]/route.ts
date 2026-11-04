@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getOwnedTest, getUser } from "@/lib/auth";
+import { prisma } from "@/shared/db";
+import { getOwnedTest } from "@/modules/online-test/server";
+import { getUser } from "@/modules/identity/server";
 
 type Ctx = { params: Promise<{ id: string }> };
 

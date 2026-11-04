@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { apiOwner } from "@/lib/kurum";
-import { IncomingRow, loadExam, marksToAnswers, saveResults } from "@/lib/examServer";
+import { apiOwner } from "@/modules/identity/server";
+import { IncomingRow, loadExam, marksToAnswers, saveResults } from "@/modules/exams/server";
 
 /**
  * Sonuç kaydı. İki biçim kabul edilir:

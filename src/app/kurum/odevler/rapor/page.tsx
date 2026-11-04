@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { classroomsOf, fullName, requireOwner } from "@/lib/kurum";
-import { Empty, PageHeader, Tabs, td, th } from "@/components/kurum/ui";
-import PrintButton from "@/components/PrintButton";
-import ExportButton from "@/components/ExportButton";
-import FilterBar from "@/components/kurum/odev/FilterBar";
-import { ODEV_TABS } from "@/components/kurum/odev/tabs";
+import { prisma } from "@/shared/db";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { fullName } from "@/modules/enrollment";
+import { requireOwner } from "@/modules/identity/server";
+import { Empty, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
+import PrintButton from "@/shared/ui/PrintButton";
+import ExportButton from "@/shared/ui/ExportButton";
+import FilterBar from "@/modules/homework/ui/FilterBar";
+import { ODEV_TABS } from "@/modules/homework/ui/tabs";
 
 export const dynamic = "force-dynamic";
 

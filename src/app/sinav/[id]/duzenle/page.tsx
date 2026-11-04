@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/db";
-import TestEditor, { EditorTest } from "@/components/TestEditor";
+import { prisma } from "@/shared/db";
+import TestEditor, { EditorTest } from "@/modules/online-test/ui/TestEditor";
 
 export const dynamic = "force-dynamic";
 

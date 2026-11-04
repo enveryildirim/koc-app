@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { dayOfWeek, requireOwner, ymd } from "@/lib/kurum";
-import { DAYS, LESSON_TYPES } from "@/lib/kurumLabels";
-import { EXAM_TYPES, fmtDate, fmtNet } from "@/lib/exam";
-import { Kpi, PageHeader, th, td } from "@/components/kurum/ui";
+import { prisma } from "@/shared/db";
+import { dayOfWeek, ymd } from "@/shared/date";
+import { requireOwner } from "@/modules/identity/server";
+import { DAYS, LESSON_TYPES } from "@/modules/schedule";
+import { EXAM_TYPES, fmtDate, fmtNet } from "@/modules/exams";
+import { Kpi, PageHeader, th, td } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 

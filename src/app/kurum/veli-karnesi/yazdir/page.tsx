@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/db";
-import { requireOwner } from "@/lib/kurum";
-import { buildParentReport, normalizePeriod } from "@/lib/parentReport";
-import VeliKarne from "@/components/kurum/veli/VeliKarne";
-import { PageHeader } from "@/components/kurum/ui";
-import PrintButton from "@/components/PrintButton";
+import { prisma } from "@/shared/db";
+import { requireOwner } from "@/modules/identity/server";
+import { buildParentReport, normalizePeriod } from "@/modules/reporting/server";
+import VeliKarne from "@/modules/reporting/ui/veli/VeliKarne";
+import { PageHeader } from "@/shared/ui/kurum";
+import PrintButton from "@/shared/ui/PrintButton";
 
 export const dynamic = "force-dynamic";
 

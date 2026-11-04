@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getUser } from "@/lib/auth";
-import { shareCode } from "@/lib/grading";
+import { prisma } from "@/shared/db";
+import { getUser } from "@/modules/identity/server";
+import { shareCode } from "@/modules/online-test";
 
 export async function POST() {
   const user = await getUser();
