@@ -6,7 +6,7 @@
  * 3. Form (mm) → görüntü (px) homografisi
  * 4. Her baloncukta koyu piksel oranını ölçme
  */
-import { BUBBLE_R, FormQuestion, MARKERS, questionBubbles, STUDENT_DIGITS, studentBubbles } from "./layout";
+import { Layout, MARKERS } from "./layout";
 
 export type ImageLike = { data: Uint8ClampedArray; width: number; height: number };
 
@@ -23,13 +23,16 @@ export type ScanResult = {
   markers: [number, number][];
   studentNo: string;
   studentBubbles: BubbleState[];
+  /** "A" | "B" | "" (okunamadı / alan yok) */
+  booklet: string;
   questions: QuestionRead[];
 };
 
 const MARK_T = 0.45;
 const UNSURE_T = 0.25;
 
-export function scanForm(img: ImageLike, questions: FormQuestion[]): ScanResult {
+export function scanForm(img: ImageLike, layout: Layout): ScanResult {
+  const R = layout.r;
   const { width: W, height: H } = img;
   const dark = binarize(img);
   const markers = findMarkers(dark, W, H);
@@ -40,7 +43,7 @@ export function scanForm(img: ImageLike, questions: FormQuestion[]): ScanResult 
   const measure = (bx: number, by: number): BubbleState => {
     let hit = 0;
     let total = 0;
-    const rr = BUBBLE_R * 0.62;
+    const rr = R * 0.62;
     const steps = 9;
     for (let i = 0; i < steps; i++) {
       for (let j = 0; j < steps; j++) {
@@ -56,13 +59,11 @@ export function scanForm(img: ImageLike, questions: FormQuestion[]): ScanResult 
     }
     const [cx, cy] = project(bx, by);
     const fill = total ? hit / total : 0;
-    return { x: cx, y: cy, r: BUBBLE_R * pxPerMm, fill, marked: fill >= MARK_T };
+    return { x: cx, y: cy, r: R * pxPerMm, fill, marked: fill >= MARK_T };
   };
 
-  const qReads: QuestionRead[] = questions.map((q, i) => {
-    const bubbles = questionBubbles(i)
-      .slice(0, q.choiceCount)
-      .map((b) => measure(b.x, b.y));
+  const qReads: QuestionRead[] = layout.questions.map((qb) => {
+    const bubbles = qb.map((b) => measure(b.x, b.y));
     const marked = bubbles.flatMap((b, k) => (b.marked ? [k] : []));
     const maxFill = Math.max(0, ...bubbles.map((b) => b.fill));
     let status: QuestionRead["status"] = "ok";
@@ -73,8 +74,8 @@ export function scanForm(img: ImageLike, questions: FormQuestion[]): ScanResult 
 
   let studentNo = "";
   const sBubbles: BubbleState[] = [];
-  for (let c = 0; c < STUDENT_DIGITS; c++) {
-    const col = studentBubbles(c).map((b) => measure(b.x, b.y));
+  for (const sc of layout.student) {
+    const col = sc.map((b) => measure(b.x, b.y));
     sBubbles.push(...col);
     let best = -1;
     col.forEach((b, d) => {
@@ -83,7 +84,12 @@ export function scanForm(img: ImageLike, questions: FormQuestion[]): ScanResult 
     studentNo += best >= 0 ? String(best) : "";
   }
 
-  return { markers, studentNo, studentBubbles: sBubbles, questions: qReads };
+  const bk = layout.booklet.map((b) => measure(b.x, b.y));
+  const bkMarked = bk.filter((b) => b.marked);
+  const booklet = bkMarked.length === 1 ? layout.booklet[bk.indexOf(bkMarked[0])].label : "";
+  sBubbles.push(...bk);
+
+  return { markers, studentNo, studentBubbles: sBubbles, booklet, questions: qReads };
 }
 
 /* --------------------------------- Eşikleme --------------------------------- */

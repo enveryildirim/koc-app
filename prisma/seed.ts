@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { gradeAll } from "../src/lib/grading";
+import { seedKurum } from "./seed-kurum";
 
 const prisma = new PrismaClient();
 
@@ -172,6 +173,8 @@ async function main() {
       });
     }
   }
+
+  await seedKurum(prisma, user.id);
 
   console.log("Seed tamamlandı → giriş: demo@sinavkur.com / demo1234");
 }

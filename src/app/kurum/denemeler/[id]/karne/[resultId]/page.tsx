@@ -1,0 +1,27 @@
+import { notFound } from "next/navigation";
+import { requireOwner } from "@/lib/kurum";
+import { examReport, loadExam } from "@/lib/examServer";
+import Karne from "@/components/kurum/sinav/Karne";
+import { PageHeader } from "@/components/kurum/ui";
+import PrintButton from "@/components/PrintButton";
+
+export const dynamic = "force-dynamic";
+
+export default async function Page({ params }: { params: Promise<{ id: string; resultId: string }> }) {
+  const ownerId = await requireOwner();
+  const { id, resultId } = await params;
+  if (!(await loadExam(ownerId, id))) notFound();
+  const report = await examReport(id);
+  const row = report.rows.find((r) => r.id === resultId);
+  if (!row) notFound();
+  return (
+    <>
+      <PageHeader
+        title="Öğrenci karnesi"
+        back={{ href: `/kurum/denemeler/${id}`, label: report.exam.name }}
+        actions={<PrintButton label="🖨️ Karneyi yazdır" />}
+      />
+      <Karne report={report} row={row} />
+    </>
+  );
+}

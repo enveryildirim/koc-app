@@ -1,4 +1,4 @@
-import { buildForm, FormInfo, PAGE_H, PAGE_W, Prim, questionBubbles, studentBubbles, BUBBLE_R, STUDENT_BOX } from "./layout";
+import { buildForm, computeLayout, FormSpec, PAGE_H, PAGE_W, Prim } from "./layout";
 
 /** Primitifleri bir canvas'a mm → px ölçeğiyle çizer. */
 export function drawPrims(ctx: CanvasRenderingContext2D, prims: Prim[], scale: number) {
@@ -36,13 +36,15 @@ export type SampleFill = {
   answers: number[][];
   studentNo: string;
   name: string;
+  booklet?: string;
 };
 
 /**
  * Test amaçlı "taranmış" bir form görüntüsü üretir: formu çizer, baloncukları
  * kurşun kalem gibi doldurur, sonra hafif döndürüp gürültü ekler.
  */
-export function renderSampleScan(info: FormInfo, fill: SampleFill): string {
+export function renderSampleScan(info: FormSpec, fill: SampleFill): string {
+  const L = computeLayout(info);
   const scale = 6; // ~150 dpi
   const page = document.createElement("canvas");
   page.width = PAGE_W * scale;
@@ -50,11 +52,11 @@ export function renderSampleScan(info: FormInfo, fill: SampleFill): string {
   const ctx = page.getContext("2d")!;
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, page.width, page.height);
-  drawPrims(ctx, buildForm(info), scale);
+  drawPrims(ctx, buildForm(info, L), scale);
 
-  const pencil = (x: number, y: number) => {
+  const pencil = (x: number, y: number, r = L.r) => {
     ctx.beginPath();
-    ctx.arc(x * scale + jitter(0.6), y * scale + jitter(0.6), BUBBLE_R * scale * (0.82 + Math.random() * 0.12), 0, Math.PI * 2);
+    ctx.arc(x * scale + jitter(0.6), y * scale + jitter(0.6), r * scale * (0.82 + Math.random() * 0.12), 0, Math.PI * 2);
     ctx.fillStyle = `rgba(30,30,40,${0.82 + Math.random() * 0.15})`;
     ctx.fill();
   };
@@ -62,21 +64,23 @@ export function renderSampleScan(info: FormInfo, fill: SampleFill): string {
   // El yazısı ad
   ctx.font = `italic ${5 * scale}px "Comic Sans MS", cursive`;
   ctx.fillStyle = "#1e3a8a";
-  ctx.fillText(fill.name, 24 * scale, 53 * scale);
+  ctx.fillText(fill.name, 24 * scale, 47 * scale);
 
   fill.studentNo.split("").forEach((d, c) => {
-    const b = studentBubbles(c)[Number(d)];
-    if (b) pencil(b.x, b.y);
+    const b = L.student[c][Number(d)];
+    if (b) pencil(b.x, b.y, 2.2);
     ctx.font = `${3.6 * scale}px Arial`;
     ctx.fillStyle = "#1e3a8a";
     ctx.textAlign = "center";
-    ctx.fillText(d, b.x * scale, (STUDENT_BOX.y + 5) * scale);
+    ctx.fillText(d, b.x * scale, (L.studentBox.y + 5) * scale);
     ctx.textAlign = "left";
   });
   fill.answers.forEach((choices, q) => {
-    const bs = questionBubbles(q);
-    for (const k of choices) pencil(bs[k].x, bs[k].y);
+    const bs = L.questions[q] ?? [];
+    for (const k of choices) if (bs[k]) pencil(bs[k].x, bs[k].y);
   });
+  const bk = L.booklet.find((b) => b.label === fill.booklet);
+  if (bk) pencil(bk.x, bk.y, 2.2);
 
   // "Tarama": döndür, ölçekle, kağıt tonu ve gürültü ekle
   const out = document.createElement("canvas");

@@ -29,7 +29,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <Link href={`/sinav/${id}/optik/yazdir`} target="_blank" className="btn-primary mt-3 w-full">🖨️ Formu yazdır</Link>
           {skipped > 0 && (
             <p className="mt-2 text-xs text-amber-600">
-              {skipped} soru (çok cevaplı / kısa cevaplı veya 60 sınırını aşan) formda yer almaz; bu sorular boş sayılır.
+              {skipped} soru (çok cevaplı / kısa cevaplı) formda yer almaz; bu sorular boş sayılır.
             </p>
           )}
         </div>
@@ -43,7 +43,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </ul>
         </div>
       </aside>
-      <OmrScanner testId={id} info={info} answerKey={key} />
+      <OmrScanner spec={info} keys={{ A: key }} saveUrl={`/api/tests/${id}/omr`} resultsHref={`/sinav/${id}/sonuclar`} />
     </div>
   );
 }

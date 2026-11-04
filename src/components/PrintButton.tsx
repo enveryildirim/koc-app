@@ -1,4 +1,4 @@
 "use client";
-export default function PrintButton() {
-  return <button className="btn-primary" onClick={() => window.print()}>🖨️ Yazdır</button>;
+export default function PrintButton({ label = "🖨️ Yazdır" }: { label?: string }) {
+  return <button className="btn-secondary" onClick={() => window.print()}>{label}</button>;
 }

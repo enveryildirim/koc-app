@@ -85,3 +85,163 @@ model Answer {
   isCorrect  Boolean  @default(false)
   points     Int      @default(0)
 }
+
+/**
+ * ============================ Kurum modülleri ============================
+ */
+
+model Classroom {
+  id        String          @id @default(cuid())
+  ownerId   String
+  name      String
+  level     String          @default("")
+  createdAt DateTime        @default(now())
+  students  Student[]
+  homeworks Homework[]
+  slots     ScheduleSlot[]
+  sessions  LessonSession[]
+
+  @@unique([ownerId, name])
+}
+
+model Student {
+  id          String           @id @default(cuid())
+  ownerId     String
+  classroomId String?
+  classroom   Classroom?       @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  studentNo   String
+  firstName   String
+  lastName    String
+  phone       String           @default("")
+  parentName  String           @default("")
+  parentPhone String           @default("")
+  /// Kurum dışı öğrenci (STS: dışarıdan sınava katılan)
+  external    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  results     ExamResult[]
+  homeworks   HomeworkStatus[]
+  attendances Attendance[]
+
+  @@unique([ownerId, studentNo])
+}
+
+model Exam {
+  id        String       @id @default(cuid())
+  ownerId   String
+  name      String
+  /// LGS | TYT | AYT | SERBEST
+  type      String
+  date      DateTime
+  /// JSON: [{ name, count, keyA, keyB }] — key: "ABCD..." (her soru için bir harf)
+  sections  String
+  bookletB  Boolean      @default(true)
+  /// Kaç yanlış bir doğruyu götürür (0 = götürmez)
+  wrongPer  Int          @default(4)
+  createdAt DateTime     @default(now())
+  results   ExamResult[]
+}
+
+model ExamResult {
+  id        String   @id @default(cuid())
+  examId    String
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  booklet   String   @default("A")
+  /// Tüm sorular için cevap dizisi: harf, " " = boş, "*" = çift işaret
+  answers   String
+  /// JSON: [{ d, y, b, net }] bölüm sırasıyla
+  stats     String
+  totalNet  Float
+  /// OMR | TXT | MANUAL
+  source    String   @default("MANUAL")
+  createdAt DateTime @default(now())
+
+  @@unique([examId, studentId])
+}
+
+model Homework {
+  id          String           @id @default(cuid())
+  ownerId     String
+  classroomId String
+  classroom   Classroom        @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  subject     String
+  title       String
+  description String           @default("")
+  assignedAt  DateTime         @default(now())
+  dueDate     DateTime
+  statuses    HomeworkStatus[]
+}
+
+model HomeworkStatus {
+  id         String   @id @default(cuid())
+  homeworkId String
+  homework   Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// PENDING | DONE | PARTIAL | NOT_DONE
+  status     String   @default("PENDING")
+  note       String   @default("")
+
+  @@unique([homeworkId, studentId])
+}
+
+model Teacher {
+  id       String          @id @default(cuid())
+  ownerId  String
+  name     String
+  branch   String
+  slots    ScheduleSlot[]
+  sessions LessonSession[]
+}
+
+/// Haftalık ders programındaki tekrar eden ders
+model ScheduleSlot {
+  id          String          @id @default(cuid())
+  ownerId     String
+  classroomId String
+  classroom   Classroom       @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject     String
+  /// GRUP | ETUT | OZEL
+  lessonType  String          @default("GRUP")
+  /// 1 = Pazartesi … 7 = Pazar
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  sessions    LessonSession[]
+}
+
+/// Belirli bir tarihte işlenen ders (yoklama bu kayda bağlanır)
+model LessonSession {
+  id          String        @id @default(cuid())
+  ownerId     String
+  slotId      String?
+  slot        ScheduleSlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  classroomId String
+  classroom   Classroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject     String
+  lessonType  String        @default("GRUP")
+  /// YYYY-MM-DD
+  date        String
+  startTime   String
+  endTime     String
+  attendances Attendance[]
+
+  @@unique([slotId, date])
+}
+
+model Attendance {
+  id        String        @id @default(cuid())
+  sessionId String
+  session   LessonSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// PRESENT | ABSENT | LATE | EXCUSED
+  status    String
+
+  @@unique([sessionId, studentId])
+}

@@ -1,0 +1,204 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { ATTENDANCE, classroomsOf, HOMEWORK, requireOwner } from "@/lib/kurum";
+import { EXAM_TYPES, fmtDate, fmtNet, parseSections } from "@/lib/exam";
+import { Kpi, PageHeader, th, td } from "@/components/kurum/ui";
+import StudentForm from "@/components/kurum/kayit/StudentForm";
+import PrintButton from "@/components/PrintButton";
+
+export const dynamic = "force-dynamic";
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const ownerId = await requireOwner();
+  const { id } = await params;
+  const st = await prisma.student.findUnique({
+    where: { id },
+    include: {
+      classroom: true,
+      results: { include: { exam: true }, orderBy: { exam: { date: "asc" } } },
+      homeworks: { include: { homework: true }, orderBy: { homework: { dueDate: "desc" } } },
+      attendances: { include: { session: true } },
+    },
+  });
+  if (!st || st.ownerId !== ownerId) notFound();
+  const classes = await classroomsOf(ownerId);
+
+  // Sınav türüne göre gruplanmış sonuçlar (birleştirilmiş karne)
+  const byType = new Map<string, typeof st.results>();
+  for (const r of st.results) byType.set(r.exam.type, [...(byType.get(r.exam.type) ?? []), r]);
+
+  const hw = { DONE: 0, PARTIAL: 0, NOT_DONE: 0, PENDING: 0 } as Record<string, number>;
+  st.homeworks.forEach((h) => (hw[h.status] = (hw[h.status] ?? 0) + 1));
+  const hwGraded = hw.DONE + hw.PARTIAL + hw.NOT_DONE;
+
+  const att = { PRESENT: 0, ABSENT: 0, LATE: 0, EXCUSED: 0 } as Record<string, number>;
+  st.attendances.forEach((a) => (att[a.status] = (att[a.status] ?? 0) + 1));
+  const attTotal = st.attendances.length;
+  const absences = st.attendances
+    .filter((a) => a.status !== "PRESENT")
+    .sort((a, b) => b.session.date.localeCompare(a.session.date))
+    .slice(0, 8);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={`${st.firstName} ${st.lastName}`}
+        sub={`No: ${st.studentNo} · ${st.classroom?.name ?? (st.external ? "Kurum dışı öğrenci" : "Sınıfsız")}`}
+        back={{ href: "/kurum/ogrenciler", label: "Öğrenciler" }}
+        actions={<PrintButton label="🖨️ Öğrenci raporunu yazdır" />}
+      />
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Kpi label="Girdiği deneme" value={st.results.length} />
+        <Kpi label="Ödev yapma" value={hwGraded ? `%${Math.round((hw.DONE / hwGraded) * 100)}` : "—"} hint={`${hw.DONE} yaptı · ${hw.PARTIAL} eksik · ${hw.NOT_DONE} yapmadı`} />
+        <Kpi label="Devam" value={attTotal ? `%${Math.round(((att.PRESENT + att.LATE) / attTotal) * 100)}` : "—"} hint={`${att.ABSENT} gelmedi · ${att.LATE} geç · ${att.EXCUSED} izinli`} />
+        <Kpi label="Veli" value={<span className="text-base">{st.parentName || "—"}</span>} hint={st.parentPhone} />
+      </div>
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">Girdiği sınavlar</h2>
+        {st.results.length === 0 && <div className="card p-6 text-sm text-slate-500">Henüz deneme sonucu yok.</div>}
+        {[...byType.entries()].map(([type, results]) => {
+          const secs = parseSections(results[results.length - 1].exam.sections);
+          const stats = results.map((r) => JSON.parse(r.stats) as { d: number; y: number; b: number; net: number }[]);
+          const avg = secs.map((_, si) => stats.reduce((s, x) => s + (x[si]?.net ?? 0), 0) / stats.length);
+          const avgTotal = results.reduce((s, r) => s + r.totalNet, 0) / results.length;
+          const maxNet = secs.reduce((s, x) => s + x.count, 0);
+          return (
+            <div key={type} className="card mb-4 overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+                <h3 className="font-semibold">{EXAM_TYPES[type]?.label ?? type} · {results.length} sınav</h3>
+                <NetTrend values={results.map((r) => r.totalNet)} max={maxNet} />
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className={th}>Sınav</th>
+                      <th className={th}>Tarih</th>
+                      {secs.map((s) => (
+                        <th key={s.name} className={`${th} text-right`}>{s.name}</th>
+                      ))}
+                      <th className={`${th} text-right`}>Toplam net</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {results.map((r, i) => (
+                      <tr key={r.id}>
+                        <td className={`${td} font-medium`}>{r.exam.name}</td>
+                        <td className={`${td} text-slate-500`}>{fmtDate(r.exam.date)}</td>
+                        {secs.map((s, si) => (
+                          <td key={s.name} className={`${td} text-right tabular-nums`}>{fmtNet(stats[i][si]?.net ?? 0)}</td>
+                        ))}
+                        <td className={`${td} text-right font-bold tabular-nums`}>{fmtNet(r.totalNet)}</td>
+                        <td className={`${td} text-right`}>
+                          <Link className="no-print text-brand-600 hover:underline" href={`/kurum/denemeler/${r.examId}/karne/${r.id}`}>Karne</Link>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-brand-50 font-semibold text-brand-700">
+                      <td className={td} colSpan={2}>Ortalama (birleştirilmiş)</td>
+                      {avg.map((a, si) => (
+                        <td key={si} className={`${td} text-right tabular-nums`}>{fmtNet(a)}</td>
+                      ))}
+                      <td className={`${td} text-right tabular-nums`}>{fmtNet(avgTotal)}</td>
+                      <td />
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="card overflow-hidden">
+          <h2 className="border-b border-slate-100 px-4 py-3 font-semibold">Son ödevler</h2>
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-slate-100">
+              {st.homeworks.slice(0, 8).map((h) => (
+                <tr key={h.id}>
+                  <td className={td}>
+                    <Link href={`/kurum/odevler/${h.homeworkId}`} className="hover:text-brand-600">{h.homework.title}</Link>
+                    <div className="text-xs text-slate-500">{h.homework.subject} · teslim {fmtDate(h.homework.dueDate)}</div>
+                  </td>
+                  <td className={`${td} text-right`}>
+                    <span className={`badge ${HOMEWORK[h.status]?.cls}`}>{HOMEWORK[h.status]?.label}</span>
+                  </td>
+                </tr>
+              ))}
+              {st.homeworks.length === 0 && (
+                <tr><td className={`${td} text-slate-500`}>Ödev kaydı yok.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+        <section className="card overflow-hidden">
+          <h2 className="border-b border-slate-100 px-4 py-3 font-semibold">Son devamsızlıklar</h2>
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-slate-100">
+              {absences.map((a) => (
+                <tr key={a.id}>
+                  <td className={td}>
+                    {fmtDate(a.session.date)} · {a.session.startTime}
+                    <div className="text-xs text-slate-500">{a.session.subject}</div>
+                  </td>
+                  <td className={`${td} text-right`}>
+                    <span className={`badge ${ATTENDANCE[a.status]?.cls}`}>{ATTENDANCE[a.status]?.label}</span>
+                  </td>
+                </tr>
+              ))}
+              {absences.length === 0 && (
+                <tr><td className={`${td} text-slate-500`}>Devamsızlık yok. 👏</td></tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <section className="no-print card p-6">
+        <h2 className="mb-4 font-semibold">Öğrenci bilgileri</h2>
+        <StudentForm
+          classes={classes.map((c) => ({ id: c.id, name: c.name }))}
+          studentId={st.id}
+          initial={{
+            studentNo: st.studentNo,
+            firstName: st.firstName,
+            lastName: st.lastName,
+            classroomId: st.classroomId ?? "",
+            phone: st.phone,
+            parentName: st.parentName,
+            parentPhone: st.parentPhone,
+            external: st.external,
+          }}
+        />
+      </section>
+    </div>
+  );
+}
+
+/** Küçük net gelişim grafiği (SVG). */
+function NetTrend({ values, max }: { values: number[]; max: number }) {
+  if (values.length < 2) return null;
+  const w = 160;
+  const h = 36;
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 8) + 4, h - 4 - (Math.max(0, v) / max) * (h - 8)]);
+  const up = values[values.length - 1] >= values[0];
+  return (
+    <div className="flex items-center gap-2 text-xs text-slate-500">
+      Net gelişimi
+      <svg width={w} height={h} className="overflow-visible">
+        <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke={up ? "#059669" : "#dc2626"} strokeWidth={2} />
+        {pts.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={2.5} fill={up ? "#059669" : "#dc2626"} />
+        ))}
+      </svg>
+      <span className={up ? "font-semibold text-emerald-700" : "font-semibold text-red-700"}>
+        {up ? "▲" : "▼"} {fmtNet(Math.abs(values[values.length - 1] - values[0]))}
+      </span>
+    </div>
+  );
+}

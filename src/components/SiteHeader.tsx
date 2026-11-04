@@ -13,7 +13,7 @@ export default async function SiteHeader() {
         <nav className="flex items-center gap-2 text-sm">
           {user ? (
             <>
-              <Link href="/panel" className="btn-secondary">Sınavlarım</Link>
+              <Link href="/kurum" className="btn-secondary">Kurum Paneli</Link>
               <span className="hidden text-slate-500 sm:inline">{user.name}</span>
               <form action="/api/auth/logout" method="post">
                 <button className="btn text-slate-600 hover:bg-slate-100">Çıkış</button>

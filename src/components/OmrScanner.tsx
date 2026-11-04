@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
-import { useRef, useState } from "react";
-import { CHOICES, FormInfo } from "@/lib/omr/layout";
+import { useMemo, useRef, useState } from "react";
+import { CHOICES, computeLayout, FormSpec } from "@/lib/omr/layout";
 import { scanForm, ScanResult } from "@/lib/omr/scan";
 import { renderSampleScan } from "@/lib/omr/draw";
 
-type KeyItem = { points: number; correct: number[]; number: number };
+export type KeyItem = { points: number; correct: number[]; number: number; section?: string };
 
 type Sheet = {
   key: string;
@@ -17,16 +17,32 @@ type Sheet = {
   overlay?: string;
   name: string;
   studentNo: string;
+  booklet: string;
   answers: number[][];
 };
 
-const MAX_DIM = 1400;
-const SAMPLE_NAMES = ["Ali Vural", "Büşra Kılıç", "Cem Aksoy", "Dilara Tan", "Eren Uçar", "Gizem Oral"];
+type Props = {
+  spec: FormSpec;
+  /** Kitapçık türüne göre cevap anahtarı. Kitapçık alanı yoksa yalnızca A kullanılır. */
+  keys: { A: KeyItem[]; B?: KeyItem[] };
+  saveUrl: string;
+  resultsHref: string;
+  /** "exam": öğrenci numarasıyla eşleştirme + net gösterimi */
+  mode?: "test" | "exam";
+  /** normalize edilmiş öğrenci no → görünen ad (exam modu) */
+  students?: Record<string, string>;
+  wrongPer?: number;
+};
 
-export default function OmrScanner({ testId, info, answerKey }: { testId: string; info: FormInfo; answerKey: KeyItem[] }) {
+const MAX_DIM = 1800;
+const SAMPLE_NAMES = ["Ali Vural", "Büşra Kılıç", "Cem Aksoy", "Dilara Tan", "Eren Uçar", "Gizem Oral"];
+const norm = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "") || "0";
+
+export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "test", students = {}, wrongPer = 0 }: Props) {
+  const layout = useMemo(() => computeLayout(spec), [spec]);
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<number | null>(null);
+  const [saved, setSaved] = useState<{ n: number; skipped: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const patch = (key: string, p: Partial<Sheet>) => setSheets((s) => s.map((x) => (x.key === key ? { ...x, ...p } : x)));
@@ -34,11 +50,8 @@ export default function OmrScanner({ testId, info, answerKey }: { testId: string
   async function addImage(fileName: string, imageUrl: string) {
     const key = `${Date.now()}-${Math.random()}`;
     setSaved(null);
-    setSheets((s) => [
-      ...s,
-      { key, fileName, imageUrl, status: "processing", name: "", studentNo: "", answers: [] },
-    ]);
-    await new Promise((r) => setTimeout(r, 30)); // arayüzün güncellenmesine izin ver
+    setSheets((s) => [...s, { key, fileName, imageUrl, status: "processing", name: "", studentNo: "", booklet: "A", answers: [] }]);
+    await new Promise((r) => setTimeout(r, 30));
     try {
       const img = await loadImage(imageUrl);
       const ratio = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
@@ -47,13 +60,13 @@ export default function OmrScanner({ testId, info, answerKey }: { testId: string
       canvas.height = Math.round(img.height * ratio);
       const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const scan = scanForm(data, info.questions);
+      const scan = scanForm(ctx.getImageData(0, 0, canvas.width, canvas.height), layout);
       patch(key, {
         status: "done",
         scan,
         overlay: drawOverlay(canvas, scan),
         studentNo: scan.studentNo,
+        booklet: scan.booklet || "A",
         answers: scan.questions.map((q) => q.marked),
       });
     } catch (e) {
@@ -63,26 +76,36 @@ export default function OmrScanner({ testId, info, answerKey }: { testId: string
 
   async function onFiles(files: FileList | null) {
     if (!files) return;
-    for (const f of Array.from(files)) {
-      await addImage(f.name, URL.createObjectURL(f));
-    }
+    for (const f of Array.from(files)) await addImage(f.name, URL.createObjectURL(f));
     if (fileRef.current) fileRef.current.value = "";
   }
 
   async function addSamples(n: number) {
+    const known = Object.entries(students);
     for (let i = 0; i < n; i++) {
-      const skill = 0.4 + Math.random() * 0.55;
-      const answers = answerKey.map((k, q) => {
+      const skill = 0.35 + Math.random() * 0.6;
+      const booklet = spec.booklet && Math.random() < 0.5 ? "B" : "A";
+      const key = (booklet === "B" && keys.B) || keys.A;
+      const answers = key.map((k, q) => {
+        const cc = spec.questions[q].choiceCount;
         const r = Math.random();
-        if (r < 0.04) return []; // boş
-        if (r < 0.06) return [0, 1].slice(0, info.questions[q].choiceCount); // çift işaretleme
+        if (r < 0.08) return [];
+        if (r < 0.095) return [0, 1];
         if (Math.random() < skill) return k.correct.slice(0, 1);
-        return [Math.floor(Math.random() * info.questions[q].choiceCount)];
+        return [Math.floor(Math.random() * cc)];
       });
-      const studentNo = String(100000 + Math.floor(Math.random() * 899999));
-      const name = SAMPLE_NAMES[Math.floor(Math.random() * SAMPLE_NAMES.length)];
-      const url = renderSampleScan(info, { answers, studentNo, name });
-      await addImage(`örnek-${studentNo}.jpg (${name})`, url);
+      let studentNo: string;
+      let name: string;
+      if (mode === "exam" && known.length) {
+        const [no, display] = known[Math.floor(Math.random() * known.length)];
+        studentNo = no.padStart(6, "0");
+        name = display.split(" (")[0];
+      } else {
+        studentNo = String(100000 + Math.floor(Math.random() * 899999));
+        name = SAMPLE_NAMES[Math.floor(Math.random() * SAMPLE_NAMES.length)];
+      }
+      const url = renderSampleScan(spec, { answers, studentNo, name, booklet: spec.booklet ? booklet : undefined });
+      await addImage(`örnek-${studentNo}.jpg (${name}${spec.booklet ? ` · ${booklet}` : ""})`, url);
     }
   }
 
@@ -90,32 +113,34 @@ export default function OmrScanner({ testId, info, answerKey }: { testId: string
     setSheets((s) =>
       s.map((x) => {
         if (x.key !== sheetKey) return x;
-        const answers = x.answers.map((a, i) => (i === q ? (a.includes(c) ? a.filter((v) => v !== c) : [c]) : a));
-        return { ...x, answers };
+        return { ...x, answers: x.answers.map((a, i) => (i === q ? (a.includes(c) ? a.filter((v) => v !== c) : [c]) : a)) };
       }),
     );
   }
 
   const ready = sheets.filter((s) => s.status === "done");
+  const unmatched = mode === "exam" ? ready.filter((s) => !students[norm(s.studentNo)]).length : 0;
 
   async function saveAll() {
     setSaving(true);
-    const res = await fetch(`/api/tests/${testId}/omr`, {
+    const res = await fetch(saveUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sheets: ready.map((s) => ({ name: s.name, studentNo: s.studentNo, answers: s.answers })) }),
+      body: JSON.stringify({
+        sheets: ready.map((s) => ({ name: s.name, studentNo: s.studentNo, booklet: s.booklet, answers: s.answers })),
+      }),
     });
     setSaving(false);
-    if (res.ok) {
-      setSaved(ready.length);
-      setSheets((s) => s.filter((x) => x.status !== "done"));
-    } else alert("Kaydedilemedi.");
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(json.error ?? "Kaydedilemedi.");
+    setSaved({ n: json.saved ?? json.ids?.length ?? ready.length, skipped: json.skipped ?? [] });
+    setSheets((s) => s.filter((x) => x.status !== "done"));
   }
 
   return (
     <div className="space-y-4">
       <div className="card p-5">
-        <h2 className="font-semibold">2. Doldurulmuş formları tarayın</h2>
+        <h2 className="font-semibold">Doldurulmuş formları tarayın</h2>
         <p className="mt-1 text-sm text-slate-500">
           Tarayıcıdan aldığınız görüntüleri veya telefonla çektiğiniz fotoğrafları yükleyin. Birden fazla dosya seçebilirsiniz.
           İşleme tamamen tarayıcınızda yapılır.
@@ -130,22 +155,39 @@ export default function OmrScanner({ testId, info, answerKey }: { testId: string
         </div>
         <p className="mt-2 text-xs text-slate-400">
           “Örnek” düğmeleri test içindir: rastgele doldurulmuş, hafif döndürülmüş ve gürültülü sahte bir tarama üretip okuyucuya verir.
+          {mode === "exam" && " Örnekler kayıtlı öğrencilerin numaralarıyla doldurulur."}
         </p>
       </div>
 
-      {saved !== null && (
+      {saved && (
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-200">
-          {saved} form kaydedildi. <Link href={`/sinav/${testId}/sonuclar`} className="font-semibold underline">Sonuçları görüntüle →</Link>
+          {saved.n} form kaydedildi.{" "}
+          {saved.skipped.length > 0 && <span className="text-amber-700">Eşleşmeyen numaralar atlandı: {saved.skipped.join(", ")}. </span>}
+          <Link href={resultsHref} className="font-semibold underline">Sonuçları görüntüle →</Link>
         </div>
       )}
 
       {sheets.map((s) => (
-        <SheetCard key={s.key} sheet={s} info={info} answerKey={answerKey} onPatch={(p) => patch(s.key, p)} onToggle={(q, c) => toggle(s.key, q, c)} onRemove={() => setSheets((x) => x.filter((y) => y.key !== s.key))} />
+        <SheetCard
+          key={s.key}
+          sheet={s}
+          spec={spec}
+          keys={keys}
+          mode={mode}
+          wrongPer={wrongPer}
+          matched={students[norm(s.studentNo)]}
+          onPatch={(p) => patch(s.key, p)}
+          onToggle={(q, c) => toggle(s.key, q, c)}
+          onRemove={() => setSheets((x) => x.filter((y) => y.key !== s.key))}
+        />
       ))}
 
       {ready.length > 0 && (
-        <div className="sticky bottom-4 flex items-center justify-between rounded-xl bg-slate-900 p-4 text-white shadow-lg">
-          <span className="text-sm">{ready.length} form kaydedilmeye hazır</span>
+        <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-900 p-4 text-white shadow-lg">
+          <span className="text-sm">
+            {ready.length} form kaydedilmeye hazır
+            {unmatched > 0 && <span className="ml-2 text-amber-300">· {unmatched} formun numarası kayıtlı öğrenciyle eşleşmiyor (atlanacak)</span>}
+          </span>
           <button className="btn bg-white text-slate-900 hover:bg-slate-100" disabled={saving} onClick={saveAll}>
             {saving ? "Kaydediliyor…" : "Tümünü sonuçlara kaydet"}
           </button>
@@ -157,31 +199,38 @@ export default function OmrScanner({ testId, info, answerKey }: { testId: string
 
 function SheetCard({
   sheet: s,
-  info,
-  answerKey,
+  spec,
+  keys,
+  mode,
+  wrongPer,
+  matched,
   onPatch,
   onToggle,
   onRemove,
 }: {
   sheet: Sheet;
-  info: FormInfo;
-  answerKey: KeyItem[];
+  spec: FormSpec;
+  keys: Props["keys"];
+  mode: "test" | "exam";
+  wrongPer: number;
+  matched?: string;
   onPatch: (p: Partial<Sheet>) => void;
   onToggle: (q: number, c: number) => void;
   onRemove: () => void;
 }) {
   const [zoom, setZoom] = useState(false);
-  let score = 0;
-  let max = 0;
-  let correct = 0;
-  answerKey.forEach((k, i) => {
+  const key = (s.booklet === "B" && keys.B) || keys.A;
+  let score = 0, max = 0, d = 0, y = 0, b = 0;
+  key.forEach((k, i) => {
     max += k.points;
     const a = s.answers[i] ?? [];
-    if (a.length === k.correct.length && a.every((v) => k.correct.includes(v))) {
+    if (a.length === 0) b++;
+    else if (a.length === k.correct.length && a.every((v) => k.correct.includes(v))) {
       score += k.points;
-      correct++;
-    }
+      d++;
+    } else y++;
   });
+  const net = wrongPer > 0 ? d - y / wrongPer : d;
   const problems = s.scan?.questions.filter((q) => q.status === "multiple" || q.status === "uncertain").length ?? 0;
 
   return (
@@ -202,28 +251,47 @@ function SheetCard({
         <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr]">
           <div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={s.overlay}
-              alt="Okunan form"
-              onClick={() => setZoom(true)}
-              className="w-full cursor-zoom-in rounded ring-1 ring-slate-200"
-            />
+            <img src={s.overlay} alt="Okunan form" onClick={() => setZoom(true)} className="w-full cursor-zoom-in rounded ring-1 ring-slate-200" />
             <p className="mt-1 text-center text-xs text-slate-400">Büyütmek için tıklayın</p>
           </div>
           <div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="label">Ad Soyad</label>
-                <input className="input" placeholder="Formdaki adı yazın" value={s.name} onChange={(e) => onPatch({ name: e.target.value })} />
-              </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {mode === "test" ? (
+                <div className="sm:col-span-2">
+                  <label className="label">Ad Soyad</label>
+                  <input className="input" placeholder="Formdaki adı yazın" value={s.name} onChange={(e) => onPatch({ name: e.target.value })} />
+                </div>
+              ) : (
+                <div className="sm:col-span-2">
+                  <label className="label">Öğrenci (numaradan eşleşen)</label>
+                  <div className={`input ${matched ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+                    {matched ?? "Kayıtlı öğrenci bulunamadı – numarayı düzeltin"}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="label">Öğrenci no (okunan)</label>
                 <input className="input font-mono" value={s.studentNo} onChange={(e) => onPatch({ studentNo: e.target.value })} />
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              {spec.booklet && (
+                <span className="flex items-center gap-1">
+                  Kitapçık:
+                  {["A", "B"].map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => onPatch({ booklet: k })}
+                      className={`h-7 w-7 rounded-full text-xs font-bold ${s.booklet === k ? "bg-slate-900 text-white" : "ring-1 ring-slate-300"}`}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                  {!s.scan.booklet && <span className="text-xs text-amber-600">(okunamadı)</span>}
+                </span>
+              )}
               <span className="badge bg-brand-50 px-3 py-1 text-sm text-brand-700">
-                {score}/{max} puan · {correct} doğru
+                {mode === "exam" ? `${d}D ${y}Y ${b}B · ${net.toFixed(2)} net` : `${score}/${max} puan · ${d} doğru`}
               </span>
               {problems > 0 ? (
                 <span className="badge bg-amber-50 px-3 py-1 text-sm text-amber-700">⚠️ {problems} soruyu kontrol edin</span>
@@ -231,31 +299,35 @@ function SheetCard({
                 <span className="badge bg-emerald-50 px-3 py-1 text-sm text-emerald-700">✓ Tüm sorular net okundu</span>
               )}
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2 xl:grid-cols-3">
-              {info.questions.map((fq, qi) => {
+            <div className="mt-3 grid max-h-96 grid-cols-1 gap-x-6 gap-y-1 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
+              {spec.questions.map((fq, qi) => {
                 const read = s.scan!.questions[qi];
                 const a = s.answers[qi] ?? [];
                 const flag = read.status === "multiple" || read.status === "uncertain";
+                const k = key[qi];
+                const newSection = k?.section && k.section !== key[qi - 1]?.section;
                 return (
-                  <div key={qi} className={`flex items-center gap-1 rounded px-1 py-0.5 ${flag ? "bg-amber-50" : ""}`}>
-                    <span className="w-7 text-right text-xs font-semibold text-slate-500">{answerKey[qi].number}.</span>
-                    {CHOICES.slice(0, fq.choiceCount).map((c, ci) => {
-                      const on = a.includes(ci);
-                      const isKey = answerKey[qi].correct.includes(ci);
-                      return (
-                        <button
-                          key={c}
-                          onClick={() => onToggle(qi, ci)}
-                          title={isKey ? "Doğru cevap" : undefined}
-                          className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
-                            on ? (isKey ? "bg-emerald-600 text-white" : "bg-red-500 text-white") : isKey ? "text-emerald-700 ring-1 ring-emerald-400" : "text-slate-400 ring-1 ring-slate-200"
-                          }`}
-                        >
-                          {c}
-                        </button>
-                      );
-                    })}
-                    {flag && <span className="text-[10px] text-amber-700">{read.status === "multiple" ? "çift" : "belirsiz"}</span>}
+                  <div key={qi} className="contents">
+                    {newSection && <div className="col-span-full mt-2 text-xs font-bold uppercase text-slate-500">{k.section}</div>}
+                    <div className={`flex items-center gap-1 rounded px-1 py-0.5 ${flag ? "bg-amber-50" : ""}`}>
+                      <span className="w-7 text-right text-xs font-semibold text-slate-500">{k?.number}.</span>
+                      {CHOICES.slice(0, fq.choiceCount).map((c, ci) => {
+                        const on = a.includes(ci);
+                        const isKey = k?.correct.includes(ci);
+                        return (
+                          <button
+                            key={c}
+                            onClick={() => onToggle(qi, ci)}
+                            className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
+                              on ? (isKey ? "bg-emerald-600 text-white" : "bg-red-500 text-white") : isKey ? "text-emerald-700 ring-1 ring-emerald-400" : "text-slate-400 ring-1 ring-slate-200"
+                            }`}
+                          >
+                            {c}
+                          </button>
+                        );
+                      })}
+                      {flag && <span className="text-[10px] text-amber-700">{read.status === "multiple" ? "çift" : "belirsiz"}</span>}
+                    </div>
                   </div>
                 );
               })}
@@ -292,14 +364,17 @@ function drawOverlay(src: HTMLCanvasElement, scan: ScanResult) {
   c.height = src.height;
   const ctx = c.getContext("2d")!;
   ctx.drawImage(src, 0, 0);
-  ctx.lineWidth = Math.max(2, c.width / 400);
+  ctx.lineWidth = Math.max(2, c.width / 450);
   for (const [x, y] of scan.markers) {
     ctx.strokeStyle = "#2563eb";
     ctx.beginPath();
     ctx.arc(x, y, c.width / 40, 0, Math.PI * 2);
     ctx.stroke();
   }
-  const all = [...scan.studentBubbles.map((b) => ({ b, warn: false })), ...scan.questions.flatMap((q) => q.bubbles.map((b) => ({ b, warn: q.status === "multiple" || q.status === "uncertain" })))];
+  const all = [
+    ...scan.studentBubbles.map((b) => ({ b, warn: false })),
+    ...scan.questions.flatMap((q) => q.bubbles.map((b) => ({ b, warn: q.status === "multiple" || q.status === "uncertain" }))),
+  ];
   for (const { b, warn } of all) {
     if (!b.marked && !warn) continue;
     ctx.strokeStyle = warn ? "#f59e0b" : "#16a34a";

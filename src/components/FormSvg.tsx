@@ -1,6 +1,6 @@
-import { buildForm, FormInfo, PAGE_H, PAGE_W } from "@/lib/omr/layout";
+import { buildForm, FormSpec, PAGE_H, PAGE_W } from "@/lib/omr/layout";
 
-export default function FormSvg({ info, className, style }: { info: FormInfo; className?: string; style?: React.CSSProperties }) {
+export default function FormSvg({ info, className, style }: { info: FormSpec; className?: string; style?: React.CSSProperties }) {
   const prims = buildForm(info);
   return (
     <svg viewBox={`0 0 ${PAGE_W} ${PAGE_H}`} className={className} style={style} xmlns="http://www.w3.org/2000/svg">

@@ -23,7 +23,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     const json = await res.json();
     setBusy(false);
     if (!res.ok) return setError(json.error ?? "Bir hata oluştu.");
-    router.push("/panel");
+    router.push("/kurum");
     router.refresh();
   }
 
