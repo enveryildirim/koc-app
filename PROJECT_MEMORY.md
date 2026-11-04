@@ -51,43 +51,36 @@ npm run dev        # http://localhost:3000
 
 ## 3. Mimari
 
+**Modüler monolit.** Ayrıntılı kurallar için **[ARCHITECTURE.md](ARCHITECTURE.md)** dosyasını okuyun. Kod `src/modules/<modül>/` altında, iş alanına göre bölünmüştür: identity, enrollment, exams, homework, schedule, online-test, reporting. `src/app/` ince bir katmandır ve veritabanına doğrudan erişemez. Modül sınırlarını `npm run lint` denetler.
+
 ### Çok kiracılık (multi-tenant)
 - **Kurum = kullanıcı.** Kurum tablolarında `ownerId` alanı var (User'a ilişki tanımlı değil).
-- Her sorgu `ownerId` ile filtrelenir:
-  - Sayfalar `requireOwner()` kullanır.
-  - API'ler `apiOwner()` kullanır: giriş yoksa 401, başka kurumun kaydıysa 404.
+- `ownerId` filtresini **modül fonksiyonları kendisi uygular**; sayfalar ve route'lar filtre yazmaz.
+  - Sayfalar `requireOwner()` ile kimliği alır ve modülün `find*` fonksiyonunu çağırır. Kayıt yoksa `null` döner ve sayfa `notFound()` çağırır.
+  - Route'lar `api()` + `ownerOrThrow()` kullanır: giriş yoksa 401, başka kurumun kaydıysa 404 (`identity/server`, `shared/http`).
 - `seed-kurum.ts`, kurum tablolarını ilişki olmadığı için elle temizler.
 
 ### Klasör yapısı (önemli dosyalar)
 ```
-prisma/
-  schema.prisma          # Online test modelleri + kurum modelleri
-  seed.ts                # Demo kullanıcı + 4 online test; sonunda seedKurum()
-  seed-kurum.ts          # Sınıflar, ~80 öğrenci, 6 deneme, ödevler, program, 3 haftalık yoklama
-src/lib/
-  auth.ts                # Oturum (getUser, requireUser, getOwnedTest)
-  grading.ts             # Online test puanlama
-  exam.ts                # Deneme: EXAM_TYPES şablonları, gradeExam (net), normNo, fmtNet  (istemci-güvenli)
-  examServer.ts          # loadExam, saveResults (no ile eşleştirme + upsert), regrade, examReport (sıra/ortalama)
-  examOmr.ts             # Deneme → optik form tanımı (FormSpec) + cevap anahtarı (istemci-güvenli)
-  kurum.ts               # requireOwner/apiOwner, ymd, dayOfWeek  (SUNUCU: next/headers içerir)
-  kurumLabels.ts         # DAYS, LESSON_TYPES, ATTENDANCE, HOMEWORK etiketleri (istemci-güvenli)
-  studentInput.ts        # Öğrenci girdisi doğrulama
-  omr/layout.ts          # Parametrik optik form düzeni: computeLayout(spec), buildForm()
-  omr/scan.ts            # Görüntüden okuma: scanForm(image, layout)
-  omr/draw.ts            # Canvas çizimi + test için sahte "taranmış" form üretici
-src/components/
-  OmrScanner.tsx         # Ortak tarama arayüzü; mode="test" | "exam"
-  FormSvg.tsx            # Yazdırılabilir form (SVG)
-  kurum/ui.tsx           # PageHeader, Kpi, Empty, Tabs, th, td
-  kurum/{kayit,sinav,odev,program}/   # Modül bileşenleri
-src/app/
-  panel, sinav/[id]/*, s/[code], sonuc/[id]   # Online test (aşama 1)
-  kurum/*                                      # Kurum paneli (aşama 2)
-  api/*                                        # Route handler'lar
+prisma/                  # schema.prisma, seed.ts, seed-kurum.ts
+src/shared/
+  db.ts                  # prisma — yalnızca modüller import eder
+  errors.ts, http.ts     # AppError (invalid/notFound/conflict/unauthorized) → api() ile HTTP yanıtı
+  date.ts                # ymd, dayOfWeek, toInputDate
+  omr/                   # layout.ts, scan.ts, draw.ts, OmrScanner.tsx, FormSvg.tsx (optik form kütüphanesi)
+  ui/                    # kurum.tsx (PageHeader, Kpi, Empty, Tabs, th, td), KurumNav, SiteHeader, Export/PrintButton
+src/modules/
+  identity/              # oturum, requireOwner/ownerOrThrow, login/register, institutionName
+  enrollment/            # sınıf + öğrenci: listStudents, getClassroom, studentNoMatcher, importStudents…
+  exams/                 # domain.ts (EXAM_TYPES, gradeExam, net/puan), omr.ts, topics.ts; server: findExam, updateExam (+regrade), importResults, examReport…
+  homework/              # ödevler + durumlar; labels.ts (STATUS, doneRate)
+  schedule/              # öğretmen, program, yoklama: listSlots, takeAttendance, attendanceSheet…
+  online-test/           # testler, public akış (publicTestByCode, submitPublicAttempt), OMR kaydetme
+  reporting/             # institutionDashboard, analiz (riskList…), devam raporları, veli karnesi, studentOverview
+src/app/                 # sayfa + route dosyaları (ince katman)
 ```
 
-**Uyarı:** `lib/kurum.ts`, `auth` üzerinden `next/headers` import ediyor. Bu yüzden `"use client"` bileşenler etiketleri **`lib/kurumLabels.ts`'den** almalı; yoksa derleme kırılır. `components/kurum/odev/labels.ts` ve `program/labels.ts` aynı etiketlerin yerel kopyaları; ileride `kurumLabels.ts`'e yönlendirilebilir.
+**İstemci/sunucu ayrımı:** `"use client"` bileşenleri yalnızca `@/modules/<m>` (index) ve `ui/` import eder. `@/modules/<m>/server` dosyaları `server-only` içerir; istemciye girerse derleme kırılır. Bu ayrım, eski `lib/kurum.ts` / `kurumLabels.ts` geçici çözümünün ve kopya etiket dosyalarının yerini aldı.
 
 ### Veri modeli (kurum)
 | Model | Amaç / önemli alanlar |
@@ -100,7 +93,7 @@ src/app/
 | `Teacher`, `ScheduleSlot` | Haftalık program (`dayOfWeek` 1=Pzt … 7=Paz, `lessonType` GRUP/ETUT/OZEL) |
 | `LessonSession` / `Attendance` | Belirli tarihteki ders (`date` "YYYY-MM-DD"), `@@unique([slotId, date])`; yoklama PRESENT/ABSENT/LATE/EXCUSED |
 
-### Net hesabı (`lib/exam.ts > gradeExam`)
+### Net hesabı (`modules/exams/domain.ts > gradeExam`)
 - Net = D − Y / `wrongPer`. Varsayılan `wrongPer`: LGS = 3, TYT/AYT = 4. Deneme bazında değiştirilebilir.
 - Çift işaret (`*`) yanlış sayılır, boşluk boş sayılır.
 - B kitapçığı kendi anahtarıyla (`keyB`) puanlanır.
@@ -110,7 +103,7 @@ src/app/
 
 ## 4. Optik okuyucu (OMR)
 
-### Form düzeni (`lib/omr/layout.ts`)
+### Form düzeni (`shared/omr/layout.ts`)
 - A4, birim mm.
 - Dört köşede 8 mm siyah kare işaret var: merkezleri (14,14), (196,14), (196,283), (14,283).
 - 6 haneli öğrenci numarası alanı; isteğe bağlı A/B kitapçık alanı.
@@ -119,7 +112,7 @@ src/app/
 - Bölüm numaraları her bölümde 1'den başlar.
 - **Formu basan, örnek üreten ve okuyan kodun hepsi aynı `computeLayout` çıktısını kullanır.** Bu yüzden düzende yapılan bir değişiklik üçünü birlikte etkiler.
 
-### Okuma algoritması (`lib/omr/scan.ts`)
+### Okuma algoritması (`shared/omr/scan.ts`)
 1. Görüntü gri tonlamaya çevrilir. Integral görüntüyle uyarlamalı eşikleme yapılır (pencere ≈ W/8, piksel < yerel ortalama × 0,72 ve < 150).
 2. Bağlı bileşenler aranır. En büyük, kareye yakın ve yoğun bloblar köşe işareti adayıdır; her görüntü köşesine en yakın aday seçilir.
 3. 4 noktadan homografi hesaplanır (8×8 Gauss eliminasyonu).
@@ -135,7 +128,7 @@ src/app/
 - **Ters görüntü:** Görüntü 180° ters çekilirse yanlış okunur; formda yön işareti yok.
 - **Gerçek kâğıt testi yapılmadı:** Gerçek kâğıt ve kamera ile test edilmedi.
 
-### Optik okuyucu TXT içe aktarma (`components/kurum/sinav/TxtImport.tsx`)
+### Optik okuyucu TXT içe aktarma (`modules/exams/ui/TxtImport.tsx`)
 - Sabit sütunlu dosyadaki alanların başlangıç sütunları kullanıcı tarafından tanımlanır: ad, numara, kitapçık, cevaplar.
 - Varsayılan tanım: ad 1–25, no 26–31, kitapçık 32, cevaplar 33'ten başlar.
 - Tanım tarayıcının `localStorage`'ında saklanır.
@@ -147,8 +140,8 @@ src/app/
 
 - **İçerik:** Seçilen dönemin özeti. Denemeler (ders bazında D/Y/B/net, sınıf ortalaması ve sınıf sırası, önceki denemeye göre değişim), ödevler, devamsızlıklar ve öğretmen görüşü. Telefon ekranına uygun ve yazdırılabilir.
 - **Dosyalar:**
-  - Veri: `lib/parentReport.ts > buildParentReport(studentId, from, to)`
-  - Görünüm: `components/kurum/veli/VeliKarne.tsx`
+  - Veri: `modules/reporting/internal/parentReport.ts` (`parentReports`, `parentReportByToken`)
+  - Görünüm: `modules/reporting/ui/veli/VeliKarne.tsx`
 - **Paylaşım:**
   - `Student.parentToken` alanında 18 rastgele bayt (base64url) tutulur. Link biçimi: `/veli/<token>?bas=YYYY-MM-DD&bit=YYYY-MM-DD`.
   - Giriş gerekmez, sayfa `noindex`; yalnızca o öğrencinin verisi gösterilir.
@@ -158,7 +151,7 @@ src/app/
   - `parentViewedAt`: velinin linki son açtığı zaman. Kurum hesabıyla açılan önizleme sayılmaz.
 - **Öğretmen görüşü:** `Student.parentNote`, `POST /api/kurum/veli/not` ile kaydedilir.
 - **Gönderim:**
-  - WhatsApp düğmesi `wa.me/<905…>?text=` adresini mesaj hazır olarak açar; numara `lib/phone.ts > waPhone` ile dönüştürülür. Gönderimi kullanıcı onaylar.
+  - WhatsApp düğmesi `wa.me/<905…>?text=` adresini mesaj hazır olarak açar; numara `shared/phone.ts > waPhone` ile dönüştürülür. Gönderimi kullanıcı onaylar.
   - Toplu "bağlantı listesini kopyala" seçeneği var.
   - Yazdırma: `/kurum/veli-karnesi/yazdir?sinif=` (sınıf) veya `?ogrenci=` (tek öğrenci).
 - **Layout:** `src/middleware.ts`, `x-pathname` header'ını ekler. Root layout bu header'a bakarak `/veli/*` sayfalarında site menüsünü ve footer'ı gizler.
@@ -169,7 +162,7 @@ src/app/
 
 Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullanımı karşılaştırılarak belirlendi. Bu adımda "1. öncelik" ve "2. öncelik" raporlarının hepsi yapıldı.
 
-**Tahmini puan** (`lib/exam.ts`: `resolveScoring`, `computeScore`, `maxScore`)
+**Tahmini puan** (`modules/exams/domain.ts`: `resolveScoring`, `computeScore`, `maxScore`)
 - Formül: puan = taban + Σ(max(0, net) × katsayı). Sonuç `ExamResult.score`'da saklanır.
 - Ayar `Exam.scoring` alanında JSON olarak tutulur; boşsa sınav türünün varsayılanı kullanılır:
   - LGS: taban 194,752; katsayılar 4,348 / 4,256 / 4,124 / 1,666 / 1,899 / 1,5075 (tam puan ≈ 500)
@@ -184,7 +177,7 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - `sections[].bOrder`: B kitapçığı eşlemesi; `bOrder[j]` = B'deki j. sorunun A'daki indeksi.
   - "A'dan karıştır" düğmesi `makeBooklet()` ile B anahtarını ve eşlemeyi birlikte üretir.
   - Eşleme yoksa B kitapçıklı öğrenciler o bölümün konu hesabına katılmaz ve arayüz bunu uyarır.
-- `topicStats()` konu analizi sekmesini, karnedeki konu başarısını, profildeki konu eksiklerini ve birleştirilmiş karneyi besler (`lib/studentTopics.ts > combinedTopics`).
+- `topicStats()` konu analizi sekmesini, karnedeki konu başarısını, profildeki konu eksiklerini ve birleştirilmiş karneyi besler (`modules/exams/topics.ts > combinedTopics`).
 
 **Yeni ekranlar ve sekmeler**
 - **Deneme sekmeleri:** Konu analizi; Girmeyenler (sınava giren sınıfların kurum içi öğrencilerinden sonucu olmayanlar). Sıralı listeye Puan ve % sütunları, sınıf ortalamalarına ortalama puan eklendi.
@@ -194,7 +187,7 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - **`/kurum/ogrenciler/[id]/birlesik?tur=`:** yazdırılabilir öğrenci birleştirilmiş karnesi (denemeler, ortalama, sınıf sırası, net gelişim grafiği, eksik/güçlü konular).
 - **Karne:** tahmini puan, yüzdelik dilim ve konu başarısı (öğrenci ile kurum karşılaştırması, öncelikli konular).
 - **Veli karnesi:** denemelerde tahmini puan.
-- **`/kurum/analiz`** (yardımcı agent yazdı; veri katmanı `lib/analysis.ts`, grafik `components/kurum/analiz/LineChart.tsx`):
+- **`/kurum/analiz`** (yardımcı agent yazdı; veri katmanı `modules/reporting/internal/analysis.ts`, grafik `modules/reporting/ui/LineChart.tsx`):
   - **Sınıf gelişimi:** tür ve ders seçimi, sınıf × deneme ortalamaları, çizgi grafik.
   - **Risk / erken uyarı:** kurallar ve ağırlıklar aşağıdaki tabloda. Toplam 4+ = Yüksek, 2–3 = Orta, 1 = Düşük.
 
@@ -206,7 +199,7 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
     | Ödev yapmıyor | Son 30 günde ödev yapma < %60 | 1 |
 
   - **Öğretmen ve ders performansı:** ders programı ile deneme bölüm adı eşleştirmesi (takma ad tablosu, "içerir" kuralı); ilk ve son deneme, kurum farkı.
-- **Excel'e aktarma:** `components/ExportButton.tsx` (`write-excel-file` ile gerçek .xlsx). Şu raporlarda var: sıralı liste, sınıf ortalamaları, soru analizi, konu analizi, girmeyenler, birleştirilmiş raporlar, analiz merkezi, devam raporları ve ödev raporu.
+- **Excel'e aktarma:** `shared/ui/ExportButton.tsx` (`write-excel-file` ile gerçek .xlsx). Şu raporlarda var: sıralı liste, sınıf ortalamaları, soru analizi, konu analizi, girmeyenler, birleştirilmiş raporlar, analiz merkezi, devam raporları ve ödev raporu.
 
 **Seed değişiklikleri**
 - Denemelere konular ve B eşlemesi eklendi.
@@ -244,7 +237,7 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - [ ] **Soru frekans analizi kitapçık bazında:** B eşlemesi artık var ve konu analizinde kullanılıyor, ama soru frekans analizi hâlâ kitapçık bazında ayrı.
 - [ ] **Kurum karşılaştırma:** Kurumlar arası karşılaştırma ve çoklu şube yok.
 - [ ] **Ödev raporu:** Sınıf ve ders bazında ödev raporu yok (öğrenci bazında var).
-- [ ] **Risk eşikleri sabit:** Risk eşikleri kodda tanımlı (`lib/analysis.ts`); kurumun ayarlayabileceği bir ekran yok.
+- [ ] **Risk eşikleri sabit:** Risk eşikleri kodda tanımlı (`modules/reporting/risk.ts`); kurumun ayarlayabileceği bir ekran yok.
 - [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye otomatik SMS/e-posta (şu an WhatsApp linki ve kopyalama var), ödeme/paket satışı yok.
 - [ ] **Excel biçimi:** Eski `.xls` desteklenmiyor; `.xlsx` veya CSV gerekiyor.
 - [ ] **OMR iyileştirmeleri:** Form yön işareti eklenmeli, gerçek taramalarla test edilmeli.
@@ -275,4 +268,4 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - **Yazdırma:** `no-print` sınıfı yazdırmada gizlenir. Kurum düzeni yazdırırken `print:block` olur; karneler `break-after-page` ile ayrı sayfalara düşer.
 - **Takılı süreçler:** `next start` kapatılırken alt süreç `next-server` açık kalabiliyor ve portu tutuyor. Gerekirse `pkill -f next-server` kullanın.
 - **Seed ID'leri:** Seed her çalıştığında ID'ler değişir. ID'leri sabit kodlamayın, veritabanından sorgulayın.
-- **Tarih işleme:** Yerel tarih için `lib/kurum.ts > ymd()` kullanılmalı. Ders oturumu tarihleri string olarak tutulur.
+- **Tarih işleme:** Yerel tarih için `shared/date.ts > ymd()` kullanılmalı. Ders oturumu tarihleri string olarak tutulur.
