@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { waPhone } from "@/shared/phone";
 import { manageLinks, reportUrl, saveNote, shareMessage, ShareStudent, whatsappUrl } from "./share";
+import { fmtDateTime } from "@/shared/date";
 
 type Props = {
   institution: string;
@@ -15,7 +16,7 @@ type Props = {
 };
 
 const fmt = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  iso ? fmtDateTime(iso, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
 
 export default function VeliPanel({ institution, classes, sinif, from, to, students: initial }: Props) {
   const router = useRouter();

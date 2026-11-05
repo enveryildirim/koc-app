@@ -1,5 +1,16 @@
 /** Tarih yardımcıları (istemci + sunucu güvenli). */
 
+/**
+ * Uygulamanın saat dilimi. Sunucu instrumentation.ts ile bu dilimde çalışır; tarayıcıda biçimlendirilen
+ * anlık zamanlar (createdAt gibi) da bu dilimle gösterilir. Böylece sunucu ve tarayıcı aynı metni üretir.
+ */
+export const APP_TIME_ZONE = "Europe/Istanbul";
+
+/** Anlık zamanı (ISO / Date) uygulama saat diliminde "gg.aa.yyyy ss:dd:sn" biçiminde gösterir. */
+export function fmtDateTime(d: Date | string, opts: Intl.DateTimeFormatOptions = {}) {
+  return new Date(d).toLocaleString("tr-TR", { timeZone: APP_TIME_ZONE, ...opts });
+}
+
 /** Yerel saat diliminde YYYY-MM-DD */
 export function ymd(d: Date | string = new Date()) {
   const x = new Date(d);

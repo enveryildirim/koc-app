@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { fmtDateTime } from "@/shared/date";
 
 type Row = {
   id: string;
@@ -42,7 +43,7 @@ export default function AttemptsTable({ rows, passPercent, testTitle }: { rows: 
       r.maxScore,
       pct(r),
       pct(r) >= passPercent ? "Geçti" : "Kaldı",
-      r.finishedAt ? new Date(r.finishedAt).toLocaleString("tr-TR") : "",
+      r.finishedAt ? fmtDateTime(r.finishedAt) : "",
     ]);
     const csv = [head, ...lines].map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
@@ -108,7 +109,7 @@ export default function AttemptsTable({ rows, passPercent, testTitle }: { rows: 
                   </span>
                 </td>
                 <td className="px-4 py-3 text-lead">{r.source === "OMR" || r.durationMin === null ? "—" : `${r.durationMin} dk`}</td>
-                <td className="px-4 py-3 text-lead">{r.finishedAt ? new Date(r.finishedAt).toLocaleString("tr-TR") : "—"}</td>
+                <td className="px-4 py-3 text-lead">{r.finishedAt ? fmtDateTime(r.finishedAt) : "—"}</td>
                 <td className="px-4 py-3 text-right">
                   <button className="text-lead/70 hover:text-red-600" title="Sil" onClick={() => del(r.id)}>✕</button>
                 </td>

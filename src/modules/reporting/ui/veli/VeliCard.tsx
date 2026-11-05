@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { manageLinks, reportUrl, shareMessage, ShareStudent, whatsappUrl } from "./share";
 import { NoteEditor } from "./VeliPanel";
+import { fmtDateTime } from "@/shared/date";
 
 /** Öğrenci profilindeki veli karnesi kartı (son 30 gün). */
 export default function VeliCard({ student: initial, institution, from, to }: { student: ShareStudent; institution: string; from: string; to: string }) {
@@ -29,7 +30,7 @@ export default function VeliCard({ student: initial, institution, from, to }: { 
           {!s.token ? (
             <span className="badge bg-mist text-lead">Paylaşılmadı</span>
           ) : s.viewedAt ? (
-            <span className="badge bg-emerald-50 text-emerald-700">👁 Veli gördü · {new Date(s.viewedAt).toLocaleString("tr-TR")}</span>
+            <span className="badge bg-emerald-50 text-emerald-700">👁 Veli gördü · {fmtDateTime(s.viewedAt)}</span>
           ) : (
             <span className="badge bg-sky-50 text-sky-700">Bağlantı hazır, henüz açılmadı</span>
           )}
