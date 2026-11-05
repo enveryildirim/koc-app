@@ -25,7 +25,7 @@ src/
 | `curriculum` | CurriculumTopic | identity | `/kurum/mufredat`, `/api/kurum/mufredat/*` |
 | `online-test` | Test, Question, Option, Attempt, Answer | identity | `/panel`, `/sinav/*`, `/s/[code]`, `/sonuc/[id]`, `/api/{tests,t,attempts}` |
 | `planning` | CalendarEvent, LessonPlan, PlanItem | identity, enrollment, exams, homework, schedule | `/kurum/takvim/*`, `/api/kurum/{takvim,plan}/*` |
-| `reporting` | Student.parent* (veli paylaşım alanları) | hepsi (online-test ve question-bank hariç) | `/kurum` (özet), `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
+| `reporting` | Student.parent* (veli paylaşım alanları), Setting | hepsi (online-test ve question-bank hariç) | `/kurum` (özet), `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 
 Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← {exams, homework, schedule} ← planning ← reporting`; `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
 
@@ -45,7 +45,7 @@ modules/<m>/
 
 1. **Kiracı izolasyonu modülün içindedir.** Kurumla ilgili her sunucu fonksiyonu ilk parametre olarak `ownerId` alır ve filtreyi kendisi uygular. Başka kurumun kaydı "yok" sayılır (`notFound`). Sayfa ve route'lar `ownerId` filtresi yazmaz.
 2. **Yazma yalnızca tablonun sahibi olan modülde yapılır.** Başka modülün verisi gerekiyorsa o modülün `server.ts` fonksiyonu kullanılır. Bir modül yalnızca başka bir modül için gereken fonksiyonu kendi `internal/for-<istemci>.ts` dosyasına koyar (örnek: `exams/internal/for-enrollment.ts`).
-3. **reporting bir okuma modelidir.** Raporlar birçok modülün tablosunu birlikte okuduğu için `reporting` bütün kurum tablolarını prisma ile doğrudan **okuyabilir**. Bunun tek yazma istisnası veli paylaşım alanlarıdır (`parentToken`, `parentSharedAt`, `parentViewedAt`, `parentNote`).
+3. **reporting bir okuma modelidir.** Raporlar birçok modülün tablosunu birlikte okuduğu için `reporting` bütün kurum tablolarını prisma ile doğrudan **okuyabilir**. Yazma istisnaları veli paylaşım alanları (`parentToken`, `parentSharedAt`, `parentViewedAt`, `parentNote`) ve kendi `Setting` tablosudur (Başarı Skoru ayarları).
 4. **Hatalar Next.js'ten bağımsızdır.** Modüller `shared/errors` hatalarını fırlatır (`invalid`, `notFound`, `conflict`, `unauthorized`). Route'lar `shared/http > api()` ile sarılır; bu sarmalayıcı hatayı `{ error }` gövdeli 400/404/409/401 yanıtına çevirir:
    ```ts
    export const DELETE = api<Params<{ id: string }>>(async (_req, ctx) => {

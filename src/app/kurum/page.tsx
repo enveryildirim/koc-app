@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
-import { institutionDashboard } from "@/modules/reporting/server";
+import { institutionDashboard, successScores } from "@/modules/reporting/server";
+import { SCORE_RULES } from "@/modules/reporting";
 import { DAYS } from "@/modules/schedule";
 import LessonDay from "@/modules/schedule/ui/LessonDay";
 import { EXAM_TYPES, fmtNet } from "@/modules/exams";
@@ -20,10 +21,11 @@ export default async function Page() {
   const d = await institutionDashboard(ownerId);
   const { today, dow, exams, attendance, homework } = d;
   const year = schoolYearOf(today);
-  const [week, holidays, plans] = await Promise.all([
+  const [week, holidays, plans, scores] = await Promise.all([
     calendarFeed(ownerId, { from: addDays(today, 1), to: addDays(today, 7) }),
     holidaysOn(ownerId, today),
     planOverview(ownerId, year, today),
+    successScores(ownerId),
   ]);
   const lastExam = exams[0];
   const weekNo = Math.floor((Date.parse(today) - Date.parse(defaultPlanStart(year))) / (7 * 86400000)) + 1;
@@ -171,6 +173,35 @@ export default async function Page() {
           <section aria-labelledby="dikkat">
             <h2 id="dikkat" className="mb-3 text-xl font-semibold">Dikkat isteyenler</h2>
             <div className="space-y-6">
+              <div>
+                <div className="mb-1.5 flex items-baseline justify-between">
+                  <h3 className="text-[15px] font-semibold">Risk seviyesine düşenler, son {SCORE_RULES.trendDays} gün</h3>
+                  <Link href="/kurum/analiz?tab=skor&seviye=RISK" className="text-sm text-lead hover:text-graphite">
+                    Risk altında {scores.levelCounts.RISK}
+                  </Link>
+                </div>
+                {scores.newlyRisk.length === 0 ? (
+                  <p className="text-sm text-lead">Bu dönemde risk seviyesine düşen öğrenci yok.</p>
+                ) : (
+                  <ul className="divide-y divide-rule/70 border-y border-rule/70 text-sm">
+                    {scores.newlyRisk.slice(0, 5).map((r) => (
+                      <li key={r.id}>
+                        <Link href={`/kurum/ogrenciler/${r.id}`} className="block py-2 hover:text-ink">
+                          <span className="flex justify-between gap-3">
+                            <span>
+                              {r.name} <span className="text-lead">{r.className}</span>
+                            </span>
+                            <span className="num whitespace-nowrap text-red-700">
+                              {r.prevScore} → {r.score}
+                            </span>
+                          </span>
+                          {r.reasons[0] && <span className="block text-[13px] text-lead">{r.reasons[0]}</span>}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div>
                 <h3 className="mb-1.5 text-[15px] font-semibold">Yıllık plana göre geride</h3>
                 {behind.length === 0 ? (

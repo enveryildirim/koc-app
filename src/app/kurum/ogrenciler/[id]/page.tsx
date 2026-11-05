@@ -10,7 +10,8 @@ import StudentForm from "@/modules/enrollment/ui/StudentForm";
 import PrintButton from "@/shared/ui/PrintButton";
 import VeliCard from "@/modules/reporting/ui/veli/VeliCard";
 import { combinedTopics } from "@/modules/exams";
-import { defaultPeriod, studentOverview } from "@/modules/reporting/server";
+import { defaultPeriod, studentOverview, studentSuccessScore } from "@/modules/reporting/server";
+import ScoreCard from "@/modules/reporting/ui/score/ScoreCard";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { id } = await params;
   const st = await findStudent(ownerId, id);
   if (!st) notFound();
-  const [{ results, homework, attendance }, classes, institution] = await Promise.all([
+  const [{ results, homework, attendance }, classes, institution, score] = await Promise.all([
     studentOverview(ownerId, st.id),
     classroomsOf(ownerId),
     institutionName(ownerId),
+    studentSuccessScore(ownerId, st.id),
   ]);
   const period = defaultPeriod();
 
@@ -55,6 +57,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <Kpi label="Devam" value={attendance.rate === null ? "—" : `%${attendance.rate}`} hint={`${att.ABSENT} gelmedi · ${att.LATE} geç · ${att.EXCUSED} izinli`} />
         <Kpi label="Veli" value={<span className="text-base">{st.parentName || "—"}</span>} hint={st.parentPhone} />
       </div>
+
+      {score && <ScoreCard s={score} />}
 
       <VeliCard
         institution={institution}

@@ -381,3 +381,13 @@ model CurriculumTopic {
 
   @@index([ownerId, subject, grade])
 }
+
+/// Kurum ayarları (anahtar → JSON). Şimdilik reporting yazar: "score" = Başarı Skoru ağırlık ve eşikleri.
+model Setting {
+  ownerId   String
+  key       String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@id([ownerId, key])
+}

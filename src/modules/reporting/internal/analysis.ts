@@ -2,8 +2,6 @@
 import { prisma } from "@/shared/db";
 import { subjectMatches } from "@/shared/subjects";
 import { ExamSection, parseSections, round2 } from "@/modules/exams";
-import { ymd } from "@/shared/date";
-import { RISK_FLAGS, RISK_RULES, type RiskFlag } from "../risk";
 
 type Stat = { d: number; y: number; b: number; net: number };
 
@@ -70,99 +68,7 @@ export async function classProgress(ownerId: string, type: string, section: stri
   };
 }
 
-/* ================================== 2. Risk ================================== */
-
-export async function riskList(ownerId: string, classroomId?: string) {
-  const since = new Date(Date.now() - RISK_RULES.days * 86400000);
-  const sinceYmd = ymd(since);
-  const students = await prisma.student.findMany({
-    where: { ownerId, external: false, classroomId: classroomId || { not: null } },
-    include: { classroom: true },
-    orderBy: { studentNo: "asc" },
-  });
-  const ids = students.map((s) => s.id);
-  const [results, att, hw] = await Promise.all([
-    prisma.examResult.findMany({
-      where: { exam: { ownerId } },
-      select: { studentId: true, totalNet: true, examId: true, student: { select: { classroomId: true } }, exam: { select: { id: true, name: true, type: true, date: true } } },
-    }),
-    prisma.attendance.groupBy({ by: ["studentId", "status"], where: { studentId: { in: ids }, session: { ownerId, date: { gte: sinceYmd } } }, _count: true }),
-    prisma.homeworkStatus.groupBy({
-      by: ["studentId", "status"],
-      where: { studentId: { in: ids }, homework: { ownerId, dueDate: { gte: since, lte: new Date() } } },
-      _count: true,
-    }),
-  ]);
-
-  // Sınıfın en son girdiği deneme (en az bir sınıf öğrencisinin sonucu olan)
-  const lastExamOfClass = new Map<string, { id: string; name: string; type: string; date: Date }>();
-  for (const r of results) {
-    const c = r.student.classroomId;
-    if (!c) continue;
-    const cur = lastExamOfClass.get(c);
-    if (!cur || r.exam.date > cur.date) lastExamOfClass.set(c, r.exam);
-  }
-  const byStudent = new Map<string, typeof results>();
-  for (const r of results) byStudent.set(r.studentId, [...(byStudent.get(r.studentId) ?? []), r]);
-
-  const count = (arr: { studentId: string; status: string; _count: number }[], id: string, st: string) =>
-    arr.find((a) => a.studentId === id && a.status === st)?._count ?? 0;
-
-  const rows = students.map((s) => {
-    const flags: RiskFlag[] = [];
-    const lastClassExam = s.classroomId ? lastExamOfClass.get(s.classroomId) : undefined;
-    const mine = (byStudent.get(s.id) ?? []).sort((a, b) => a.exam.date.getTime() - b.exam.date.getTime());
-    let lastNet: number | null = null;
-    let delta: number | null = null;
-    let lastExamName = "";
-    if (lastClassExam) {
-      if (!mine.some((r) => r.examId === lastClassExam.id)) flags.push("MISSED_EXAM");
-      const sameType = mine.filter((r) => r.exam.type === lastClassExam.type);
-      const last = sameType[sameType.length - 1];
-      const prev = sameType[sameType.length - 2];
-      if (last) {
-        lastNet = last.totalNet;
-        lastExamName = last.exam.name;
-      }
-      if (last && prev) {
-        delta = round2(last.totalNet - prev.totalNet);
-        if (delta <= -RISK_RULES.netDropAbs || (prev.totalNet > 0 && delta <= -RISK_RULES.netDropRel * prev.totalNet)) flags.push("NET_DROP");
-      }
-    }
-    const present = count(att, s.id, "PRESENT") + count(att, s.id, "LATE");
-    const attTotal = present + count(att, s.id, "ABSENT") + count(att, s.id, "EXCUSED");
-    const attRate = attTotal ? Math.round((present / attTotal) * 100) : null;
-    if (attRate !== null && attRate < RISK_RULES.attendanceMin) flags.push("ATTENDANCE");
-    const done = count(hw, s.id, "DONE");
-    const graded = done + count(hw, s.id, "PARTIAL") + count(hw, s.id, "NOT_DONE");
-    const hwRate = graded ? Math.round((done / graded) * 100) : null;
-    if (hwRate !== null && hwRate < RISK_RULES.homeworkMin) flags.push("HOMEWORK");
-    const score = flags.reduce((a, f) => a + RISK_FLAGS[f].weight, 0);
-    return {
-      id: s.id,
-      studentNo: s.studentNo,
-      name: `${s.firstName} ${s.lastName}`,
-      className: s.classroom?.name ?? "—",
-      parentName: s.parentName,
-      parentPhone: s.parentPhone,
-      lastNet,
-      lastExamName,
-      delta,
-      attRate,
-      absent: count(att, s.id, "ABSENT"),
-      hwRate,
-      flags,
-      score,
-      level: score >= 4 ? "Yüksek" : score >= 2 ? "Orta" : "Düşük",
-    };
-  });
-
-  const risky = rows.filter((r) => r.flags.length > 0).sort((a, b) => b.score - a.score || (a.attRate ?? 101) - (b.attRate ?? 101));
-  const flagCounts = Object.fromEntries((Object.keys(RISK_FLAGS) as RiskFlag[]).map((f) => [f, risky.filter((r) => r.flags.includes(f)).length])) as Record<RiskFlag, number>;
-  return { total: rows.length, risky, flagCounts };
-}
-
-/* ========================== 3. Öğretmen / ders performansı ========================== */
+/* ========================== 2. Öğretmen / ders performansı ========================== */
 
 export async function teacherPerformance(ownerId: string) {
   const [slots, exams] = await Promise.all([

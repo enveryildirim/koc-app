@@ -29,6 +29,7 @@ const phone = () =>
 
 export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   // Kurum tabloları kullanıcıya ilişkili olmadığından elle temizlenir
+  await prisma.setting.deleteMany();
   await prisma.curriculumTopic.deleteMany();
   await prisma.lessonPlan.deleteMany();
   await prisma.calendarEvent.deleteMany();
@@ -92,6 +93,11 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   // Her öğrencinin ders bazında "yeteneği" (sınav sonuçlarını tutarlı kılmak için)
   const skill = new Map<string, number>();
   const baseSkill = new Map<string, number>();
+  // Başarı Skoru demosu: her sınıftan iki öğrenci son 3 haftada düşüşe geçer (net, devam, ödev birlikte).
+  // Önceden ortanın üstünde oldukları için 4 hafta önceki skorları "iyi" ya da "izlenmeli" çıkar.
+  const decliners = new Set(classes.flatMap((c) => [...c.students].sort(() => Math.random() - 0.5).slice(0, 2).map((st) => st.id)));
+  for (const id of decliners) baseSkill.set(id, 0.62 + Math.random() * 0.15);
+  const DECLINE_DAYS = 18;
   const sk = (studentId: string, section: string) => {
     if (!baseSkill.has(studentId)) baseSkill.set(studentId, 0.3 + Math.random() * 0.6);
     const k = studentId + section;
@@ -152,7 +158,8 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       let answers = "";
       for (const s of sections) {
         const key = booklet === "B" ? s.keyB : s.keyA;
-        const base = sk(st.id, s.name) + (ei % 3) * 0.03; // denemeler ilerledikçe hafif gelişim
+        const drop = decliners.has(st.id) && e.ago <= DECLINE_DAYS ? 0.2 : 0;
+        const base = sk(st.id, s.name) + (ei % 3) * 0.03 - drop; // denemeler ilerledikçe hafif gelişim
         for (let i = 0; i < s.count; i++) {
           const topic = s.topics[booklet === "B" ? s.bOrder[i] : i];
           const p = Math.min(0.97, Math.max(0.05, base + diff(s.name + topic)));
@@ -195,7 +202,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   };
   for (const c of classes) {
     for (const [i, [subject, title]] of hwDefs[c.level].entries()) {
-      const assignedAgo = 24 - i * 6;
+      const assignedAgo = 36 - i * 9;
       const due = daysAgo(assignedAgo - 5);
       const hw = await prisma.homework.create({
         data: {
@@ -214,7 +221,8 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
           const p = baseSkill.get(st.id) ?? 0.6;
           const r = Math.random();
           // Çoğu öğrenci ödevini yapar; başarısı düşük olanlarda yapmama olasılığı artar
-          const done = 0.58 + p * 0.38;
+          const daysAgoDue = (Date.now() - due.getTime()) / 86400000;
+          const done = decliners.has(st.id) && daysAgoDue <= DECLINE_DAYS ? 0.2 : 0.58 + p * 0.38;
           const status = !past ? "PENDING" : r < done ? "DONE" : r < done + 0.1 ? "PARTIAL" : "NOT_DONE";
           return { homeworkId: hw.id, studentId: st.id, status };
         }),
@@ -258,7 +266,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     await prisma.scheduleSlot.createMany({ data: slots });
   }
 
-  /* ------------------------- Son 3 haftanın yoklamaları ------------------------- */
+  /* ------------------------- Son 7 haftanın yoklamaları ------------------------- */
   const allSlots = await prisma.scheduleSlot.findMany();
   const studentsByClass = new Map(classes.map((c) => [c.id, c.students]));
   const absentProne = new Set(
@@ -267,7 +275,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       .filter(() => Math.random() < 0.12)
       .map((s) => s.id),
   );
-  for (let ago = 21; ago >= 1; ago--) {
+  for (let ago = 49; ago >= 1; ago--) {
     const d = daysAgo(ago);
     const dow = ((d.getDay() + 6) % 7) + 1;
     for (const slot of allSlots.filter((s) => s.dayOfWeek === dow)) {
@@ -287,7 +295,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       await prisma.attendance.createMany({
         data: studentsByClass.get(slot.classroomId)!.map((st) => {
           const r = Math.random();
-          const absentP = absentProne.has(st.id) ? 0.25 : 0.04;
+          const absentP = decliners.has(st.id) && ago <= DECLINE_DAYS ? 0.3 : absentProne.has(st.id) ? 0.25 : 0.04;
           const status = r < absentP ? "ABSENT" : r < absentP + 0.04 ? "LATE" : r < absentP + 0.06 ? "EXCUSED" : "PRESENT";
           return { sessionId: session.id, studentId: st.id, status };
         }),

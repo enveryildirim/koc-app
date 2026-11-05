@@ -50,5 +50,5 @@ Algoritma (`src/lib/omr/scan.ts`): uyarlamalı eşikleme → köşe karelerini b
 
 Net hesabı: LGS'de 3 yanlış, TYT/AYT'de 4 yanlış 1 doğruyu götürür (deneme bazında değiştirilebilir). Çift işaretleme yanlış sayılır.
 
-Demo veride: 4 sınıf (8-A, 8-B, 12-A, 12-B), ~80 öğrenci, 6 deneme, 20 ödev, 8 öğretmen ve son 3 haftanın yoklamaları.
+Demo veride: 4 sınıf (8-A, 8-B, 12-A, 12-B), ~80 öğrenci, 6 deneme, 20 ödev, 8 öğretmen ve son 7 haftanın yoklamaları.
 Test kolaylıkları: “Örnek taranmış form üret”, “Örnek okuyucu dosyası üret”, “Örnek veriyle dene” (öğrenci yükleme) ve cevap anahtarında “Rastgele doldur”.

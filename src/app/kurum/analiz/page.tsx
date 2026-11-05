@@ -2,7 +2,10 @@ import Link from "next/link";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { EXAM_TYPES, fmtDate, fmtNet } from "@/modules/exams";
-import { classProgress, examTypesOf, RISK_FLAGS, RISK_RULES, RiskFlag, riskList, teacherPerformance } from "@/modules/reporting/server";
+import { classProgress, examTypesOf, successScores, teacherPerformance } from "@/modules/reporting/server";
+import { DIM_KEYS, dimDetail, LEVELS, SCORE_DIMS, SCORE_RULES } from "@/modules/reporting";
+import { DimBars, ScoreBadge, ScoreDelta } from "@/modules/reporting/ui/score/ScoreParts";
+import ScoreSettingsForm from "@/modules/reporting/ui/score/ScoreSettingsForm";
 import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
 import { schoolYearLabel } from "@/modules/planning";
 import { planAlerts } from "@/modules/planning/server";
@@ -13,11 +16,11 @@ import LineChart, { SERIES_COLORS } from "@/modules/reporting/ui/LineChart";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ tab?: string; tur?: string; ders?: string; sinif?: string }>;
+type SP = Promise<{ tab?: string; tur?: string; ders?: string; sinif?: string; seviye?: string }>;
 
 const TABS = [
   { key: "gelisim", label: "Sınıf gelişimi" },
-  { key: "risk", label: "Risk / erken uyarı" },
+  { key: "skor", label: "Başarı Skoru" },
   { key: "ogretmen", label: "Öğretmen & ders performansı" },
   { key: "plan", label: "Yıllık plan" },
 ];
@@ -25,18 +28,20 @@ const TABS = [
 export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
-  const tab = TABS.some((t) => t.key === sp.tab) ? sp.tab! : "gelisim";
+  // Eski "risk" bağlantıları Başarı Skoru sekmesine gider.
+  const asked = sp.tab === "risk" ? "skor" : sp.tab;
+  const tab = TABS.some((t) => t.key === asked) ? asked! : "gelisim";
 
   return (
     <div>
       <PageHeader
         title="Analiz ve uyarılar"
-        sub="Denemeler arası gelişim, risk altındaki öğrenciler ve öğretmen/ders performansı"
+        sub="Denemeler arası gelişim, öğrencilerin Başarı Skoru ve öğretmen/ders performansı"
         actions={<PrintButton />}
       />
       <Tabs tabs={TABS.map((t) => ({ ...t, href: `/kurum/analiz?tab=${t.key}` }))} active={tab} />
       {tab === "gelisim" && <Progress ownerId={ownerId} tur={sp.tur} ders={sp.ders ?? ""} />}
-      {tab === "risk" && <Risk ownerId={ownerId} sinif={sp.sinif ?? ""} />}
+      {tab === "skor" && <Score ownerId={ownerId} sinif={sp.sinif ?? ""} seviye={sp.seviye ?? ""} />}
       {tab === "ogretmen" && <Teachers ownerId={ownerId} />}
       {tab === "plan" && <PlanTab ownerId={ownerId} />}
     </div>
@@ -190,89 +195,104 @@ function Signed({ v }: { v: number }) {
   return <span className={v > 0 ? "font-semibold text-emerald-700" : v < 0 ? "font-semibold text-red-600" : "text-lead"}>{v > 0 ? "+" : ""}{fmtNet(v)}</span>;
 }
 
-/* ===================================== Risk ===================================== */
+/* ================================= Başarı Skoru ================================= */
 
-async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
+const LEVEL_FILTERS = [
+  { key: "", label: "Tümü" },
+  { key: "RISK", label: LEVELS.RISK.label },
+  { key: "WATCH", label: LEVELS.WATCH.label },
+  { key: "GOOD", label: LEVELS.GOOD.label },
+];
+
+async function Score({ ownerId, sinif, seviye }: { ownerId: string; sinif: string; seviye: string }) {
   const classes = await classroomsOf(ownerId);
   const cls = classes.find((c) => c.id === sinif)?.id ?? "";
-  const r = await riskList(ownerId, cls || undefined);
-  const flagKeys = Object.keys(RISK_FLAGS) as RiskFlag[];
+  const r = await successScores(ownerId, { classroomId: cls || undefined });
+  const lv = LEVEL_FILTERS.some((f) => f.key === seviye) ? seviye : "";
+  const rows = lv ? r.rows.filter((x) => x.level === lv) : r.rows;
+  const className = classes.find((c) => c.id === cls)?.name;
+  const href = (q: Record<string, string>) => {
+    const s = new URLSearchParams({ tab: "skor", sinif: cls, seviye: lv, ...q });
+    for (const [k, v] of [...s.entries()]) if (!v) s.delete(k);
+    return `/kurum/analiz?${s}`;
+  };
+  const chip = (on: boolean) => (on ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs");
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-        <Kpi label="Riskli öğrenci" value={r.risky.length} hint={`${r.total} öğrenciden`} />
-        {flagKeys.map((f) => (
-          <Kpi key={f} label={RISK_FLAGS[f].label} value={r.flagCounts[f]} hint={`ağırlık ${RISK_FLAGS[f].weight}`} />
-        ))}
+        <Kpi label="Ortalama skor" value={r.average ?? "—"} hint={`${r.rows.length} öğrenci`} />
+        <Kpi label={LEVELS.GOOD.label} value={r.levelCounts.GOOD} hint={`${r.settings.good} ve üstü`} />
+        <Kpi label={LEVELS.WATCH.label} value={r.levelCounts.WATCH} hint={`${r.settings.watch}–${r.settings.good - 1}`} />
+        <Kpi label={LEVELS.RISK.label} value={r.levelCounts.RISK} hint={`${r.settings.watch} altı`} />
+        <Kpi label="Risk seviyesine düşen" value={r.newlyRisk.length} hint={`son ${SCORE_RULES.trendDays} günde`} />
       </div>
 
       <div className="no-print card flex flex-wrap items-center gap-2 p-4">
         <span className="text-sm font-medium text-lead">Sınıf</span>
-        <Link href="/kurum/analiz?tab=risk" className={!cls ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}>Tümü</Link>
+        <Link href={href({ sinif: "" })} className={chip(!cls)}>Tümü</Link>
         {classes.map((c) => (
-          <Link key={c.id} href={`/kurum/analiz?tab=risk&sinif=${c.id}`} className={cls === c.id ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}>
-            {c.name}
-          </Link>
+          <Link key={c.id} href={href({ sinif: c.id })} className={chip(cls === c.id)}>{c.name}</Link>
+        ))}
+        <span className="ml-2 text-sm font-medium text-lead">Seviye</span>
+        {LEVEL_FILTERS.map((f) => (
+          <Link key={f.key} href={href({ seviye: f.key })} className={chip(lv === f.key)}>{f.label}</Link>
         ))}
         <div className="ml-auto">
           <ExportButton
-            fileName={`risk_listesi${cls ? "_" + classes.find((c) => c.id === cls)?.name : ""}`}
-            headers={["Risk puanı", "Seviye", "Öğrenci No", "Öğrenci", "Sınıf", "Veli", "Veli telefonu", "Son deneme", "Son net", "Net değişimi", "Devam %", "Gelmedi (ders)", "Ödev yapma %", "Uyarılar"]}
-            rows={r.risky.map((x) => [
+            fileName={`basari_skoru${className ? "_" + className : ""}`}
+            headers={["Skor", "Seviye", "4 hafta önce", "Değişim", "Öğrenci No", "Öğrenci", "Sınıf", ...DIM_KEYS.map((k) => SCORE_DIMS[k].label), "Açıklama", "Veli", "Veli telefonu"]}
+            rows={rows.map((x) => [
               x.score,
-              x.level,
+              x.level ? LEVELS[x.level].label : "",
+              x.prevScore,
+              x.delta,
               x.studentNo,
               x.name,
               x.className,
+              ...DIM_KEYS.map((k) => x.dims[k]),
+              x.reasons.join("; "),
               x.parentName,
               x.parentPhone,
-              x.lastExamName,
-              x.lastNet,
-              x.delta,
-              x.attRate,
-              x.absent,
-              x.hwRate,
-              x.flags.map((f) => RISK_FLAGS[f].label).join(", "),
             ])}
           />
         </div>
       </div>
 
-      <h2 className="hidden text-lg font-bold print:block">Risk / Erken Uyarı Listesi{cls ? ` · ${classes.find((c) => c.id === cls)?.name}` : ""}</h2>
+      <h2 className="hidden text-lg font-bold print:block">Başarı Skoru{className ? ` · ${className}` : ""}</h2>
 
-      {r.risky.length === 0 ? (
-        <Empty>Uyarı gerektiren öğrenci yok. 🎉</Empty>
+      {rows.length === 0 ? (
+        <Empty>Bu filtreye uyan öğrenci yok.</Empty>
       ) : (
         <div className="card overflow-x-auto print:shadow-none print:ring-0">
           <table className="w-full text-sm">
             <thead className="bg-paper">
               <tr>
-                <th className={th}>Risk</th>
-                <th className={th}>Öğrenci</th>
+                <th className={th}>Skor</th>
+                <th className={`${th} text-right`} title={`${SCORE_RULES.trendDays} gün öncesine göre`}>Değişim</th>
+                <th className={`${th} pin`}>Öğrenci</th>
                 <th className={th}>Sınıf</th>
+                <th className={th}>Boyutlar</th>
+                <th className={th}>Neden</th>
                 <th className={th}>Veli</th>
-                <th className={`${th} text-right`}>Son net</th>
-                <th className={`${th} text-right`}>Devam</th>
-                <th className={`${th} text-right`}>Ödev</th>
-                <th className={th}>Uyarılar</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-rule/70">
-              {r.risky.map((x) => (
-                <tr key={x.id} className={x.level === "Yüksek" ? "bg-red-50/40" : ""}>
-                  <td className={td}>
-                    <span
-                      className={`badge font-bold ${x.level === "Yüksek" ? "bg-red-600 text-white" : x.level === "Orta" ? "bg-amber-100 text-amber-800" : "bg-mist text-lead"}`}
-                    >
-                      {x.score} · {x.level}
-                    </span>
-                  </td>
-                  <td className={td}>
-                    <Link href={`/kurum/ogrenciler/${x.id}`} className="font-medium hover:text-brand-600">{x.name}</Link>
+              {rows.map((x) => (
+                <tr key={x.id} className={x.level === "RISK" ? "bg-red-50/30" : ""}>
+                  <td className={td}><ScoreBadge score={x.score} level={x.level} /></td>
+                  <td className={`${td} text-right`}><ScoreDelta delta={x.delta} /></td>
+                  <td className={`${td} pin`}>
+                    <Link href={`/kurum/ogrenciler/${x.id}`} className="font-medium hover:text-ink">{x.name}</Link>
                     <div className="num text-xs text-lead/70">{x.studentNo}</div>
                   </td>
-                  <td className={td}>{x.className}</td>
+                  <td className={`${td} whitespace-nowrap`}>{x.className}</td>
+                  <td className={td}>
+                    <DimBars dims={x.dims} details={Object.fromEntries(DIM_KEYS.map((k) => [k, dimDetail(k, x.signals)]))} />
+                  </td>
+                  <td className={`${td} min-w-[16rem] text-[13px]`}>
+                    {x.reasons.length ? x.reasons.map((t) => <div key={t}>{t}</div>) : <span className="text-lead/70">—</span>}
+                  </td>
                   <td className={td}>
                     {x.parentName || "—"}
                     {x.parentPhone && (
@@ -281,29 +301,6 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
                       </div>
                     )}
                   </td>
-                  <td className={`${td} text-right tabular-nums`}>
-                    {x.lastNet === null ? "—" : <b>{fmtNet(x.lastNet)}</b>}
-                    {x.delta !== null && (
-                      <div className={`text-xs ${x.delta < 0 ? "text-red-600" : "text-emerald-600"}`}>
-                        {x.delta > 0 ? "▲" : x.delta < 0 ? "▼" : ""}
-                        {fmtNet(Math.abs(x.delta))}
-                      </div>
-                    )}
-                  </td>
-                  <td className={`${td} text-right tabular-nums ${x.attRate !== null && x.attRate < RISK_RULES.attendanceMin ? "font-semibold text-red-600" : ""}`}>
-                    {x.attRate === null ? "—" : `%${x.attRate}`}
-                    {x.absent > 0 && <div className="text-xs font-normal text-lead">{x.absent} ders</div>}
-                  </td>
-                  <td className={`${td} text-right tabular-nums ${x.hwRate !== null && x.hwRate < RISK_RULES.homeworkMin ? "font-semibold text-red-600" : ""}`}>
-                    {x.hwRate === null ? "—" : `%${x.hwRate}`}
-                  </td>
-                  <td className={td}>
-                    <div className="flex flex-wrap gap-1">
-                      {x.flags.map((f) => (
-                        <span key={f} className={`badge ${RISK_FLAGS[f].cls}`}>{RISK_FLAGS[f].label}</span>
-                      ))}
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -311,16 +308,21 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
         </div>
       )}
 
-      <div className="card p-4 text-xs text-lead">
-        <h3 className="mb-1 font-semibold text-graphite">Uyarı kuralları</h3>
-        <ul className="list-disc space-y-0.5 pl-5">
-          <li><b>Net düşüşü</b> (ağırlık 2): aynı türdeki son iki denemesi arasında toplam net {RISK_RULES.netDropAbs} veya daha fazla ya da %{RISK_RULES.netDropRel * 100} ve üzeri düştü.</li>
-          <li><b>Son denemeye girmedi</b> (ağırlık 1): sınıfının girdiği en son denemede sonucu yok.</li>
-          <li><b>Devam düşük</b> (ağırlık 2): son {RISK_RULES.days} günde devam oranı (Geldi + Geç) %{RISK_RULES.attendanceMin}&apos;in altında.</li>
-          <li><b>Ödev yapmıyor</b> (ağırlık 1): son {RISK_RULES.days} günde teslim tarihi geçen ödevlerde yapma oranı %{RISK_RULES.homeworkMin}&apos;ın altında.</li>
-          <li>Risk puanı ağırlıkların toplamıdır: 4 ve üzeri <b>Yüksek</b>, 2–3 <b>Orta</b>, 1 <b>Düşük</b>. Yalnızca en az bir uyarısı olan öğrenciler listelenir.</li>
-        </ul>
-      </div>
+      <details className="no-print card p-4">
+        <summary className="cursor-pointer text-[15px] font-semibold">Skor nasıl hesaplanıyor, ayarlar</summary>
+        <div className="mt-3 space-y-5">
+          <ul className="list-disc space-y-0.5 pl-5 text-xs text-lead">
+            <li><b>Akademik düzey:</b> son denemedeki tahmini puanın kurum içi yüzdeliği (en iyi 100, en düşük 0).</li>
+            <li><b>Gelişim:</b> aynı türdeki son {SCORE_RULES.growthExams} denemede netin eğimi. Deneme başına −{SCORE_RULES.growthRange} net ve altı 0, +{SCORE_RULES.growthRange} net ve üstü 100, sabit gidiş 50.</li>
+            <li><b>Deneme katılımı:</b> son {SCORE_RULES.participationDays} günde sınıfının girdiği denemelerden kaçına girdiği.</li>
+            <li><b>Devam:</b> son {SCORE_RULES.days} günde (Geldi + Geç) / bütün yoklamalar. %{SCORE_RULES.attendanceFloor} ve altı 0, %100 devam 100.</li>
+            <li><b>Ödev:</b> son {SCORE_RULES.days} günde teslimi geçen ödevlerde yapma oranı; eksik yapılan yarım sayılır.</li>
+            <li>Toplam skor, boyutların ağırlıklı ortalamasıdır. Bir boyutta veri yoksa o boyut hesaba katılmaz, kalan ağırlıklar oranlanır. Değişim sütunu aynı hesabın {SCORE_RULES.trendDays} gün önceki verilerle yapılmış hâline göredir.</li>
+            <li>Skor kurum içi bir izleme aracıdır; veli karnesinde gösterilmez.</li>
+          </ul>
+          <ScoreSettingsForm initial={r.settings} dims={r.rows.map((x) => x.dims)} />
+        </div>
+      </details>
     </div>
   );
 }

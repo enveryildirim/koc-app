@@ -2,7 +2,7 @@
 
 Bu dosya projede ne yapıldığını, neden öyle yapıldığını ve kalan işleri kaydeder. Projeye yeni başlayan bir geliştirici veya yapay zekâ asistanı önce bunu okumalı.
 
-Son güncelleme: 4 Kasım 2026 · Dal: `deneme-sinavza`
+Son güncelleme: 5 Kasım 2026 · Dal: `deneme-sinavza`
 
 ---
 
@@ -190,15 +190,7 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
 - **Veli karnesi:** denemelerde tahmini puan.
 - **`/kurum/analiz`** (yardımcı agent yazdı; veri katmanı `modules/reporting/internal/analysis.ts`, grafik `modules/reporting/ui/LineChart.tsx`):
   - **Sınıf gelişimi:** tür ve ders seçimi, sınıf × deneme ortalamaları, çizgi grafik.
-  - **Risk / erken uyarı:** kurallar ve ağırlıklar aşağıdaki tabloda. Toplam 4+ = Yüksek, 2–3 = Orta, 1 = Düşük.
-
-    | Uyarı | Kural | Ağırlık |
-    |---|---|---|
-    | Net düşüşü | Aynı türdeki son iki denemede ≥ 5 net veya ≥ %10 düşüş | 2 |
-    | Son denemeye girmedi | Sınıfın son denemesinde sonucu yok | 1 |
-    | Devam düşük | Son 30 günde devam < %85 | 2 |
-    | Ödev yapmıyor | Son 30 günde ödev yapma < %60 | 1 |
-
+  - **Başarı Skoru:** 4 kurallı risk listesinin yerini aldı (5 Kasım 2026). Ayrıntı: bölüm 4f.
   - **Öğretmen ve ders performansı:** ders programı ile deneme bölüm adı eşleştirmesi (takma ad tablosu, "içerir" kuralı); ilk ve son deneme, kurum farkı.
 - **Excel'e aktarma:** `shared/ui/ExportButton.tsx` (`write-excel-file` ile gerçek .xlsx). Şu raporlarda var: sıralı liste, sınıf ortalamaları, soru analizi, konu analizi, girmeyenler, birleştirilmiş raporlar, analiz merkezi, devam raporları ve ödev raporu.
 
@@ -254,6 +246,34 @@ Rapor ihtiyacı, referans sistemin rapor listesi ve kurumların günlük kullan�
   - **Gizlilik:** `CalendarEvent.parentVisible` alanı. Varsayılan türe göre belirlenir (`EVENT_KINDS[k].parentDefault`): tatil, deneme planı ve etkinlik açık; toplantı ve diğer kapalı. Etkinlik formunda "Velilere göster" kutusuyla değiştirilir; takvimin liste görünümünde 👪 ile işaretlenir. Velilere açık etkinliğin **notu da velilere görünür**.
 - **Yapılmayanlar:** öğretmen ve öğrenci girişi (rol/yetki sistemi). Bunun yerine öğretmen için yazdırılabilir sayfa, veli için mevcut paylaşım linki kullanılıyor.
 
+## 4f. Başarı Skoru (5 Kasım 2026)
+
+Rakip analizinden sonra "erken uyarı" iş önceliği olarak seçildi. Öğrenci başına 0–100 skor, nedenini söyleyen cümleler ve 4 haftalık gidiş.
+
+- **Dosyalar:**
+  - Saf hesap (istemci + sunucu): `modules/reporting/score.ts` (`SCORE_DIMS`, `SCORE_RULES`, `dimScores`, `totalScore`, `scoreStudent`, `normalizeScoreSettings`).
+  - Veri: `modules/reporting/internal/score.ts` (`scoreSignals(ownerId, asOf)`, `successScores`, `studentSuccessScore`, `scoreSettings`, `saveScoreSettings`).
+  - Arayüz: `modules/reporting/ui/score/` (`ScoreParts`, `ScoreCard`, `ScoreSettingsForm`).
+- **Boyutlar** (her biri 0–100; varsayılan ağırlık):
+
+  | Boyut | Ölçüm | Ağırlık |
+  |---|---|---|
+  | Akademik düzey | Son denemedeki tahmini puanın kurum içi yüzdeliği (eşitlikte yarım) | 30 |
+  | Gelişim | Son en fazla 4 denemede net eğimi; −5 net/deneme → 0, +5 → 100. Tür: en az iki denemesi olan türlerden en son girileni (12. sınıfta tek AYT varsa TYT) | 25 |
+  | Deneme katılımı | Son 60 günde sınıfının girdiği denemelerden girdiği oran | 10 |
+  | Devam | Son 30 gün (Geldi + Geç) / tüm kayıtlar; %70 ve altı 0, %100 → 100 | 20 |
+  | Ödev | Son 30 günde teslimi geçen ödevler; eksik yarım sayılır | 15 |
+
+  - Verisi olmayan boyut hesaba girmez, kalan ağırlıklar oranlanır.
+  - Seviyeler: 70+ İyi, 50–69 İzlenmeli, 50 altı Risk altında.
+  - **Açıklamalar:** en çok puan kaybettiren iki boyut cümleye çevrilir (`reasonFor`).
+  - **Trend:** aynı hesap 28 gün önceki tarih için tekrarlanır (`asOf`). Anlık görüntü tablosu yok. "Risk seviyesine düşen" = şimdi risk altında, 28 gün önce skoru olan ve risk altında olmayan.
+- **Ayarlar:** yeni `Setting` tablosu (`ownerId + key`, JSON `value`); `score` anahtarı ağırlık ve eşikleri tutar. Şimdilik yalnız reporting yazar. `POST /api/kurum/ayarlar/skor` (`{ settings }`, `null` = varsayılan). Hatalı değerler `normalizeScoreSettings` ile kırpılır.
+- **Ekranlar:** `/kurum/analiz?tab=skor` (eski `?tab=risk` buraya yönlenir; sınıf ve seviye filtresi, boyut çubukları, açıklamalar, Excel, altta ayarlar ve canlı dağılım önizlemesi), öğrenci profilinde skor kartı (kurum dışı ve sınıfsız öğrencide yok), kokpitte "Risk seviyesine düşenler".
+- **Gizlilik kararı:** skor veliye gösterilmez; kurum içi araçtır.
+- **Seed:** her sınıftan iki öğrenci son 18 günde düşüşe geçer (net, devam, ödev). Yoklamalar 7 haftaya, ödev teslimleri 31 gün öncesine kadar yayıldı; böylece 28 gün önceki skor da aynı boyutlarla hesaplanır.
+- **Doğrulama:** bağımsız Python hesabı (SQLite'tan) 79/79 öğrencide skor ve beş boyutta sayfayla aynı; "risk seviyesine düşen" sayısı aynı. API: girişsiz 401, hatalı ayar normalize, varsayılana dönüş çalıştı. Eski `riskList` ve `risk.ts` kaldırıldı.
+
 ## 4e. Tasarım dili (4 Kasım 2026)
 
 Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu. Yeni ekran yazarken şu kurallara uyun:
@@ -308,7 +328,6 @@ Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu.
 - [ ] **Soru frekans analizi kitapçık bazında:** B eşlemesi artık var ve konu analizinde kullanılıyor, ama soru frekans analizi hâlâ kitapçık bazında ayrı.
 - [ ] **Kurum karşılaştırma:** Kurumlar arası karşılaştırma ve çoklu şube yok.
 - [ ] **Ödev raporu:** Sınıf ve ders bazında ödev raporu yok (öğrenci bazında var).
-- [ ] **Risk eşikleri sabit:** Risk eşikleri kodda tanımlı (`modules/reporting/risk.ts`); kurumun ayarlayabileceği bir ekran yok.
 - [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye otomatik SMS/e-posta (şu an WhatsApp linki ve kopyalama var), ödeme/paket satışı yok.
 - [ ] **Excel biçimi:** Eski `.xls` desteklenmiyor; `.xlsx` veya CSV gerekiyor.
 - [ ] **OMR iyileştirmeleri:** Form yön işareti eklenmeli, gerçek taramalarla test edilmeli.
