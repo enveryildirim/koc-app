@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { CHOICES, computeLayout, FormSpec } from "./layout";
 import { scanForm, ScanResult } from "./scan";
 import { renderSampleScan } from "./draw";
+import { qrMatrix } from "./qr";
 
 export type KeyItem = { points: number; correct: number[]; number: number; section?: string };
 
@@ -43,6 +44,9 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ n: number; skipped: string[]; badBooklet: string[] } | null>(null);
+  // Örnek üretme seçenekleri (test için): kişisel form (kimlik şeridi + QR) ve rastgele yön (ters / yan)
+  const [samplePersonal, setSamplePersonal] = useState(false);
+  const [sampleRotate, setSampleRotate] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const patch = (key: string, p: Partial<Sheet>) => setSheets((s) => s.map((x) => (x.key === key ? { ...x, ...p } : x)));
@@ -97,17 +101,25 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
       });
       let studentNo: string;
       let name: string;
+      let className = "";
       if (mode === "exam" && known.length) {
         const [no, display] = known[Math.floor(Math.random() * known.length)];
         studentNo = no.padStart(6, "0");
         name = display.split(" (")[0];
+        className = display.match(/\(([^)]*)\)$/)?.[1] ?? "";
       } else {
         studentNo = String(100000 + Math.floor(Math.random() * 899999));
         name = SAMPLE_NAMES[Math.floor(Math.random() * SAMPLE_NAMES.length)];
       }
       const multi = letters.length > 1;
-      const url = renderSampleScan(spec, { answers, studentNo, name, booklet: multi ? booklet : undefined });
-      await addImage(`örnek-${studentNo}.jpg (${name}${multi ? ` · ${booklet}` : ""})`, url);
+      const personal = samplePersonal && mode === "exam";
+      const rotation = sampleRotate ? ([0, 90, 180, 270] as const)[Math.floor(Math.random() * 4)] : 0;
+      const sheetSpec: FormSpec = personal
+        ? { ...spec, personal: { studentNo: norm(studentNo), name, className, qr: qrMatrix(`örnek ${norm(studentNo)}`) } }
+        : spec;
+      const url = renderSampleScan(sheetSpec, { answers, studentNo, name, booklet: multi ? booklet : undefined, rotation });
+      const tags = [name, multi ? booklet : "", personal ? "kişisel" : "", rotation ? `${rotation}°` : ""].filter(Boolean).join(" · ");
+      await addImage(`örnek-${norm(studentNo)}.jpg (${tags})`, url);
     }
   }
 
@@ -154,6 +166,18 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
           </label>
           <button className="btn-secondary" onClick={() => addSamples(1)}>🧪 Örnek taranmış form üret</button>
           <button className="btn-secondary" onClick={() => addSamples(5)}>🧪 5 örnek üret</button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-4 text-xs text-lead">
+          {mode === "exam" && (
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={samplePersonal} onChange={(e) => setSamplePersonal(e.target.checked)} />
+              Örnekler kişisel form olsun (kimlik şeridi ve QR)
+            </label>
+          )}
+          <label className="flex items-center gap-1.5">
+            <input type="checkbox" checked={sampleRotate} onChange={(e) => setSampleRotate(e.target.checked)} />
+            Rastgele yön (ters ya da yan çekilmiş fotoğraf)
+          </label>
         </div>
         <p className="mt-2 text-xs text-lead/70">
           “Örnek” düğmeleri test içindir: rastgele doldurulmuş, hafif döndürülmüş ve gürültülü sahte bir tarama üretip okuyucuya verir.
@@ -277,6 +301,15 @@ function SheetCard({
                 <input className="input num" value={s.studentNo} onChange={(e) => onPatch({ studentNo: e.target.value })} />
               </div>
             </div>
+            <p className="mt-1.5 text-xs text-lead">
+              {s.scan.studentSource === "id"
+                ? "Numara kişisel formun kimlik şeridinden okundu."
+                : s.scan.studentSource === "invalid"
+                  ? <span className="text-red-700">Kimlik şeridi okunamadı (kirli ya da katlanmış olabilir); numarayı elle girin.</span>
+                  : "Numara kodlama alanından okundu."}
+              {s.scan.rotation !== 0 && ` Form ${s.scan.rotation}° dönük çekilmiş; düzeltilerek okundu.`}
+              {!s.scan.oriented && " Formda yön işareti yok (eski form); düz çekildiği varsayıldı."}
+            </p>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
               {(spec.booklets?.length ?? 0) > 1 && (
                 <span className="flex items-center gap-1">

@@ -37,6 +37,8 @@ export type SampleFill = {
   studentNo: string;
   name: string;
   booklet?: string;
+  /** Fotoğrafın dönüklüğü (derece): ters ya da yan çekilmiş formu taklit eder. */
+  rotation?: 0 | 90 | 180 | 270;
 };
 
 /**
@@ -66,7 +68,8 @@ export function renderSampleScan(info: FormSpec, fill: SampleFill): string {
   ctx.fillStyle = "#1e3a8a";
   ctx.fillText(fill.name, 24 * scale, 47 * scale);
 
-  fill.studentNo.split("").forEach((d, c) => {
+  // Kişisel formda numara alanı yoktur (numara kimlik şeridinde basılıdır).
+  if (L.student.length) fill.studentNo.split("").forEach((d, c) => {
     const b = L.student[c][Number(d)];
     if (b) pencil(b.x, b.y, 2.2);
     ctx.font = `${3.6 * scale}px Arial`;
@@ -83,16 +86,18 @@ export function renderSampleScan(info: FormSpec, fill: SampleFill): string {
   if (bk) pencil(bk.x, bk.y, 2.2);
 
   // "Tarama": döndür, ölçekle, kağıt tonu ve gürültü ekle
+  const rot = fill.rotation ?? 0;
+  const side = rot === 90 || rot === 270;
   const out = document.createElement("canvas");
-  out.width = 1240;
-  out.height = 1754;
+  out.width = side ? 1754 : 1240;
+  out.height = side ? 1240 : 1754;
   const o = out.getContext("2d")!;
   o.fillStyle = "#cfcac0";
   o.fillRect(0, 0, out.width, out.height);
   o.translate(out.width / 2 + jitter(20), out.height / 2 + jitter(20));
-  o.rotate(((Math.random() - 0.5) * 5 * Math.PI) / 180);
+  o.rotate(((rot + (Math.random() - 0.5) * 5) * Math.PI) / 180);
   const s = 0.92 + Math.random() * 0.04;
-  o.scale((out.width / page.width) * s, (out.width / page.width) * s);
+  o.scale((1240 / page.width) * s, (1240 / page.width) * s);
   o.drawImage(page, -page.width / 2, -page.height / 2);
   o.setTransform(1, 0, 0, 1, 0, 0);
 

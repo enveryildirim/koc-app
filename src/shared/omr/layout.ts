@@ -2,6 +2,7 @@
  * Optik form düzeni (parametrik). Tüm koordinatlar A4 sayfası üzerinde milimetre cinsindendir.
  * Yazdırılan form (SVG), örnek form üreticisi (canvas) ve tarayıcı aynı `computeLayout` çıktısını kullanır.
  */
+import { encodeStudentId, ID_BITS } from "./idcode";
 
 export const PAGE_W = 210;
 export const PAGE_H = 297;
@@ -14,6 +15,20 @@ export const MARKERS: [number, number][] = [
   [196, 283],
   [14, 283],
 ];
+
+/**
+ * Yön işareti: sol üst köşe karesinin altındaki küçük kare. Okuyucu dört olası yönelimden bu karenin
+ * dolu göründüğünü seçer; böylece ters ya da yan çekilmiş fotoğraflar da okunur. İşareti olmayan
+ * eski formlarda okuyucu düz yönelimi varsayar.
+ */
+export const ORIENT_MARK: [number, number] = [14, 25];
+export const ORIENT_SIZE = 4;
+
+/** Kişisel formun kimlik şeridi (alt kenar, köşe kareleri arasında). Bkz. idcode.ts */
+const ID_X0 = 36;
+const ID_PITCH = 4.4;
+const ID_Y = 283;
+export const ID_CELL = 2.8;
 
 export const CHOICES = ["A", "B", "C", "D", "E"];
 export const MAX_QUESTIONS = 180;
@@ -43,6 +58,11 @@ export type FormSpec = {
   sections?: { name: string; count: number }[];
   /** Kitapçık türü alanındaki harfler (ör. ["A","B"] ya da ["A","B","C","D"]); boş / tek harf = alan yok. */
   booklets?: string[];
+  /**
+   * Kişisel form: öğrenci bilgisi basılır, numara kodlama alanı yerine QR ve alt kenarda kimlik şeridi çıkar.
+   * Cevap ve kitapçık alanlarının yeri değişmez; okuyucu genel ve kişisel formu aynı düzenle okur.
+   */
+  personal?: { studentNo: string; name: string; className: string; qr?: { size: number; data: number[] } };
 };
 /** Geriye dönük uyumluluk için. */
 export type FormInfo = FormSpec;
@@ -54,6 +74,8 @@ export type Layout = {
   headers: { x: number; y: number; text: string; w: number }[];
   student: Bubble[][];
   booklet: Bubble[];
+  /** Kimlik şeridi hücre merkezleri (32). Her düzende vardır; yalnızca kişisel formda basılır. */
+  idStrip: { x: number; y: number }[];
   answerBox: { x: number; y: number; w: number; h: number };
   studentBox: { x: number; y: number; w: number; h: number };
 };
@@ -119,7 +141,8 @@ export function computeLayout(spec: FormSpec): Layout {
     });
   });
 
-  const student = Array.from({ length: STUDENT_DIGITS }, (_, c) =>
+  // Kişisel formda numara alanı basılmaz (yerinde QR olur); okuyucu genel düzeni kullandığı için alanı yine bilir.
+  const student = spec.personal ? [] : Array.from({ length: STUDENT_DIGITS }, (_, c) =>
     Array.from({ length: 10 }, (_, d) => ({ x: STUDENT_X + c * STUDENT_DX, y: STUDENT_Y + 8 + d * STUDENT_DY, label: String(d) })),
   );
   // En fazla 4 baloncuk: x 50–74 mm, öğrenci numarası kutusu 135 mm'den başlar.
@@ -132,6 +155,7 @@ export function computeLayout(spec: FormSpec): Layout {
     headers,
     student,
     booklet,
+    idStrip: Array.from({ length: ID_BITS }, (_, i) => ({ x: ID_X0 + i * ID_PITCH, y: ID_Y })),
     answerBox: { x: AREA_X - 2, y: ANSWER_TOP - 6, w: AREA_W + 4, h: R * rowH + 8 },
     studentBox: {
       x: STUDENT_X - 5,
@@ -159,14 +183,19 @@ export function buildForm(spec: FormSpec, layout = computeLayout(spec)): Prim[] 
   for (const [x, y] of MARKERS) {
     p.push({ kind: "rect", x: x - MARKER_SIZE / 2, y: y - MARKER_SIZE / 2, w: MARKER_SIZE, h: MARKER_SIZE, fill: "#000" });
   }
+  p.push({ kind: "rect", x: ORIENT_MARK[0] - ORIENT_SIZE / 2, y: ORIENT_MARK[1] - ORIENT_SIZE / 2, w: ORIENT_SIZE, h: ORIENT_SIZE, fill: "#000" });
 
   p.push({ kind: "text", x: 26, y: 17, text: spec.brand.toUpperCase() + " · OPTİK CEVAP FORMU", size: 3.2, fill: soft, bold: true });
   p.push({ kind: "text", x: 26, y: 27, text: truncate(spec.title, 48), size: 6, fill: ink, bold: true });
 
-  const fields = ["Ad Soyad", "Sınıf / Şube", "Tarih", "İmza"];
-  fields.forEach((f, i) => {
+  const per = spec.personal;
+  const fields: [string, string][] = per
+    ? [["Ad Soyad", per.name], ["Sınıf / Şube", per.className], ["Öğrenci numarası", per.studentNo], ["İmza", ""]]
+    : [["Ad Soyad", ""], ["Sınıf / Şube", ""], ["Tarih", ""], ["İmza", ""]];
+  fields.forEach(([f, value], i) => {
     const y = 42 + i * 14;
     p.push({ kind: "text", x: 22, y, text: f, size: 3.2, fill: "#4b5563" });
+    if (value) p.push({ kind: "text", x: 22, y: y + 5.8, text: truncate(value, 40), size: 4.6, fill: ink, bold: true });
     p.push({ kind: "line", x1: 22, y1: y + 7, x2: 122, y2: y + 7, stroke: "#d1d5db", sw: 0.3 });
   });
 
@@ -175,9 +204,32 @@ export function buildForm(spec: FormSpec, layout = computeLayout(spec)): Prim[] 
     for (const b of L.booklet) bubble(p, b, 2.2);
   }
 
+  if (per) {
+    // QR (insan ve telefon için) ve kimlik şeridi (okuyucu için)
+    if (per.qr) {
+      const side = 30;
+      const m = side / per.qr.size;
+      const x0 = L.studentBox.x + (L.studentBox.w - side) / 2;
+      const y0 = L.studentBox.y + 4;
+      per.qr.data.forEach((v, i) => {
+        if (!v) return;
+        const r = Math.floor(i / per.qr!.size);
+        const c = i % per.qr!.size;
+        p.push({ kind: "rect", x: x0 + c * m, y: y0 + r * m, w: m + 0.02, h: m + 0.02, fill: "#000" });
+      });
+      p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: y0 + side + 5, text: "Kişiye özel form", size: 2.8, fill: "#4b5563", anchor: "middle", bold: true });
+      p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: y0 + side + 9, text: "Başkasıyla değiştirmeyin", size: 2.4, fill: soft, anchor: "middle" });
+    }
+    encodeStudentId(per.studentNo).forEach((on, i) => {
+      const c = L.idStrip[i];
+      if (on) p.push({ kind: "rect", x: c.x - ID_CELL / 2, y: c.y - ID_CELL / 2, w: ID_CELL, h: ID_CELL, fill: "#000" });
+      else p.push({ kind: "rect", x: c.x - ID_CELL / 2, y: c.y - ID_CELL / 2, w: ID_CELL, h: ID_CELL, stroke: "#d1d5db", sw: 0.2 });
+    });
+  }
+
   // Öğrenci numarası
-  p.push({ kind: "rect", ...L.studentBox, stroke: "#d1d5db", sw: 0.3, r: 1.5 });
-  p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: L.studentBox.y - 2, text: "ÖĞRENCİ NUMARASI", size: 2.8, fill: "#4b5563", anchor: "middle", bold: true });
+  if (L.student.length) p.push({ kind: "rect", ...L.studentBox, stroke: "#d1d5db", sw: 0.3, r: 1.5 });
+  if (L.student.length) p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: L.studentBox.y - 2, text: "ÖĞRENCİ NUMARASI", size: 2.8, fill: "#4b5563", anchor: "middle", bold: true });
   for (const col of L.student) {
     p.push({ kind: "rect", x: col[0].x - 2.6, y: L.studentBox.y + 1, w: 5.2, h: 5, stroke: "#9ca3af", sw: 0.25 });
     for (const b of col) bubble(p, b, 2.2);

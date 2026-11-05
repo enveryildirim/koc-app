@@ -125,9 +125,18 @@ src/app/                 # sayfa + route dosyaları (ince katman)
 - Sentetik testlerde (döndürme ±4°, perspektif, gölge, gürültü) online test, LGS (90), TYT (120) ve AYT (80) formlarında tüm cevaplar, öğrenci numaraları ve kitapçık türü doğru okundu.
 - Test script'leri depoda yok (geçici klasörde yazıldı). İhtiyaç olursa `computeLayout` + `buildForm` ile görüntü rasterize edip `scanForm` çağırarak yeniden yazılabilir.
 
+### Yön işareti ve kişisel form (5 Kasım 2026)
+- **Yön işareti:** sol üst köşe karesinin altında 4 mm kare (`ORIENT_MARK` = (14, 25)). Okuyucu köşe karelerini görüntü köşelerine göre sıralar, dört döngüsel eşlemenin her biri için homografi kurar ve yön işaretinin dolu (≥ %60) göründüğünü seçer. 90°, 180° ve 270° dönük fotoğraflar okunur. İşareti olmayan eski formlarda düz yön varsayılır (eski davranış). `ScanResult.rotation`, `oriented`.
+- **Kişisel form:** `FormSpec.personal` (ad, sınıf, numara, QR matrisi). Numara kodlama alanı basılmaz; yerinde QR (öğrencinin kurum sayfası adresi, `shared/omr/qr.ts`) durur. Alt kenarda, köşe kareleri arasında 32 hücrelik **kimlik şeridi** (`shared/omr/idcode.ts`): 20 bit numara + 4 bit sürüm + 8 bit CRC-8 (XOR 0xA5; boş şerit geçersiz). Hücreler 2,8 mm, aralık 4,4 mm; birleşip köşe karesi sanılmazlar.
+- **Okuma:** düzen her zaman hem numara alanını hem şeridi içerir; genel ve kişisel form aynı deneme için karışık taranabilir. Şeritte dolu hücre varsa numara yalnızca şeritten alınır (`studentSource: "id"`); sağlama tutmazsa numara boş bırakılır (`"invalid"`), QR'ın bulunduğu numara alanı okunmaz. Tarayıcı kartında kaynak ve dönüklük yazılır.
+- **Basım:** `/kurum/denemeler/[id]/form?kisisel=1&sinif=` (sınıfın her öğrencisi için bir sayfa); optik sekmesinde "Kişisel formları yazdır".
+- **Örnek üretici:** "kişisel form" ve "rastgele yön" seçenekleri (`renderSampleScan(..., { rotation })`).
+- **Doğrulama:** kimlik kodu: 3002 numara gidiş-dönüş, tek bit hatalarının 96064/96064'ü, denenen çift bit hatalarının 15010/15010'u yakalandı; boş ve dolu şerit geçersiz. Uçtan uca (geçici test sayfası, sonra silindi): LGS / TYT / AYT × genel / kişisel × 0° / 90° / 180° / 270° × 2 = 48 sentetik formun hepsinde numara, kitapçık ve bütün cevaplar doğru, yön doğru tespit edildi.
+
 ### Bilinen sınırlamalar
-- **Ters görüntü:** Görüntü 180° ters çekilirse yanlış okunur; formda yön işareti yok.
-- **Gerçek kâğıt testi yapılmadı:** Gerçek kâğıt ve kamera ile test edilmedi.
+- **Gerçek kâğıt testi yapılmadı:** Gerçek kâğıt ve telefon fotoğrafıyla test edilmedi (kullanıcı yapacak). Sentetik örnekler yalnızca ±2,5° eğim, hafif ölçek, gölge ve gürültü içeriyor; güçlü perspektif, kırışık kâğıt, bulanıklık ve yan ışık denenmedi.
+- **İşaretsiz eski form ters çekilirse** hâlâ yanlış okunur; bu formlar yeniden basılmalı.
+- **QR ile yedek okuma yok:** şerit okunamazsa numara elle girilir.
 
 ### Optik okuyucu TXT içe aktarma (`modules/exams/ui/TxtImport.tsx`)
 - Sabit sütunlu dosyadaki alanların başlangıç sütunları kullanıcı tarafından tanımlanır: ad, numara, kitapçık, cevaplar.

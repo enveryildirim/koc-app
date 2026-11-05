@@ -119,6 +119,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </p>
               <FormSvg info={spec} className="mt-3 w-full rounded ring-1 ring-rule" />
               <Link href={`${base}/form`} target="_blank" className="btn-primary mt-3 w-full">Formu yazdır</Link>
+              <Link href={`${base}/form?kisisel=1`} target="_blank" className="btn-secondary mt-2 w-full">Kişisel formları yazdır</Link>
+              <p className="mt-2 text-xs text-lead">
+                Kişisel formda öğrencinin adı, numarası ve QR kodu basılıdır; numara kodlanmaz, okuyucu alt kenardaki şeritten okur. Ters ya da yan çekilen
+                fotoğraflar yön işaretiyle düzeltilir.
+              </p>
             </div>
             <div className="card p-4 text-sm text-lead">
               Okunan öğrenci numarası kayıtlı öğrencilerle eşleştirilir (baştaki sıfırlar önemsizdir). Aynı öğrenci tekrar okutulursa sonucu güncellenir.

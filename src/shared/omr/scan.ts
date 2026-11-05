@@ -3,10 +3,12 @@
  *
  * 1. Gri tonlama + uyarlamalı eşikleme (gölgeli fotoğraflara dayanıklı)
  * 2. Bağlı bileşen analizi ile 4 köşe karesini bulma
- * 3. Form (mm) → görüntü (px) homografisi
- * 4. Her baloncukta koyu piksel oranını ölçme
+ * 3. Yön: dört olası yönelimden yön işaretinin (ORIENT_MARK) dolu göründüğünü seçme
+ * 4. Form (mm) → görüntü (px) homografisi
+ * 5. Her baloncukta koyu piksel oranını ölçme; kimlik şeridi varsa numarayı oradan okuma
  */
-import { Layout, MARKERS } from "./layout";
+import { ID_CELL, Layout, MARKERS, ORIENT_MARK, ORIENT_SIZE } from "./layout";
+import { decodeStudentId } from "./idcode";
 
 export type ImageLike = { data: Uint8ClampedArray; width: number; height: number };
 
@@ -25,6 +27,15 @@ export type ScanResult = {
   studentBubbles: BubbleState[];
   /** "A" | "B" | "" (okunamadı / alan yok) */
   booklet: string;
+  /** Formun görüntüdeki dönüklüğü (saat yönünde derece). Yön işareti yoksa 0 varsayılır. */
+  rotation: 0 | 90 | 180 | 270;
+  /** Yön işareti bulundu mu (eski formlarda yoktur). */
+  oriented: boolean;
+  /**
+   * Numaranın kaynağı: "id" kişisel formun kimlik şeridi, "grid" numara kodlama alanı.
+   * "invalid": şerit var ama sağlama tutmadı; numara boş bırakılır, elle girilmeli.
+   */
+  studentSource: "id" | "grid" | "invalid";
   questions: QuestionRead[];
 };
 
@@ -35,8 +46,34 @@ export function scanForm(img: ImageLike, layout: Layout): ScanResult {
   const R = layout.r;
   const { width: W, height: H } = img;
   const dark = binarize(img);
-  const markers = findMarkers(dark, W, H);
-  const h = homography(MARKERS, markers);
+  const found = findMarkers(dark, W, H);
+
+  // Yön: köşe kareleri görüntü köşelerine göre sıralı (sol üst, sağ üst, sağ alt, sol alt). Form k adım
+  // dönükse formun sol üst karesi bu listenin k. elemanıdır. Yön işaretinin dolu göründüğü k seçilir.
+  const square = (hh: number[], [cx, cy]: [number, number], half: number) => {
+    let hit = 0;
+    let total = 0;
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
+        const [px, py] = applyH(hh, cx + ((i / 6) * 2 - 1) * half, cy + ((j / 6) * 2 - 1) * half);
+        const ix = Math.round(px);
+        const iy = Math.round(py);
+        total++;
+        if (ix >= 0 && iy >= 0 && ix < W && iy < H && dark[iy * W + ix]) hit++;
+      }
+    }
+    return hit / total;
+  };
+  const options = [0, 1, 2, 3].map((k) => {
+    const dst = MARKERS.map((_, i) => found[(i + k) % 4]);
+    const hh = homography(MARKERS, dst);
+    return { k, dst, hh, fill: square(hh, ORIENT_MARK, ORIENT_SIZE * 0.3) };
+  });
+  const best = options.reduce((a, b) => (b.fill > a.fill ? b : a));
+  const oriented = best.fill >= 0.6;
+  const chosen = oriented ? best : options[0];
+  const markers = chosen.dst;
+  const h = chosen.hh;
   const project = (x: number, y: number) => applyH(h, x, y);
   const pxPerMm = Math.hypot(markers[1][0] - markers[0][0], markers[1][1] - markers[0][1]) / (MARKERS[1][0] - MARKERS[0][0]);
 
@@ -72,9 +109,19 @@ export function scanForm(img: ImageLike, layout: Layout): ScanResult {
     return { marked, status, bubbles };
   });
 
+  // Kimlik şeridi: hücrelerden en az biri doluysa kişisel formdur ve numara yalnızca şeritten alınır
+  // (kişisel formda numara alanının yerinde QR durur; orayı okumak yanlış numara verirdi).
+  const idCells = layout.idStrip.map((c) => {
+    const fill = square(h, [c.x, c.y], ID_CELL * 0.3);
+    const [x, y] = project(c.x, c.y);
+    return { x, y, r: (ID_CELL / 2) * pxPerMm, fill, marked: fill >= 0.5 };
+  });
+  const hasStrip = idCells.some((c) => c.marked);
+  const fromStrip = hasStrip ? decodeStudentId(idCells.map((c) => c.marked)) : null;
+
   let studentNo = "";
   const sBubbles: BubbleState[] = [];
-  for (const sc of layout.student) {
+  for (const sc of hasStrip ? [] : layout.student) {
     const col = sc.map((b) => measure(b.x, b.y));
     sBubbles.push(...col);
     let best = -1;
@@ -89,7 +136,20 @@ export function scanForm(img: ImageLike, layout: Layout): ScanResult {
   const booklet = bkMarked.length === 1 ? layout.booklet[bk.indexOf(bkMarked[0])].label : "";
   sBubbles.push(...bk);
 
-  return { markers, studentNo, studentBubbles: sBubbles, booklet, questions: qReads };
+  if (hasStrip) {
+    studentNo = fromStrip ?? "";
+    sBubbles.push(...idCells);
+  }
+  return {
+    markers,
+    studentNo,
+    studentBubbles: sBubbles,
+    booklet,
+    questions: qReads,
+    rotation: ((chosen.k * 90) % 360) as ScanResult["rotation"],
+    oriented,
+    studentSource: hasStrip ? (fromStrip ? "id" : "invalid") : "grid",
+  };
 }
 
 /* --------------------------------- Eşikleme --------------------------------- */
