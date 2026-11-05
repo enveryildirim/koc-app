@@ -361,3 +361,23 @@ model QuestionItem {
 
   @@index([ownerId, subject])
 }
+
+/// Müfredat: ders + düzey için ünite / konu / kazanım listesi (kurum bir kez tanımlar).
+/// Yıllık plan bu listeden kurulur; soru havuzu ve deneme konuları bu adlardan seçilir.
+model CurriculumTopic {
+  id      String @id @default(cuid())
+  ownerId String
+  subject String
+  /// Sınıf / sınav düzeyi: 5–12, LGS, TYT, AYT
+  grade   String
+  unit    String @default("")
+  topic   String
+  /// Kazanım kodu (ör. M.8.1.1) ve açıklaması; isteğe bağlı
+  code    String @default("")
+  outcome String @default("")
+  /// Önerilen ders haftası
+  weeks   Int    @default(1)
+  order   Int
+
+  @@index([ownerId, subject, grade])
+}

@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { subjectMatches } from "@/shared/subjects";
 import {
   bookletLetters,
   formatTopicSpec,
@@ -32,6 +33,7 @@ export default function KeyEditor({
   scoring: initialScoring,
   choices,
   hasResults,
+  topicSuggestions = {},
 }: {
   examId: string;
   type: string;
@@ -39,6 +41,8 @@ export default function KeyEditor({
   scoring: Scoring;
   choices: number;
   hasResults: boolean;
+  /** Ders → müfredattaki konu adları (bölüm adıyla eşleşen ders önerilir). */
+  topicSuggestions?: Record<string, string[]>;
 }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
@@ -221,6 +225,11 @@ export default function KeyEditor({
                 onChange={(e) => setTopicText(setAt(topicText, i, e.target.value))}
               />
               {parsedTopics.errors.length > 0 && <p className="mt-1 text-xs text-red-600">{parsedTopics.errors[0]}</p>}
+              <TopicPicker
+                topics={[...new Set(Object.entries(topicSuggestions).filter(([subj]) => subjectMatches(s.name, subj)).flatMap(([, l]) => l))]}
+                count={s.count}
+                onAdd={(line) => setTopicText(setAt(topicText, i, `${(topicText[i] ?? "").trimEnd()}${(topicText[i] ?? "").trim() ? "\n" : ""}${line}`))}
+              />
               {alts.length > 0 && (
                 <>
                   <p className="mt-3 text-xs text-lead">
@@ -287,6 +296,38 @@ export default function KeyEditor({
       <p className="text-xs text-lead">
         Anahtarı yayıncının cevap anahtarından kopyalayıp yapıştırabilirsiniz; harf dışındaki karakterler otomatik temizlenir. Bölüm yapısını değiştirirseniz optik formu yeniden yazdırın.
       </p>
+    </div>
+  );
+}
+
+/** Müfredattaki konulardan "aralık: konu" satırı ekler. */
+function TopicPicker({ topics, count, onAdd }: { topics: string[]; count: number; onAdd: (line: string) => void }) {
+  const [range, setRange] = useState("");
+  const [topic, setTopic] = useState("");
+  if (!topics.length) return null;
+  const valid = /^\s*\d+\s*(-\s*\d+\s*)?$/.test(range) && range.split("-").every((n) => Number(n) >= 1 && Number(n) <= count) && topic;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <span className="font-semibold">Müfredattan ekle:</span>
+      <input className="input w-20 px-2 py-1 text-xs" placeholder="ör. 1-4" value={range} onChange={(e) => setRange(e.target.value)} aria-label="Soru aralığı" />
+      <select className="input w-auto max-w-72 px-2 py-1 text-xs" value={topic} onChange={(e) => setTopic(e.target.value)} aria-label="Müfredat konusu">
+        <option value="">Konu seçin</option>
+        {topics.map((t) => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <button
+        type="button"
+        className="btn-secondary px-2 py-1 text-xs"
+        disabled={!valid}
+        onClick={() => {
+          onAdd(`${range.replace(/\s+/g, "")}: ${topic}`);
+          // Sonraki aralığa geç: "1-4" → "5-"
+          const end = Number(range.split("-").pop());
+          setRange(end < count ? `${end + 1}-` : "");
+          setTopic("");
+        }}
+      >
+        Ekle
+      </button>
     </div>
   );
 }

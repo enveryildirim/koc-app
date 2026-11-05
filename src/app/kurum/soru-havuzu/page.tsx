@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, DIFFICULTY } from "@/modules/question-bank";
 import { bankSummary, listItems, listSources } from "@/modules/question-bank/server";
+import { mergeTopicSuggestions } from "@/modules/curriculum";
+import { curriculumTopicNames } from "@/modules/curriculum/server";
 import QuestionGrid from "@/modules/question-bank/ui/QuestionGrid";
 import { HAVUZ_TABS } from "@/modules/question-bank/ui/tabs";
 import { Empty, Kpi, PageHeader, Tabs } from "@/shared/ui/kurum";
@@ -14,12 +16,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const ownerId = await requireOwner();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.s) || 1);
-  const [summary, sources, list] = await Promise.all([
+  const [summary, sources, list, curTopics] = await Promise.all([
     bankSummary(ownerId),
     listSources(ownerId),
     listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q }, page),
+    curriculumTopicNames(ownerId),
   ]);
-  const subjects = [...new Set([...summary.subjects, ...DEFAULT_SUBJECTS])].sort((a, b) => a.localeCompare(b, "tr"));
+  // Düzenleme önerileri: müfredat konuları önce (havuzda olmasa da seçilebilsin)
+  const suggestions = mergeTopicSuggestions(curTopics, summary.topics);
+  const subjects = [...new Set([...summary.subjects, ...Object.keys(curTopics), ...DEFAULT_SUBJECTS])].sort((a, b) => a.localeCompare(b, "tr"));
   const topicChoices = sp.ders ? summary.topics[sp.ders] ?? [] : [...new Set(Object.values(summary.topics).flat())].sort((a, b) => a.localeCompare(b, "tr"));
   const pages = Math.ceil(list.total / list.pageSize);
   const filtered = Object.entries(sp).some(([k, v]) => k !== "s" && v);
@@ -82,7 +87,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           {list.items.length === 0 ? (
             <Empty>Bu filtreye uygun soru yok.</Empty>
           ) : (
-            <QuestionGrid items={list.items} subjects={subjects} topics={summary.topics} />
+            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} />
           )}
 
           {pages > 1 && (

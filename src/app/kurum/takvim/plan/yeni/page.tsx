@@ -2,6 +2,7 @@ import { requireOwner } from "@/modules/identity/server";
 import { defaultPlanStart, schoolYearLabel, schoolYearOf } from "@/modules/planning";
 import { planEditorData } from "@/modules/planning/server";
 import PlanEditor from "@/modules/planning/ui/PlanEditor";
+import { planTemplatesByClass } from "@/modules/curriculum/server";
 import { ymd } from "@/shared/date";
 import { Empty, PageHeader } from "@/shared/ui/kurum";
 
@@ -24,6 +25,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
           year={year}
           classrooms={data.classrooms}
           subjectsByClass={data.subjectsByClass}
+          templatesByClass={await planTemplatesByClass(ownerId, data.classrooms)}
           holidays={data.holidays}
           initial={{ classroomId, subject: sp.ders ?? "", startDate: defaultPlanStart(year), source: "" }}
         />

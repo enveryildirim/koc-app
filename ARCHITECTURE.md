@@ -22,9 +22,10 @@ src/
 | `homework` | Homework, HomeworkStatus | identity, enrollment | `/kurum/odevler/*`, `/api/kurum/odevler/*` |
 | `schedule` | Teacher, ScheduleSlot, LessonSession, Attendance | identity, enrollment | `/kurum/ders-programi`, `/kurum/yoklama/*`, `/api/kurum/{ogretmenler,program,yoklama}` |
 | `question-bank` | QuestionSource, QuestionItem | identity | `/kurum/soru-havuzu/*`, `/api/kurum/soru-havuzu/*` |
+| `curriculum` | CurriculumTopic | identity | `/kurum/mufredat`, `/api/kurum/mufredat/*` |
 | `online-test` | Test, Question, Option, Attempt, Answer | identity | `/panel`, `/sinav/*`, `/s/[code]`, `/sonuc/[id]`, `/api/{tests,t,attempts}` |
 | `planning` | CalendarEvent, LessonPlan, PlanItem | identity, enrollment, exams, homework, schedule | `/kurum/takvim/*`, `/api/kurum/{takvim,plan}/*` |
-| `reporting` | Student.parent* (veli paylaşım alanları) | hepsi (online-test hariç) | `/kurum` (özet), `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
+| `reporting` | Student.parent* (veli paylaşım alanları) | hepsi (online-test ve question-bank hariç) | `/kurum` (özet), `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 
 Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← {exams, homework, schedule} ← planning ← reporting`; `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
 
@@ -75,3 +76,9 @@ modules/<m>/
 - **Dosyalar** `shared/storage` ile `STORAGE_DIR/<ownerId>/` altında durur (varsayılan `./storage`, git dışı). `public/` kullanılmaz; görseller `ownerId` denetleyen route'lardan sunulur. Dosya türü ilk baytlardan belirlenir.
 - **Kesme tarayıcıda yapılır.** PDF `pdfjs-dist` ile tuvale çizilir; sunucuya yalnızca kesilmiş PNG'ler ve 0–1 oranlı kutu (`crop`) gider.
 - **Otomatik bulma** `question-bank/detect.ts > detectQuestions()` saf fonksiyonudur (mürekkep izdüşümü, sütun ve boşluk analizi). Yapay zekâ dedektörü eklenirken aynı `DetectedBox` tipini döndürmeli; `QuestionItem.origin` (`MANUAL | AUTO | AI`) ve `text` alanları bunun için hazırdır.
+
+## Müfredat (`curriculum`)
+
+- Ders + düzey için ünite / konu / kazanım listesi; Excel ile içe ve dışa aktarılır (`parseCurriculumTable`, `CURRICULUM_COLUMNS`). `sample.ts` örnek (sahte) veridir.
+- Diğer modüller müfredata bağımlı değildir: sayfalar müfredat konularını öneri olarak verir (yıllık plan "müfredattan doldur", soru havuzu ve cevap anahtarı konu seçimi). Bağlantı konu **adı** üzerindendir (`planning > topicMatches`).
+- Takip ekranı (`reporting > curriculumTracking`) her konu için plan ilerlemesini, havuzdaki soru sayısını ve deneme başarısını okur; düzey → sınıf / deneme türü eşlemesi `curriculum > gradeScope`.

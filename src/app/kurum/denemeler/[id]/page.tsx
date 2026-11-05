@@ -9,6 +9,7 @@ import { examAbsentees, examReport, findExam } from "@/modules/exams/server";
 import { examFormSpec, examKeys } from "@/modules/exams";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
 import KeyEditor from "@/modules/exams/ui/KeyEditor";
+import { curriculumTopicNames } from "@/modules/curriculum/server";
 import TxtImport from "@/modules/exams/ui/TxtImport";
 import DeleteResult from "@/modules/exams/ui/DeleteResult";
 import OmrScanner from "@/shared/omr/OmrScanner";
@@ -76,6 +77,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           initial={{ name: exam.name, date: exam.date.toISOString().slice(0, 10), booklets: exam.letters.length, wrongPer: exam.wrongPer, sections: exam.secs }}
           choices={choicesFor(exam.type)}
           hasResults={exam.resultCount > 0}
+          topicSuggestions={await curriculumTopicNames(ownerId)}
         />
       </>
     );

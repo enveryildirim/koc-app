@@ -19,12 +19,13 @@ const MODULES = {
   identity: [],
   enrollment: ["identity"],
   "question-bank": ["identity"],
+  curriculum: ["identity"],
   exams: ["identity", "enrollment", "question-bank"],
   homework: ["identity", "enrollment"],
   schedule: ["identity", "enrollment"],
   "online-test": ["identity"],
   planning: ["identity", "enrollment", "exams", "homework", "schedule"],
-  reporting: ["identity", "enrollment", "exams", "homework", "schedule", "planning"],
+  reporting: ["identity", "enrollment", "exams", "homework", "schedule", "planning", "curriculum"],
 };
 const DB_IN_APP = "error";
 

@@ -5,6 +5,7 @@ import { EXAM_TYPES, gradeExam, LETTERS, makeBooklet, randomKey, resolveScoring 
 import { nationalHolidays, schoolYearOf } from "../src/modules/planning/calendar";
 import { defaultPlanStart, layoutPlan, mondayOf, parsePlan } from "../src/modules/planning/plan";
 import { addDays } from "../src/shared/date";
+import { SAMPLE_CURRICULUM } from "../src/modules/curriculum/sample";
 
 const FIRST = [
   "Ahmet", "Ayşe", "Mehmet", "Zeynep", "Mustafa", "Elif", "Emre", "Esra", "Burak", "Merve", "Can", "Selin", "Kerem", "Nil",
@@ -28,6 +29,7 @@ const phone = () =>
 
 export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   // Kurum tabloları kullanıcıya ilişkili olmadığından elle temizlenir
+  await prisma.curriculumTopic.deleteMany();
   await prisma.lessonPlan.deleteMany();
   await prisma.calendarEvent.deleteMany();
   await prisma.attendance.deleteMany();
@@ -376,4 +378,15 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       })),
     });
   }
+
+  // Örnek müfredat (8. sınıf, 12. sınıf fizik, TYT); konu adları yukarıdaki plan ve deneme konularıyla uyumlu
+  const orderInSet = new Map<string, number>();
+  await prisma.curriculumTopic.createMany({
+    data: SAMPLE_CURRICULUM.map((r) => {
+      const k = r.subject + "|" + r.grade;
+      const order = orderInSet.get(k) ?? 0;
+      orderInSet.set(k, order + 1);
+      return { ...r, ownerId, order };
+    }),
+  });
 }

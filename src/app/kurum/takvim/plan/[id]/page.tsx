@@ -4,6 +4,7 @@ import { planProgress, schoolYearLabel } from "@/modules/planning";
 import { findPlan, planEditorData } from "@/modules/planning/server";
 import PlanActions from "@/modules/planning/ui/PlanActions";
 import PlanEditor from "@/modules/planning/ui/PlanEditor";
+import { planTemplatesByClass } from "@/modules/curriculum/server";
 import PlanItems from "@/modules/planning/ui/PlanItems";
 import { ymd } from "@/shared/date";
 import { Kpi, PageHeader } from "@/shared/ui/kurum";
@@ -30,6 +31,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           year={plan.year}
           classrooms={data.classrooms}
           subjectsByClass={data.subjectsByClass}
+          templatesByClass={await planTemplatesByClass(ownerId, data.classrooms)}
           holidays={data.holidays}
           initial={{ classroomId: plan.classroomId, subject: plan.subject, startDate: plan.startDate, source: plan.source }}
         />

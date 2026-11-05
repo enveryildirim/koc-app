@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { schoolYearLabel, schoolYearRange } from "../calendar";
 import { isHolidayWeek, layoutPlan, mondayOf, parsePlan, PLAN_HELP, type Range } from "../plan";
 import { addDays } from "@/shared/date";
+import { subjectMatches } from "@/shared/subjects";
 
 type Holiday = Range & { classroomId: string | null };
 
@@ -12,6 +13,8 @@ type Props = {
   year: number;
   classrooms: { id: string; name: string }[];
   subjectsByClass: Record<string, string[]>;
+  /** Sınıfın düzeyine uyan müfredat setlerinden hazır plan metinleri (müfredat ekranından). */
+  templatesByClass?: Record<string, { subject: string; grade: string; topics: number; source: string }[]>;
   holidays: Holiday[];
   initial: { classroomId: string; subject: string; startDate: string; source: string };
 };
@@ -62,6 +65,13 @@ export default function PlanEditor(p: Props) {
   }
 
   const subjects = p.subjectsByClass[f.classroomId] ?? [];
+  const allTemplates = p.templatesByClass?.[f.classroomId] ?? [];
+  const templates = f.subject.trim() ? allTemplates.filter((t) => subjectMatches(t.subject, f.subject)) : allTemplates;
+  const gradeName = (g: string) => (/^\d+$/.test(g) ? `${g}. sınıf` : g);
+  function applyTemplate(t: (typeof allTemplates)[number]) {
+    if (f.source.trim() && !confirm("Konu listesi müfredattaki konularla değiştirilsin mi?")) return;
+    set({ source: t.source, subject: f.subject.trim() || t.subject });
+  }
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="card space-y-4 p-5">
@@ -95,6 +105,16 @@ export default function PlanEditor(p: Props) {
               <button className="text-xs text-brand-700 hover:underline" onClick={() => set({ source: EXAMPLE })}>Örnek doldur</button>
             )}
           </div>
+          {templates.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[13px]">
+              <span className="text-lead">Müfredattan doldur:</span>
+              {templates.map((t) => (
+                <button key={t.subject + t.grade} type="button" className="btn-secondary px-2 py-0.5 text-[13px]" onClick={() => applyTemplate(t)}>
+                  {t.subject} · {gradeName(t.grade)} <span className="font-normal text-lead">({t.topics} konu)</span>
+                </button>
+              ))}
+            </div>
+          )}
           <textarea
             className="input font-mono text-sm"
             rows={16}

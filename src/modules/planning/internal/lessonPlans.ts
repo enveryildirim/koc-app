@@ -204,7 +204,7 @@ export async function planEditorData(ownerId: string, year: number) {
     if (!list.includes(s.subject)) list.push(s.subject);
   }
   return {
-    classrooms: classrooms.map((c) => ({ id: c.id, name: c.name })),
+    classrooms: classrooms.map((c) => ({ id: c.id, name: c.name, level: c.level })),
     subjectsByClass,
     holidays: holidays.map((h) => ({ start: h.startDate, end: h.endDate, classroomId: h.classroomId })),
   };
