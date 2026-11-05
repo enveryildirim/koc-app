@@ -4,7 +4,7 @@ import { examPlanCoverage } from "@/modules/planning/server";
 import ExamPlanCoverage from "@/modules/planning/ui/ExamPlanCoverage";
 import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
-import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, LETTERS, normNo, topicStats, totalQuestions } from "@/modules/exams";
+import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
 import { examAbsentees, examReport, findExam } from "@/modules/exams/server";
 import { examFormSpec, examKeys } from "@/modules/exams";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
@@ -26,7 +26,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const sp = await searchParams;
   const exam = await findExam(ownerId, id);
   if (!exam) notFound();
-  const keyed = exam.secs.every((s) => s.keyA.length === s.count && (!exam.bookletB || s.keyB.length === s.count));
+  const keyed = sectionsKeyed(exam.secs, exam.letters.length);
+  const multi = exam.letters.length > 1;
   const tab = sp.tab ?? (keyed ? "sonuclar" : "anahtar");
   const base = `/kurum/denemeler/${id}`;
   const tabs = [
@@ -47,7 +48,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         title={exam.name}
         sub={`${EXAM_TYPES[exam.type]?.label ?? exam.type} · ${fmtDate(exam.date)} · ${totalQuestions(exam.secs)} soru · ${exam.wrongPer ? `${exam.wrongPer} yanlış 1 doğruyu götürür` : "yanlış doğruyu götürmez"}`}
         back={{ href: "/kurum/denemeler", label: "Denemeler" }}
-        actions={<PrintButton />}
+        actions={
+          <>
+            {exam.secs.some((s) => s.items?.length) && <Link href={`${base}/kitapcik`} className="btn-secondary">Soru kitapçığı</Link>}
+            <PrintButton />
+          </>
+        }
       />
       <Tabs tabs={tabs} active={tab} />
       {!keyed && tab !== "anahtar" && (
@@ -67,7 +73,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           examId={id}
           type={exam.type}
           scoring={exam.scoringResolved}
-          initial={{ name: exam.name, date: exam.date.toISOString().slice(0, 10), bookletB: exam.bookletB, wrongPer: exam.wrongPer, sections: exam.secs }}
+          initial={{ name: exam.name, date: exam.date.toISOString().slice(0, 10), booklets: exam.letters.length, wrongPer: exam.wrongPer, sections: exam.secs }}
           choices={choicesFor(exam.type)}
           hasResults={exam.resultCount > 0}
         />
@@ -81,7 +87,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     const map = Object.fromEntries(
       students.map((s) => [normNo(s.studentNo), `${s.firstName} ${s.lastName} (${s.classroom?.name ?? (s.external ? "Kurum dışı" : "—")})`]),
     );
-    const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.bookletB);
+    const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.letters);
     if (tab === "txt") {
       return (
         <>
@@ -89,11 +95,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <TxtImport
             examId={id}
             total={totalQuestions(exam.secs)}
-            bookletB={exam.bookletB}
+            booklets={exam.letters}
             choices={choicesFor(exam.type)}
             sampleNos={students.filter((s) => !s.external).map((s) => s.studentNo)}
-            keyA={exam.secs.map((s) => s.keyA.padEnd(s.count, " ")).join("")}
-            keyB={exam.secs.map((s) => (s.keyB || s.keyA).padEnd(s.count, " ")).join("")}
+            keys={Object.fromEntries(exam.letters.map((b) => [b, exam.secs.map((s) => keyFor(s, b).padEnd(s.count, " ")).join("")]))}
             students={map}
           />
         </>
@@ -102,12 +107,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     return (
       <>
         {header}
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
           <aside className="space-y-4">
             <div className="card p-4">
               <h2 className="font-semibold">Optik form</h2>
               <p className="mt-1 text-sm text-lead">
-                Bu sınava özel form: bölüm başlıkları{exam.bookletB ? ", kitapçık türü" : ""} ve 6 haneli öğrenci numarası alanı.
+                Bu sınava özel form: bölüm başlıkları{multi ? `, kitapçık türü (${exam.letters.join(", ")})` : ""} ve 6 haneli öğrenci numarası alanı.
               </p>
               <FormSvg info={spec} className="mt-3 w-full rounded ring-1 ring-rule" />
               <Link href={`${base}/form`} target="_blank" className="btn-primary mt-3 w-full">Formu yazdır</Link>
@@ -118,7 +123,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </aside>
           <OmrScanner
             spec={spec}
-            keys={examKeys(exam.secs)}
+            keys={examKeys(exam.secs, exam.letters)}
             saveUrl={`/api/kurum/denemeler/${id}/sonuclar`}
             resultsHref={`${base}?tab=sonuclar`}
             mode="exam"
@@ -231,7 +236,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     const general = sinif ? topicStats(exam.secs, report.rows) : stats;
     const genRate = new Map(general.map((g) => [g.section + "|" + g.topic, g.rate]));
     const noTopics = exam.secs.every((s) => !s.topics?.some(Boolean));
-    const missingMap = exam.bookletB && exam.secs.some((s) => s.topics?.some(Boolean) && !(s.bOrder?.length === s.count));
+    const missingMap = exam.letters.filter((b) => b !== "A" && exam.secs.some((s) => s.topics?.some(Boolean) && !orderFor(s, b)));
     return (
       <>
         {header}
@@ -250,9 +255,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 rows={stats.map((t) => [t.section, t.topic, t.questions, t.rate, ...(sinif ? [genRate.get(t.section + "|" + t.topic) ?? null] : [])])}
               />
             </div>
-            {missingMap && (
+            {missingMap.length > 0 && (
               <p className="mb-3 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
-                Bazı bölümlerde B kitapçığı soru eşlemesi girilmemiş; bu bölümlerde yalnızca A kitapçıklı öğrenciler hesaba katıldı.
+                Bazı bölümlerde {missingMap.join(", ")} kitapçığı soru eşlemesi girilmemiş; bu bölümlerde o kitapçıklı öğrenciler hesaba katılmadı.
               </p>
             )}
             <p className="mb-3 text-sm text-lead">En zayıf konudan en güçlüye sıralı. %50’nin altındaki konular kırmızıdır; tekrar planlamasında öncelik verilebilir.</p>
@@ -295,7 +300,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   /* --------------------------- Soru frekans analizi --------------------------- */
   if (tab === "analiz") {
-    const bk = sp.kitapcik === "B" ? "B" : "A";
+    const bk = (exam.letters as string[]).includes(sp.kitapcik ?? "") ? sp.kitapcik! : "A";
     const list = rows.filter((r) => r.booklet === bk);
     const c = choicesFor(exam.type);
     let offset = 0;
@@ -304,9 +309,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         {header}
         <div className="no-print mb-4 flex flex-wrap items-center gap-2">
           <ClassFilter base={base} tab="analiz" classes={classes} sinif={sinif} extra={`&kitapcik=${bk}`} />
-          {exam.bookletB && (
+          {multi && (
             <div className="flex gap-1">
-              {["A", "B"].map((k) => (
+              {exam.letters.map((k) => (
                 <Link key={k} href={`${base}?tab=analiz&kitapcik=${k}${sinif ? `&sinif=${sinif}` : ""}`} className={k === bk ? "btn-primary" : "btn-secondary"}>
                   {k} kitapçığı
                 </Link>
@@ -321,7 +326,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               const out: (string | number)[][] = [];
               let off = 0;
               for (const s of exam.secs) {
-                const key = bk === "B" ? s.keyB || s.keyA : s.keyA;
+                const key = keyFor(s, bk);
                 for (let i = 0; i < s.count; i++) {
                   const ans = list.map((r) => r.answers[off + i] ?? " ");
                   const n = Math.max(1, ans.length);
@@ -340,7 +345,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         {exam.secs.map((s) => {
           const start = offset;
           offset += s.count;
-          const key = bk === "B" ? s.keyB || s.keyA : s.keyA;
+          const key = keyFor(s, bk);
           return (
             <div key={s.name} className="card mb-4 overflow-x-auto">
               <h3 className="border-b border-rule/70 px-4 py-2 font-semibold">{s.name}</h3>
@@ -461,7 +466,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   return (
     <>
       {header}
-      <div className="no-print mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="no-print mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi label="Katılım" value={rows.length} />
         <Kpi label="Ortalama net" value={fmtNet(sel ? sel.total : report.general.total)} />
         <Kpi label="Ort. tahmini puan" value={fmtNet(sel ? sel.score : report.general.score)} hint={`En yüksek ${fmtNet(Math.max(...rows.map((r) => r.score)))}`} />

@@ -9,7 +9,7 @@ src/
   app/        Yalnızca yönlendirme. Sayfa ve route dosyaları modül fonksiyonlarını çağırır ve sonucu gösterir.
               Bir sayfa birden fazla modülü birleştirebilir. Veritabanına doğrudan erişemez.
   modules/    İş alanları (aşağıdaki tablo).
-  shared/     Modüllerden bağımsız altyapı: db, errors, http, date, phone, omr/ (optik form kütüphanesi), ui/.
+  shared/     Modüllerden bağımsız altyapı: db, errors, http, date, phone, storage (kurum dosyaları), omr/ (optik form kütüphanesi), ui/.
 ```
 
 ## Modüller
@@ -18,14 +18,15 @@ src/
 |---|---|---|---|
 | `identity` | User | — | `/giris`, `/kayit`, `/api/auth/*` |
 | `enrollment` | Classroom, Student (veli alanları hariç) | identity | `/kurum/ogrenciler`, `/api/kurum/{siniflar,ogrenciler}` |
-| `exams` | Exam, ExamResult | identity, enrollment | `/kurum/denemeler/*`, `/api/kurum/denemeler/*` |
+| `exams` | Exam, ExamResult | identity, enrollment, question-bank | `/kurum/denemeler/*`, `/api/kurum/denemeler/*` |
 | `homework` | Homework, HomeworkStatus | identity, enrollment | `/kurum/odevler/*`, `/api/kurum/odevler/*` |
 | `schedule` | Teacher, ScheduleSlot, LessonSession, Attendance | identity, enrollment | `/kurum/ders-programi`, `/kurum/yoklama/*`, `/api/kurum/{ogretmenler,program,yoklama}` |
+| `question-bank` | QuestionSource, QuestionItem | identity | `/kurum/soru-havuzu/*`, `/api/kurum/soru-havuzu/*` |
 | `online-test` | Test, Question, Option, Attempt, Answer | identity | `/panel`, `/sinav/*`, `/s/[code]`, `/sonuc/[id]`, `/api/{tests,t,attempts}` |
 | `planning` | CalendarEvent, LessonPlan, PlanItem | identity, enrollment, exams, homework, schedule | `/kurum/takvim/*`, `/api/kurum/{takvim,plan}/*` |
 | `reporting` | Student.parent* (veli paylaşım alanları) | hepsi (online-test hariç) | `/kurum` (özet), `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 
-Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← {exams, homework, schedule} ← planning ← reporting`. Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
+Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← {exams, homework, schedule} ← planning ← reporting`; `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
 
 ## Bir modülün içi
 
@@ -68,3 +69,9 @@ modules/<m>/
 2. Fonksiyonu `internal/` içine yazın, `server.ts`'ten dışa açın. İlk parametre `ownerId` olsun.
 3. Sayfa veya route bu fonksiyonu çağırsın. Route ise `api()` ile sarın.
 4. Yeni bir modül gerekiyorsa `eslint.config.mjs > MODULES` tablosuna ekleyin.
+
+## Soru havuzu (`question-bank`)
+
+- **Dosyalar** `shared/storage` ile `STORAGE_DIR/<ownerId>/` altında durur (varsayılan `./storage`, git dışı). `public/` kullanılmaz; görseller `ownerId` denetleyen route'lardan sunulur. Dosya türü ilk baytlardan belirlenir.
+- **Kesme tarayıcıda yapılır.** PDF `pdfjs-dist` ile tuvale çizilir; sunucuya yalnızca kesilmiş PNG'ler ve 0–1 oranlı kutu (`crop`) gider.
+- **Otomatik bulma** `question-bank/detect.ts > detectQuestions()` saf fonksiyonudur (mürekkep izdüşümü, sütun ve boşluk analizi). Yapay zekâ dedektörü eklenirken aynı `DetectedBox` tipini döndürmeli; `QuestionItem.origin` (`MANUAL | AUTO | AI`) ve `text` alanları bunun için hazırdır.

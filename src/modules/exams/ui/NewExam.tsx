@@ -8,7 +8,7 @@ export default function NewExam() {
   const [name, setName] = useState("");
   const [type, setType] = useState("LGS");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [bookletB, setBookletB] = useState(true);
+  const [booklets, setBooklets] = useState(2);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -18,7 +18,7 @@ export default function NewExam() {
     const res = await fetch("/api/kurum/denemeler", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, type, date, bookletB }),
+      body: JSON.stringify({ name, type, date, booklets }),
     });
     const json = await res.json();
     setBusy(false);
@@ -53,8 +53,13 @@ export default function NewExam() {
         {t.wrongPer ? `, ${t.wrongPer} yanlış 1 doğruyu götürür` : ""}. Bölümleri sonraki adımda değiştirebilirsiniz.
       </p>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={bookletB} onChange={(e) => setBookletB(e.target.checked)} className="accent-brand-600" />
-        A ve B kitapçık
+        <span className="font-semibold">Kitapçık</span>
+        <select className="input w-auto" value={booklets} onChange={(e) => setBooklets(Number(e.target.value))}>
+            <option value={1}>Tek kitapçık</option>
+            <option value={2}>A, B</option>
+            <option value={3}>A, B, C</option>
+            <option value={4}>A, B, C, D</option>
+          </select>
       </label>
       {err && <p className="text-sm text-red-600">{err}</p>}
       <button className="btn-primary w-full" disabled={busy}>Oluştur ve cevap anahtarını gir</button>

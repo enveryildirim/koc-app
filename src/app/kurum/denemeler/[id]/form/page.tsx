@@ -10,7 +10,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { id } = await params;
   const exam = await findExam(ownerId, id);
   if (!exam) notFound();
-  const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.bookletB);
+  const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.letters);
   return (
     <div>
       <div className="no-print mb-4 flex items-center gap-3">

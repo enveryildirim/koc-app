@@ -16,19 +16,21 @@ function defaultDef(): Def {
 type Props = {
   examId: string;
   total: number;
-  bookletB: boolean;
+  /** Denemenin kitapçıkları; tek harfse kitapçık sütunu okunmaz. */
+  booklets: string[];
   choices: number;
   sampleNos: string[];
   students: Record<string, string>;
-  keyA: string;
-  keyB: string;
+  /** Kitapçık → tüm sorular boyunca anahtar */
+  keys: Record<string, string>;
 };
 
-export default function TxtImport({ examId, total, bookletB, choices, sampleNos, students, keyA, keyB }: Props) {
+export default function TxtImport({ examId, total, booklets, choices, sampleNos, students, keys }: Props) {
+  const bookletB = booklets.length > 1;
   const [def, setDef] = useState<Def>(defaultDef);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ saved: number; skipped: string[] } | null>(null);
+  const [result, setResult] = useState<{ saved: number; skipped: string[]; badBooklet?: string[] } | null>(null);
 
   useEffect(() => {
     try {
@@ -56,17 +58,17 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
           .split("")
           .map((ch) => (LETTERS.slice(0, choices).includes(ch) ? ch : ch === "*" ? "*" : " "))
           .join("");
-        const bk = bookletB ? cut(def.bookletStart, 1).toUpperCase() : "A";
+        const bk = bookletB ? cut(def.bookletStart, 1).trim().toUpperCase() : "A";
         return {
           name: cut(def.nameStart, def.nameLen).trim(),
           studentNo,
-          booklet: bk === "B" ? "B" : "A",
-          bookletOk: !bookletB || bk === "A" || bk === "B",
+          booklet: bk,
+          bookletOk: !bookletB || booklets.includes(bk),
           answers,
           match: students[norm(studentNo)],
         };
       }),
-    [lines, def, total, choices, bookletB, students],
+    [lines, def, total, choices, bookletB, booklets, students],
   );
 
   async function onFile(f?: File) {
@@ -82,8 +84,8 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
   function sample() {
     const pad = (s: string, n: number) => s.slice(0, n).padEnd(n, " ");
     const out = sampleNos.slice(0, 25).map((no) => {
-      const bk = bookletB && Math.random() < 0.5 ? "B" : "A";
-      const key = bk === "B" ? keyB : keyA;
+      const bk = booklets[Math.floor(Math.random() * booklets.length)];
+      const key = keys[bk] ?? keys.A;
       const skill = 0.35 + Math.random() * 0.6;
       let ans = "";
       for (let i = 0; i < total; i++) {
@@ -186,7 +188,8 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
       {result && (
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-200">
           {result.saved} sonuç kaydedildi.
-          {result.skipped.length > 0 && <span className="text-amber-700"> Eşleşmeyen numaralar atlandı: {result.skipped.join(", ")}.</span>}{" "}
+          {result.skipped.length > 0 && <span className="text-amber-700"> Eşleşmeyen numaralar atlandı: {result.skipped.join(", ")}.</span>}
+          {(result.badBooklet?.length ?? 0) > 0 && <span className="text-red-700"> Kitapçık türü geçersiz olduğu için kaydedilmedi: {result.badBooklet!.join(", ")}.</span>}{" "}
           <Link href={`/kurum/denemeler/${examId}?tab=sonuclar`} className="font-semibold underline">Sıralı listeyi gör</Link>
         </div>
       )}
@@ -211,7 +214,7 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
           </div>
           <div className="max-h-[420px] overflow-auto">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-white text-left text-lead">
+              <thead className="sticky top-0 bg-surface text-left text-lead">
                 <tr>
                   <th className="px-3 py-2">Dosyadaki ad</th>
                   <th className="px-3 py-2">No</th>
@@ -226,7 +229,7 @@ export default function TxtImport({ examId, total, bookletB, choices, sampleNos,
                     <td className="px-3 py-1.5">{p.name || "—"}</td>
                     <td className="px-3 py-1.5 font-mono">{p.studentNo || "—"}</td>
                     <td className="px-3 py-1.5">{p.match ?? <span className="text-amber-700">Eşleşmedi</span>}</td>
-                    {bookletB && <td className={`px-3 py-1.5 font-bold ${p.bookletOk ? "" : "text-red-600"}`}>{p.booklet}</td>}
+                    {bookletB && <td className={`px-3 py-1.5 font-bold ${p.bookletOk ? "" : "text-red-600"}`}>{p.booklet || "?"}</td>}
                     <td className="max-w-md truncate px-3 py-1.5 font-mono text-lead">{p.answers.replace(/ /g, "·")}</td>
                   </tr>
                 ))}

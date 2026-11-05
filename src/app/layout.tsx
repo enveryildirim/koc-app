@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const path = (await headers()).get("x-pathname") ?? "";
-  // Veli sayfası kurum markasıyla, site menüsü olmadan; kurum paneli kendi kenar çubuğuyla gösterilir.
-  const bare = path.startsWith("/veli/") || path === "/kurum" || path.startsWith("/kurum/");
+  // Veli sayfası kurum markasıyla, site menüsü olmadan; kurum paneli (online testler dahil) kendi kenar çubuğuyla gösterilir.
+  const bare = path.startsWith("/veli/") || path === "/kurum" || path.startsWith("/kurum/") || path === "/panel" || path.startsWith("/sinav/");
   return (
     <html lang="tr" className={`${body.variable} ${head.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">

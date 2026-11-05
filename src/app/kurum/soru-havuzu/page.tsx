@@ -1,0 +1,99 @@
+import Link from "next/link";
+import { requireOwner } from "@/modules/identity/server";
+import { DEFAULT_SUBJECTS, DIFFICULTY } from "@/modules/question-bank";
+import { bankSummary, listItems, listSources } from "@/modules/question-bank/server";
+import QuestionGrid from "@/modules/question-bank/ui/QuestionGrid";
+import { HAVUZ_TABS } from "@/modules/question-bank/ui/tabs";
+import { Empty, Kpi, PageHeader, Tabs } from "@/shared/ui/kurum";
+
+export const dynamic = "force-dynamic";
+
+type Search = { ders?: string; konu?: string; zorluk?: string; kaynak?: string; eksik?: string; q?: string; s?: string };
+
+export default async function Page({ searchParams }: { searchParams: Promise<Search> }) {
+  const ownerId = await requireOwner();
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.s) || 1);
+  const [summary, sources, list] = await Promise.all([
+    bankSummary(ownerId),
+    listSources(ownerId),
+    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q }, page),
+  ]);
+  const subjects = [...new Set([...summary.subjects, ...DEFAULT_SUBJECTS])].sort((a, b) => a.localeCompare(b, "tr"));
+  const topicChoices = sp.ders ? summary.topics[sp.ders] ?? [] : [...new Set(Object.values(summary.topics).flat())].sort((a, b) => a.localeCompare(b, "tr"));
+  const pages = Math.ceil(list.total / list.pageSize);
+  const filtered = Object.entries(sp).some(([k, v]) => k !== "s" && v);
+  const href = (s: number) => `?${new URLSearchParams({ ...Object.fromEntries(Object.entries(sp).filter(([, v]) => v)), s: String(s) })}`;
+
+  return (
+    <div>
+      <PageHeader
+        title="Soru havuzu"
+        sub="PDF ya da fotoğraftan kestiğiniz sorular; ders, konu ve zorluğa göre."
+        actions={
+          <>
+            <Link href="/kurum/denemeler/havuzdan" className="btn-secondary">Havuzdan deneme</Link>
+            <Link href="/kurum/soru-havuzu/kaynaklar" className="btn-primary">+ Kaynaktan soru kes</Link>
+          </>
+        }
+      />
+      <Tabs tabs={HAVUZ_TABS} active="items" />
+
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        <Kpi label="Soru" value={summary.total} hint={`${summary.subjects.length} ders`} />
+        <Kpi label="Cevabı girilmemiş" value={summary.noAnswer} hint={summary.noAnswer ? <Link href="?eksik=cevap" className="underline">Listele</Link> : "Hepsi tamam"} />
+        <Kpi label="Kaynak" value={sources.length} />
+      </div>
+
+      {summary.total === 0 ? (
+        <Empty>
+          Havuz boş. <Link href="/kurum/soru-havuzu/kaynaklar" className="font-semibold text-graphite underline">Bir PDF ya da sayfa fotoğrafı yükleyin</Link>, sorular otomatik bulunsun.
+        </Empty>
+      ) : (
+        <>
+          <form className="no-print mb-3 flex flex-wrap items-center gap-2">
+            <select name="ders" defaultValue={sp.ders ?? ""} className="input w-auto" aria-label="Ders">
+              <option value="">Tüm dersler</option>
+              {summary.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select name="konu" defaultValue={sp.konu ?? ""} className="input w-auto max-w-56" aria-label="Konu">
+              <option value="">Tüm konular</option>
+              {topicChoices.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select name="zorluk" defaultValue={sp.zorluk ?? ""} className="input w-auto" aria-label="Zorluk">
+              <option value="">Her zorluk</option>
+              {Object.entries(DIFFICULTY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            <select name="kaynak" defaultValue={sp.kaynak ?? ""} className="input w-auto max-w-56" aria-label="Kaynak">
+              <option value="">Tüm kaynaklar</option>
+              {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select name="eksik" defaultValue={sp.eksik ?? ""} className="input w-auto" aria-label="Eksik bilgi">
+              <option value="">Eksik bilgi: hepsi</option>
+              <option value="cevap">Cevabı girilmemiş</option>
+              <option value="konu">Konusu girilmemiş</option>
+            </select>
+            <input name="q" defaultValue={sp.q ?? ""} placeholder="Konuda ara" className="input w-40" />
+            <button className="btn-secondary">Filtrele</button>
+            {filtered && <Link href="/kurum/soru-havuzu" className="text-[13px] text-lead hover:text-graphite">Temizle</Link>}
+            <span className="ml-auto text-[13px] text-lead">{list.total} soru</span>
+          </form>
+
+          {list.items.length === 0 ? (
+            <Empty>Bu filtreye uygun soru yok.</Empty>
+          ) : (
+            <QuestionGrid items={list.items} subjects={subjects} topics={summary.topics} />
+          )}
+
+          {pages > 1 && (
+            <nav className="mt-4 flex items-center justify-center gap-3 text-sm" aria-label="Sayfalar">
+              {page > 1 && <Link href={href(page - 1)} className="btn-secondary">‹ Önceki</Link>}
+              <span className="num text-lead">{page} / {pages}</span>
+              {page < pages && <Link href={href(page + 1)} className="btn-secondary">Sonraki ›</Link>}
+            </nav>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

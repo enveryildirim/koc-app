@@ -15,13 +15,41 @@ export default async function Page() {
       <PageHeader
         title="Denemeler ve optik okuma"
         sub="Deneme sınavı oluşturun, cevap anahtarını girin, optik formları tarayın veya optik okuyucu dosyasını yükleyin."
-        actions={<Link href="/kurum/denemeler/birlesik" className="btn-secondary">Birleştirilmiş raporlar</Link>}
+        actions={
+          <>
+            <Link href="/kurum/denemeler/birlesik" className="btn-secondary">Birleştirilmiş raporlar</Link>
+            <Link href="/kurum/denemeler/havuzdan" className="btn-primary">Havuzdan deneme oluştur</Link>
+          </>
+        }
       />
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
         {exams.length === 0 ? (
           <Empty>Henüz deneme yok.</Empty>
         ) : (
-          <div className="card overflow-x-auto">
+          <>
+          {/* Telefonda kart: sınav adı ve ortalama net önde; tür, tarih, katılım ve anahtar durumu altında. */}
+          <ul className="card divide-y divide-rule/70 sm:hidden">
+            {exams.map((e) => {
+              const keyed = e.secs.every((s) => s.keyA.length === s.count);
+              return (
+                <li key={e.id}>
+                  <Link href={`/kurum/denemeler/${e.id}`} className="block px-3.5 py-2.5 active:bg-paper">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-medium">{e.name}</span>
+                      <span className="num shrink-0 font-semibold">{e.avgNet === null ? "—" : fmtNet(e.avgNet)}<span className="ml-1 text-xs font-normal text-lead">net</span></span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-lead">
+                      <span className="badge badge-plain bg-mist text-graphite">{EXAM_TYPES[e.type]?.label ?? e.type}</span>
+                      <span>{fmtDate(e.date)}</span>
+                      <span>{e.resultCount} katılım</span>
+                      {keyed ? <span className="badge bg-emerald-50 text-emerald-700">Anahtar hazır</span> : <span className="badge bg-amber-50 text-amber-700">Anahtar eksik</span>}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="card hidden overflow-x-auto sm:block">
             <table className="w-full text-sm">
               <thead className="bg-paper">
                 <tr>
@@ -59,6 +87,7 @@ export default async function Page() {
               </tbody>
             </table>
           </div>
+          </>
         )}
         <NewExam />
       </div>

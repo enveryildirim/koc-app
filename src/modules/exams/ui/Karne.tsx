@@ -1,4 +1,4 @@
-import { EXAM_TYPES, fmtDate, fmtNet, topicStats } from "../domain";
+import { EXAM_TYPES, fmtDate, fmtNet, keyFor, topicStats } from "../domain";
 import type { ExamReport as Report } from "../internal/results";
 
 type Row = Report["rows"][number];
@@ -12,7 +12,7 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
   const errors = secs.map((s) => {
     const start = offset;
     offset += s.count;
-    const key = row.booklet === "B" ? s.keyB || s.keyA : s.keyA;
+    const key = keyFor(s, row.booklet);
     const list: { q: number; given: string; correct: string }[] = [];
     for (let i = 0; i < s.count; i++) {
       const a = row.answers[start + i] ?? " ";

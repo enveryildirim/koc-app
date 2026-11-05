@@ -1,10 +1,29 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { formatTopicSpec, LETTERS, makeBooklet, maxScore, parseTopicSpec, randomKey, resolveScoring, Scoring } from "../domain";
+import {
+  bookletLetters,
+  formatTopicSpec,
+  KEY_FIELD,
+  LETTERS,
+  makeBooklet,
+  maxScore,
+  ORDER_FIELD,
+  parseTopicSpec,
+  randomKey,
+  resolveScoring,
+  Scoring,
+  type AltBooklet,
+  type ExamSection,
+} from "../domain";
 
-type Sec = { name: string; count: number; keyA: string; keyB: string; topics?: string[]; bOrder?: number[] };
-type Init = { name: string; date: string; bookletB: boolean; wrongPer: number; sections: Sec[] };
+type Sec = ExamSection;
+type Init = { name: string; date: string; booklets: number; wrongPer: number; sections: Sec[] };
+type OrderTexts = Partial<Record<AltBooklet, string>>;
+
+const ALTS = ["B", "C", "D"] as const;
+const keyField = (b: string) => (b === "A" ? "keyA" : KEY_FIELD[b as AltBooklet]);
+const orderTexts = (s: Sec): OrderTexts => Object.fromEntries(ALTS.map((b) => [b, (s[ORDER_FIELD[b]] ?? []).map((i) => i + 1).join(" ")]));
 
 export default function KeyEditor({
   examId,
@@ -26,10 +45,12 @@ export default function KeyEditor({
   const [scoring, setScoring] = useState<Scoring>(initialScoring);
   // Konu ve eşleme metinleri (düzenlenirken serbest metin, kaydederken çözümlenir)
   const [topicText, setTopicText] = useState(initial.sections.map((s) => formatTopicSpec(s.topics)));
-  const [orderText, setOrderText] = useState(initial.sections.map((s) => (s.bOrder ?? []).map((i) => i + 1).join(" ")));
+  const [orderText, setOrderText] = useState<OrderTexts[]>(initial.sections.map(orderTexts));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const allowed = LETTERS.slice(0, choices);
+  const letters = bookletLetters(v.booklets);
+  const alts = letters.filter((b): b is AltBooklet => b !== "A");
 
   const setSec = (i: number, p: Partial<Sec>) => setV({ ...v, sections: v.sections.map((s, j) => (j === i ? { ...s, ...p } : s)) });
   const clean = (k: string) => k.toUpperCase().replace(/[^A-E]/g, "");
@@ -48,9 +69,14 @@ export default function KeyEditor({
     for (const [i, s] of v.sections.entries()) {
       const t = parseTopicSpec(topicText[i] ?? "", s.count);
       if (t.errors.length) return setMsg({ ok: false, text: `${s.name} konuları: ${t.errors[0]}` });
-      const bOrder = v.bookletB ? parseOrder(orderText[i] ?? "", s.count) : undefined;
-      if (bOrder === null) return setMsg({ ok: false, text: `${s.name}: B eşlemesi 1–${s.count} arası her soru numarasını bir kez içermeli.` });
-      sections.push({ ...s, topics: t.topics, bOrder });
+      const sec: Sec = { ...s, topics: t.topics };
+      for (const b of ALTS) {
+        const o = alts.includes(b) ? parseOrder(orderText[i]?.[b] ?? "", s.count) : undefined;
+        if (o === null) return setMsg({ ok: false, text: `${s.name}: ${b} eşlemesi 1–${s.count} arası her soru numarasını bir kez içermeli.` });
+        if (o) sec[ORDER_FIELD[b]] = o;
+        else delete sec[ORDER_FIELD[b]];
+      }
+      sections.push(sec);
     }
     setBusy(true);
     const res = await fetch(`/api/kurum/denemeler/${examId}`, {
@@ -75,7 +101,7 @@ export default function KeyEditor({
   function addSection() {
     setV({ ...v, sections: [...v.sections, { name: "Yeni bölüm", count: 10, keyA: "", keyB: "" }] });
     setTopicText([...topicText, ""]);
-    setOrderText([...orderText, ""]);
+    setOrderText([...orderText, {}]);
     setScoring({ ...scoring, coefs: [...scoring.coefs, 1] });
   }
   function removeSection(i: number) {
@@ -102,14 +128,20 @@ export default function KeyEditor({
           <label className="label">Kaç yanlış 1 doğruyu götürür</label>
           <input type="number" min={0} max={10} className="input" value={v.wrongPer} onChange={(e) => setV({ ...v, wrongPer: Number(e.target.value) })} />
         </div>
-        <label className="flex items-center gap-2 text-sm sm:col-span-4">
-          <input type="checkbox" checked={v.bookletB} onChange={(e) => setV({ ...v, bookletB: e.target.checked })} className="accent-brand-600" />
-          B kitapçığı var (optik formda kitapçık türü alanı çıkar)
+        <label className="flex flex-wrap items-center gap-2 text-sm sm:col-span-4">
+          <span className="font-semibold">Kitapçık sayısı</span>
+          <select className="input w-auto" value={v.booklets} onChange={(e) => setV({ ...v, booklets: Number(e.target.value) })}>
+            <option value={1}>Tek kitapçık</option>
+            <option value={2}>2 (A, B)</option>
+            <option value={3}>3 (A, B, C)</option>
+            <option value={4}>4 (A, B, C, D)</option>
+          </select>
+          <span className="text-xs text-lead">Birden çok kitapçıkta optik formda kitapçık türü alanı çıkar; sayıyı değiştirirseniz formu yeniden yazdırın.</span>
         </label>
       </div>
 
       {v.sections.map((s, i) => {
-        const keys = v.bookletB ? (["keyA", "keyB"] as const) : (["keyA"] as const);
+
         const parsedTopics = parseTopicSpec(topicText[i] ?? "", s.count);
         const covered = parsedTopics.topics.filter(Boolean).length;
         return (
@@ -125,25 +157,26 @@ export default function KeyEditor({
               </div>
               {v.sections.length > 1 && <button className="btn-danger" onClick={() => removeSection(i)}>Bölümü sil</button>}
             </div>
-            {keys.map((k) => {
-              const val = s[k];
+            {letters.map((bk) => {
+              const k = keyField(bk);
+              const val = s[k] ?? "";
               const bad = val.split("").some((ch) => !allowed.includes(ch));
               return (
                 <div key={k} className="mt-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="label mb-0">{k === "keyA" ? "A kitapçığı" : "B kitapçığı"} cevap anahtarı</label>
+                    <label className="label mb-0">{letters.length > 1 ? `${bk} kitapçığı` : "Cevap"} anahtarı</label>
                     <div className="flex gap-3 text-xs">
                       <span className={val.length === s.count && !bad ? "text-emerald-700" : "text-amber-700"}>
                         {val.length}/{s.count} {bad && `· yalnızca ${allowed} kullanılabilir`}
                       </span>
-                      {k === "keyB" && s.keyA.length === s.count && (
+                      {bk !== "A" && s.keyA.length === s.count && (
                         <button
                           className="font-medium text-brand-600"
-                          title="Soruları karıştırarak B kitapçığı anahtarı ve soru eşlemesi üretir"
+                          title={`Soruları karıştırarak ${bk} kitapçığı anahtarı ve soru eşlemesi üretir`}
                           onClick={() => {
-                            const b = makeBooklet(s.keyA, Date.now() % 100000);
-                            setSec(i, { keyB: b.keyB });
-                            setOrderText(setAt(orderText, i, b.bOrder.map((x) => x + 1).join(" ")));
+                            const b = makeBooklet(s.keyA, (Date.now() + bk.charCodeAt(0) * 7919) % 233280);
+                            setSec(i, { [k]: b.key });
+                            setOrderText(setAt(orderText, i, { ...orderText[i], [bk]: b.order.map((x) => x + 1).join(" ") }));
                           }}
                         >
                           A’dan karıştır (+eşleme)
@@ -188,18 +221,24 @@ export default function KeyEditor({
                 onChange={(e) => setTopicText(setAt(topicText, i, e.target.value))}
               />
               {parsedTopics.errors.length > 0 && <p className="mt-1 text-xs text-red-600">{parsedTopics.errors[0]}</p>}
-              {v.bookletB && (
+              {alts.length > 0 && (
                 <>
-                  <label className="label mt-3 text-xs">B kitapçığı soru eşlemesi (isteğe bağlı)</label>
-                  <p className="text-xs text-lead">
-                    B’deki 1., 2., 3. … sorunun A kitapçığındaki numarası, boşlukla ayrılmış. Girilmezse B kitapçıklı öğrenciler konu analizine katılmaz.
+                  <p className="mt-3 text-xs text-lead">
+                    <b>Soru eşlemesi (isteğe bağlı):</b> kitapçıktaki 1., 2., 3. … sorunun A kitapçığındaki numarası, boşlukla ayrılmış. Girilmezse o kitapçıklı
+                    öğrenciler konu analizine katılmaz. “A’dan karıştır” eşlemeyi kendiliğinden doldurur.
                   </p>
-                  <input
-                    className="input mt-1 font-mono text-xs"
-                    value={orderText[i] ?? ""}
-                    placeholder={Array.from({ length: Math.min(s.count, 8) }, (_, q) => q + 1).reverse().join(" ") + " …"}
-                    onChange={(e) => setOrderText(setAt(orderText, i, e.target.value))}
-                  />
+                  {alts.map((b) => (
+                    <label key={b} className="mt-1 flex items-center gap-2">
+                      <span className="w-6 text-xs font-semibold">{b}</span>
+                      <input
+                        className="input font-mono text-xs"
+                        value={orderText[i]?.[b] ?? ""}
+                        placeholder={Array.from({ length: Math.min(s.count, 8) }, (_, q) => q + 1).reverse().join(" ") + " …"}
+                        onChange={(e) => setOrderText(setAt(orderText, i, { ...orderText[i], [b]: e.target.value }))}
+                        aria-label={`${s.name} ${b} kitapçığı eşlemesi`}
+                      />
+                    </label>
+                  ))}
                 </>
               )}
             </details>

@@ -43,4 +43,7 @@ next-env.d.ts
 .env
 prisma/dev.db*
 
+# kurum dosyaları (soru havuzu kaynakları ve kesilmiş sorular)
+/storage/
+
 !.env.example

@@ -24,7 +24,7 @@ type Sheet = {
 type Props = {
   spec: FormSpec;
   /** Kitapçık türüne göre cevap anahtarı. Kitapçık alanı yoksa yalnızca A kullanılır. */
-  keys: { A: KeyItem[]; B?: KeyItem[] };
+  keys: { A: KeyItem[] } & Partial<Record<string, KeyItem[]>>;
   saveUrl: string;
   resultsHref: string;
   /** "exam": öğrenci numarasıyla eşleştirme + net gösterimi */
@@ -42,7 +42,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
   const layout = useMemo(() => computeLayout(spec), [spec]);
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<{ n: number; skipped: string[] } | null>(null);
+  const [saved, setSaved] = useState<{ n: number; skipped: string[]; badBooklet: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const patch = (key: string, p: Partial<Sheet>) => setSheets((s) => s.map((x) => (x.key === key ? { ...x, ...p } : x)));
@@ -84,8 +84,9 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
     const known = Object.entries(students);
     for (let i = 0; i < n; i++) {
       const skill = 0.35 + Math.random() * 0.6;
-      const booklet = spec.booklet && Math.random() < 0.5 ? "B" : "A";
-      const key = (booklet === "B" && keys.B) || keys.A;
+      const letters = spec.booklets ?? ["A"];
+      const booklet = letters[Math.floor(Math.random() * letters.length)];
+      const key = keys[booklet] ?? keys.A;
       const answers = key.map((k, q) => {
         const cc = spec.questions[q].choiceCount;
         const r = Math.random();
@@ -104,8 +105,9 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
         studentNo = String(100000 + Math.floor(Math.random() * 899999));
         name = SAMPLE_NAMES[Math.floor(Math.random() * SAMPLE_NAMES.length)];
       }
-      const url = renderSampleScan(spec, { answers, studentNo, name, booklet: spec.booklet ? booklet : undefined });
-      await addImage(`örnek-${studentNo}.jpg (${name}${spec.booklet ? ` · ${booklet}` : ""})`, url);
+      const multi = letters.length > 1;
+      const url = renderSampleScan(spec, { answers, studentNo, name, booklet: multi ? booklet : undefined });
+      await addImage(`örnek-${studentNo}.jpg (${name}${multi ? ` · ${booklet}` : ""})`, url);
     }
   }
 
@@ -133,7 +135,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
     setSaving(false);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) return alert(json.error ?? "Kaydedilemedi.");
-    setSaved({ n: json.saved ?? json.ids?.length ?? ready.length, skipped: json.skipped ?? [] });
+    setSaved({ n: json.saved ?? json.ids?.length ?? ready.length, skipped: json.skipped ?? [], badBooklet: json.badBooklet ?? [] });
     setSheets((s) => s.filter((x) => x.status !== "done"));
   }
 
@@ -163,6 +165,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-200">
           {saved.n} form kaydedildi.{" "}
           {saved.skipped.length > 0 && <span className="text-amber-700">Eşleşmeyen numaralar atlandı: {saved.skipped.join(", ")}. </span>}
+          {saved.badBooklet.length > 0 && <span className="text-red-700">Kitapçık türü geçersiz olduğu için kaydedilmedi: {saved.badBooklet.join(", ")}. </span>}
           <Link href={resultsHref} className="font-semibold underline">Sonuçları görüntüle</Link>
         </div>
       )}
@@ -188,7 +191,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
             {ready.length} form kaydedilmeye hazır
             {unmatched > 0 && <span className="ml-2 text-amber-300">· {unmatched} formun numarası kayıtlı öğrenciyle eşleşmiyor (atlanacak)</span>}
           </span>
-          <button className="btn bg-white text-graphite hover:bg-mist" disabled={saving} onClick={saveAll}>
+          <button className="btn bg-surface text-graphite hover:bg-mist" disabled={saving} onClick={saveAll}>
             {saving ? "Kaydediliyor…" : "Tümünü sonuçlara kaydet"}
           </button>
         </div>
@@ -219,7 +222,7 @@ function SheetCard({
   onRemove: () => void;
 }) {
   const [zoom, setZoom] = useState(false);
-  const key = (s.booklet === "B" && keys.B) || keys.A;
+  const key = keys[s.booklet] ?? keys.A;
   let score = 0, max = 0, d = 0, y = 0, b = 0;
   key.forEach((k, i) => {
     max += k.points;
@@ -255,7 +258,7 @@ function SheetCard({
             <p className="mt-1 text-center text-xs text-lead/70">Büyütmek için tıklayın</p>
           </div>
           <div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {mode === "test" ? (
                 <div className="sm:col-span-2">
                   <label className="label">Ad Soyad</label>
@@ -275,10 +278,10 @@ function SheetCard({
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-              {spec.booklet && (
+              {(spec.booklets?.length ?? 0) > 1 && (
                 <span className="flex items-center gap-1">
                   Kitapçık:
-                  {["A", "B"].map((k) => (
+                  {spec.booklets!.map((k) => (
                     <button
                       key={k}
                       onClick={() => onPatch({ booklet: k })}
@@ -341,7 +344,7 @@ function SheetCard({
       {zoom && s.overlay && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setZoom(false)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={s.overlay} alt="" className="max-h-full max-w-full rounded bg-white" />
+          <img src={s.overlay} alt="" className="max-h-full max-w-full rounded bg-surface" />
         </div>
       )}
     </div>

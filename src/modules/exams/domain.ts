@@ -5,10 +5,18 @@ export type ExamSection = {
   count: number;
   keyA: string;
   keyB: string;
+  /** C ve D kitapçıklarının anahtarları (4 kitapçığa kadar). Erişim: keyFor() */
+  keyC?: string;
+  keyD?: string;
   /** A kitapçığı soru sırasıyla konu (kazanım) adları; boş string = konu girilmemiş */
   topics?: string[];
   /** B kitapçığı eşlemesi: bOrder[j] = B'deki j. sorunun A'daki indeksi (0 tabanlı) */
   bOrder?: number[];
+  /** C / D kitapçığı eşlemeleri (bOrder ile aynı anlamda). Erişim: orderFor() */
+  cOrder?: number[];
+  dOrder?: number[];
+  /** Soru havuzundan kurulduysa A kitapçığı sırasıyla soru kimlikleri (QuestionItem.id) */
+  items?: string[];
 };
 
 export type Scoring = { base: number; coefs: number[] };
@@ -121,7 +129,7 @@ export function totalQuestions(sections: ExamSection[]) {
 export function gradeExam(sections: ExamSection[], answers: string, booklet: string, wrongPer: number, scoring?: Scoring) {
   let offset = 0;
   const stats: SectionStat[] = sections.map((s) => {
-    const key = (booklet === "B" ? s.keyB || s.keyA : s.keyA).toUpperCase();
+    const key = keyFor(s, booklet).toUpperCase();
     let d = 0;
     let y = 0;
     let b = 0;
@@ -158,10 +166,72 @@ export function shufflePerm(count: number, seed: number) {
   return arr;
 }
 
-/** A anahtarından, soruları karıştırılmış B kitapçığı anahtarı ve eşlemesi üretir. */
+/** A anahtarından, soruları karıştırılmış bir kitapçığın (B, C, D) anahtarı ve eşlemesi: order[j] = j. sorunun A'daki indeksi. */
 export function makeBooklet(keyA: string, seed: number) {
-  const bOrder = shufflePerm(keyA.length, seed);
-  return { keyB: bOrder.map((i) => keyA[i]).join(""), bOrder };
+  const order = shufflePerm(keyA.length, seed);
+  return { key: order.map((i) => keyA[i]).join(""), order };
+}
+
+/* ------------------------------- Kitapçıklar ------------------------------- */
+
+export const BOOKLETS = ["A", "B", "C", "D"] as const;
+export type Booklet = (typeof BOOKLETS)[number];
+/** A dışındaki kitapçıklar (anahtar ve eşleme tutanlar). */
+export type AltBooklet = Exclude<Booklet, "A">;
+
+/** Bölümde A dışındaki kitapçıkların alan adları (düzenleme ekranı için). */
+export const KEY_FIELD = { B: "keyB", C: "keyC", D: "keyD" } as const;
+export const ORDER_FIELD = { B: "bOrder", C: "cOrder", D: "dOrder" } as const;
+
+export const isBooklet = (x: unknown): x is Booklet => typeof x === "string" && (BOOKLETS as readonly string[]).includes(x);
+
+/** Denemenin kitapçık sayısı (1–4). bookletB false ise tek kitapçık; eski kayıtlarda booklets yoksa 2. */
+export function bookletCount(e: { bookletB: boolean; booklets?: number | null }) {
+  return e.bookletB ? Math.min(4, Math.max(2, e.booklets ?? 2)) : 1;
+}
+
+/** Kullanılan kitapçık harfleri: ["A"], ["A","B"], … */
+export function bookletLetters(n: number): Booklet[] {
+  return BOOKLETS.slice(0, Math.min(4, Math.max(1, n)));
+}
+
+/** Kitapçığın cevap anahtarı. Girilmemişse A anahtarı (deneme "anahtarı eksik" sayılır). */
+export function keyFor(s: ExamSection, booklet: string): string {
+  if (booklet === "A" || !isBooklet(booklet)) return s.keyA;
+  return s[KEY_FIELD[booklet as AltBooklet]] || s.keyA;
+}
+
+/** Kitapçığın A'ya eşlemesi (order[j] = j. sorunun A'daki indeksi). A için birim sıra; girilmemişse undefined. */
+export function orderFor(s: ExamSection, booklet: string): number[] | undefined {
+  if (booklet === "A") return Array.from({ length: s.count }, (_, i) => i);
+  if (!isBooklet(booklet)) return undefined;
+  const o = s[ORDER_FIELD[booklet as AltBooklet]];
+  return o && o.length === s.count ? o : undefined;
+}
+
+/** Bölüme bir kitapçığın anahtarını / eşlemesini yazar (yeni nesne). */
+export function setBooklet(s: ExamSection, booklet: AltBooklet, key: string, order?: number[]): ExamSection {
+  const out: ExamSection = { ...s, [KEY_FIELD[booklet]]: key };
+  if (order) out[ORDER_FIELD[booklet]] = order;
+  else delete out[ORDER_FIELD[booklet]];
+  return out;
+}
+
+/** Bölümden kullanılmayan kitapçıkların (n'den sonrakiler) alanlarını atar. */
+export function trimBooklets(s: ExamSection, n: number): ExamSection {
+  const out: ExamSection = { ...s };
+  for (const b of ["B", "C", "D"] as const) {
+    if (bookletLetters(n).includes(b)) continue;
+    if (b === "B") out.keyB = "";
+    else delete out[KEY_FIELD[b]];
+    delete out[ORDER_FIELD[b]];
+  }
+  return out;
+}
+
+/** Tüm kitapçıkların anahtarları tam mı. */
+export function sectionsKeyed(secs: ExamSection[], n: number) {
+  return secs.every((s) => bookletLetters(n).every((b) => (b === "A" ? s.keyA : (s[KEY_FIELD[b as AltBooklet]] ?? "")).length === s.count));
 }
 
 /** B kitapçığı için A anahtarının karıştırılmış hâli (test verisi ve "otomatik üret" için). */
@@ -227,7 +297,7 @@ export type TopicStat = { section: string; topic: string; questions: number; cor
 
 /**
  * Bir veya daha çok sonuç için konu bazında doğru oranları.
- * B kitapçığında eşleme (bOrder) yoksa o bölümün B kitapçıklı cevapları hesaba katılmaz.
+ * A dışındaki kitapçıkta eşleme (bOrder / cOrder / dOrder) yoksa o bölümün o kitapçıklı cevapları hesaba katılmaz.
  */
 export function topicStats(sections: ExamSection[], results: { answers: string; booklet: string }[]): TopicStat[] {
   const map = new Map<string, TopicStat>();
@@ -244,11 +314,11 @@ export function topicStats(sections: ExamSection[], results: { answers: string; 
       map.get(k)!.questions++;
     });
     for (const r of results) {
-      const isB = r.booklet === "B";
-      if (isB && !(s.bOrder && s.bOrder.length === s.count)) continue;
-      const key = isB ? s.keyB || s.keyA : s.keyA;
+      const order = orderFor(s, r.booklet || "A");
+      if (!order) continue;
+      const key = keyFor(s, r.booklet || "A");
       for (let j = 0; j < s.count; j++) {
-        const aIdx = isB ? s.bOrder![j] : j;
+        const aIdx = order[j];
         const t = s.topics[aIdx];
         if (!t) continue;
         const st = map.get(s.name + "|" + t)!;

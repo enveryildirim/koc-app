@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { findTest } from "@/modules/online-test/server";
 import { requireOwner } from "@/modules/identity/server";
 import TestTabs from "@/modules/online-test/ui/TestTabs";
+import { PageHeader } from "@/shared/ui/kurum";
 
 export default async function TestLayout({
   children,
@@ -16,21 +17,21 @@ export default async function TestLayout({
   const test = await findTest(ownerId, id);
   if (!test) notFound();
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="no-print">
-        <Link href="/panel" className="text-sm text-lead hover:text-graphite">← Sınavlarım</Link>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">{test.title}</h1>
-          <div className="flex items-center gap-2 text-sm">
+    <div>
+      <PageHeader
+        title={test.title}
+        back={{ href: "/panel", label: "Online testler" }}
+        actions={
+          <div className="flex items-center gap-2 text-[13px]">
             <span className="text-lead">Paylaşım kodu</span>
             <span className="rounded bg-graphite px-2 py-1 font-mono font-bold text-white">{test.shareCode}</span>
             {test.isPublished && (
-              <Link href={`/s/${test.shareCode}`} target="_blank" className="btn-secondary py-1">Sınavı aç ↗</Link>
+              <Link href={`/s/${test.shareCode}`} target="_blank" className="btn-secondary">Sınavı aç ↗</Link>
             )}
           </div>
-        </div>
-        <TestTabs id={test.id} />
-      </div>
+        }
+      />
+      <TestTabs id={test.id} />
       {children}
     </div>
   );

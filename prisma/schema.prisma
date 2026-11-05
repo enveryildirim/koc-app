@@ -143,7 +143,10 @@ model Exam {
   /// JSON: [{ name, count, keyA, keyB, topics?, bOrder? }] — key: "ABCD..." (her soru için bir harf);
   /// topics: A kitapçığı soru sırasıyla konu adları; bOrder[j] = B'deki j. sorunun A'daki indeksi
   sections  String
+  /// Birden çok kitapçık var mı. false = tek kitapçık (A)
   bookletB  Boolean      @default(true)
+  /// bookletB true iken kitapçık sayısı (2–4: A/B, A/B/C, A/B/C/D). Kullanım: domain > bookletCount()
+  booklets  Int          @default(2)
   /// Kaç yanlış bir doğruyu götürür (0 = götürmez)
   wrongPer  Int          @default(4)
   /// Tahmini puan ayarı JSON: { base, coefs: number[] } (bölüm sırasıyla). Boş = türün varsayılanı
@@ -314,4 +317,47 @@ model PlanItem {
   sessionId String?
 
   @@index([planId, order])
+}
+
+/// Soru havuzu kaynağı: yüklenen PDF ya da resim(ler). Dosyalar storage/<ownerId>/ altında durur.
+model QuestionSource {
+  id        String         @id @default(cuid())
+  ownerId   String
+  name      String
+  /// PDF | IMAGE
+  kind      String
+  /// Saklanan dosya anahtarları (JSON dizi). PDF'te tek dosya, resimlerde her dosya bir sayfa.
+  files     String
+  createdAt DateTime       @default(now())
+  items     QuestionItem[]
+
+  @@index([ownerId])
+}
+
+/// Kaynaktan kesilmiş tek soru (görsel olarak saklanır).
+model QuestionItem {
+  id         String          @id @default(cuid())
+  ownerId    String
+  sourceId   String?
+  source     QuestionSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  /// Kaynaktaki sayfa (1 tabanlı) ve kesim kutusu (sayfaya göre 0–1 oranlı JSON {x,y,w,h})
+  page       Int?
+  crop       String          @default("")
+  imageKey   String
+  subject    String
+  topic      String          @default("")
+  /// Sınıf / sınav düzeyi: 5–12, LGS, TYT, AYT…
+  grade      String          @default("")
+  /// 1 kolay, 2 orta, 3 zor
+  difficulty Int             @default(2)
+  /// Doğru cevap (A–E); boş = girilmemiş
+  answer     String          @default("")
+  /// Sorunun metni (ileride OCR / yapay zekâ ile doldurulur; aramada kullanılır)
+  text       String          @default("")
+  /// Kutunun nasıl bulunduğu: MANUAL | AUTO (sezgisel) | AI
+  origin     String          @default("MANUAL")
+  usedCount  Int             @default(0)
+  createdAt  DateTime        @default(now())
+
+  @@index([ownerId, subject])
 }

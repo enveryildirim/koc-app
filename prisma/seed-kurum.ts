@@ -135,7 +135,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     const t = EXAM_TYPES[e.type];
     const sections = t.sections.map((s, si) => {
       const keyA = randomKey(s.count, t.choices);
-      const { keyB, bOrder } = makeBooklet(keyA, 7 + ei * 13 + si);
+      const { key: keyB, order: bOrder } = makeBooklet(keyA, 7 + ei * 13 + si);
       return { name: s.name, count: s.count, keyA, keyB, bOrder, topics: topicsFor(s.name, s.count) };
     });
     const scoring = resolveScoring(e.type, sections);

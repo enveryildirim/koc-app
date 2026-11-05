@@ -15,14 +15,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   if (info.questions.length === 0) {
     return (
-      <div className="card mt-6 p-12 text-center text-lead">
+      <div className="card p-12 text-center text-lead">
         Optik form için sınavda en az bir <b>tek cevaplı çoktan seçmeli</b> veya <b>doğru/yanlış</b> soru olmalı.
       </div>
     );
   }
 
   return (
-    <div className="mt-6 grid gap-6 lg:grid-cols-[300px_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       <aside className="space-y-4">
         <div className="card p-4">
           <h2 className="font-semibold">1. Formu yazdırın</h2>

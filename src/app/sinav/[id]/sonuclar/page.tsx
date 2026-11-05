@@ -25,15 +25,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   if (attempts.length === 0) {
     return (
-      <div className="card mt-6 p-12 text-center text-lead">
+      <div className="card p-12 text-center text-lead">
         Henüz katılım yok. Sınav bağlantısını paylaşın veya <b>Optik Form</b> sekmesinden form tarayın.
       </div>
     );
   }
 
   return (
-    <div className="mt-6 space-y-6">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         <Kpi label="Katılım" value={attempts.length} />
         <Kpi label="Ortalama" value={`%${avg}`} />
         <Kpi label="En yüksek" value={`%${Math.max(...percents)}`} />
@@ -41,7 +41,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <Kpi label="Geçen" value={`${passed} (%${Math.round((passed / attempts.length) * 100)})`} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="card p-5">
           <h2 className="font-semibold">Puan dağılımı (%)</h2>
           <div className="mt-4 flex h-44 items-end gap-2">

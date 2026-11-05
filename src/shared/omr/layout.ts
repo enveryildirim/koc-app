@@ -41,8 +41,8 @@ export type FormSpec = {
   questions: FormQuestion[];
   /** İsteğe bağlı bölüm başlıkları; count toplamı soru sayısına eşit olmalı. */
   sections?: { name: string; count: number }[];
-  /** A/B kitapçık türü alanı */
-  booklet?: boolean;
+  /** Kitapçık türü alanındaki harfler (ör. ["A","B"] ya da ["A","B","C","D"]); boş / tek harf = alan yok. */
+  booklets?: string[];
 };
 /** Geriye dönük uyumluluk için. */
 export type FormInfo = FormSpec;
@@ -122,9 +122,8 @@ export function computeLayout(spec: FormSpec): Layout {
   const student = Array.from({ length: STUDENT_DIGITS }, (_, c) =>
     Array.from({ length: 10 }, (_, d) => ({ x: STUDENT_X + c * STUDENT_DX, y: STUDENT_Y + 8 + d * STUDENT_DY, label: String(d) })),
   );
-  const booklet = spec.booklet
-    ? ["A", "B"].map((label, k) => ({ x: 50 + k * 8, y: 112, label }))
-    : [];
+  // En fazla 4 baloncuk: x 50–74 mm, öğrenci numarası kutusu 135 mm'den başlar.
+  const booklet = (spec.booklets?.length ?? 0) > 1 ? spec.booklets!.slice(0, 4).map((label, k) => ({ x: 50 + k * 8, y: 112, label })) : [];
 
   return {
     r,

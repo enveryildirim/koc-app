@@ -1,28 +1,14 @@
 "use client";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Tabs } from "@/shared/ui/kurum";
 
+/** Online test sayfalarının sekmeleri (kurum panelindeki hap sekmelerle aynı görünüm). */
 export default function TestTabs({ id }: { id: string }) {
   const path = usePathname();
   const tabs = [
-    ["duzenle", "Sorular & Ayarlar"],
-    ["sonuclar", "Sonuçlar"],
-    ["optik", "Optik Form"],
+    { key: "duzenle", label: "Sorular ve ayarlar", href: `/sinav/${id}/duzenle` },
+    { key: "sonuclar", label: "Sonuçlar", href: `/sinav/${id}/sonuclar` },
+    { key: "optik", label: "Optik form", href: `/sinav/${id}/optik` },
   ];
-  return (
-    <div className="mt-6 flex gap-1 border-b border-rule">
-      {tabs.map(([slug, label]) => {
-        const active = path.includes(`/${slug}`);
-        return (
-          <Link
-            key={slug}
-            href={`/sinav/${id}/${slug}`}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${active ? "border-brand-600 text-brand-700" : "border-transparent text-lead hover:text-graphite"}`}
-          >
-            {label}
-          </Link>
-        );
-      })}
-    </div>
-  );
+  return <Tabs tabs={tabs} active={tabs.find((t) => path.includes(`/${t.key}`))?.key ?? "duzenle"} />;
 }

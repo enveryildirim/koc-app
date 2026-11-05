@@ -15,7 +15,8 @@ export function marksToAnswers(marks: number[][]) {
  * Sonuç kaydı. İki biçim kabul edilir:
  *  - Optik tarama: { sheets: [{ studentNo, booklet, answers: number[][] }] }
  *  - TXT / elle:   { rows: [{ studentNo, booklet, answers: "ABC D*..." }], source: "TXT" | "MANUAL" }
- * Öğrenci numarasıyla eşleşmeyen satırlar `skipped` listesine düşer.
+ * Öğrenci numarasıyla eşleşmeyen satırlar `skipped`, kitapçık türü bu denemede olmayan satırlar `badBooklet` listesine düşer.
+ * Tek kitapçıklı denemede kitapçık alanı yok sayılır (A).
  */
 export async function importResults(ownerId: string, examId: string, body: Record<string, unknown>) {
   const exam = await getExam(ownerId, examId);
@@ -39,13 +40,19 @@ export async function importResults(ownerId: string, examId: string, body: Recor
   const total = exam.secs.reduce((s, x) => s + x.count, 0);
   let saved = 0;
   const skipped: string[] = [];
+  const badBooklet: string[] = [];
   for (const r of rows) {
     const studentId = studentIdOf(r.studentNo);
     if (!studentId) {
       skipped.push(r.studentNo || "(boş)");
       continue;
     }
-    const booklet = r.booklet === "B" ? "B" : "A";
+    const given = String(r.booklet ?? "").trim().toUpperCase();
+    const booklet = exam.letters.length === 1 ? "A" : (exam.letters as string[]).includes(given) ? given : null;
+    if (!booklet) {
+      badBooklet.push(`${r.studentNo || "(boş)"} (${given || "boş"})`);
+      continue;
+    }
     const answers = r.answers.toUpperCase().padEnd(total, " ").slice(0, total);
     const g = gradeExam(exam.secs, answers, booklet, exam.wrongPer, exam.scoringResolved);
     const data = { booklet, answers, stats: JSON.stringify(g.stats), totalNet: g.totalNet, score: g.score, source };
@@ -56,7 +63,7 @@ export async function importResults(ownerId: string, examId: string, body: Recor
     });
     saved++;
   }
-  return { saved, skipped };
+  return { saved, skipped, badBooklet };
 }
 
 /** Denemedeki bir sonucu siler; sonuç bu denemeye / kuruma ait değilse notFound. */

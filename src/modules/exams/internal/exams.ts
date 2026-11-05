@@ -1,6 +1,20 @@
 import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
-import { choicesFor, EXAM_TYPES, gradeExam, LETTERS, parseSections, resolveScoring } from "../domain";
+import { bookletCount, bookletLetters, choicesFor, EXAM_TYPES, gradeExam, LETTERS, parseSections, resolveScoring, setBooklet, trimBooklets, type AltBooklet, type ExamSection } from "../domain";
+
+/** İstekteki kitapçık sayısı (1–4); booklets yoksa eski bookletB alanı, o da yoksa fallback. */
+function bookletInput(body: Record<string, unknown>, fallback: number) {
+  if (body.booklets !== undefined) {
+    const n = Math.round(Number(body.booklets));
+    if (!(n >= 1 && n <= 4)) throw invalid("Kitapçık sayısı 1 ile 4 arasında olmalı.");
+    return n;
+  }
+  if (typeof body.bookletB === "boolean") return body.bookletB ? Math.max(2, fallback) : 1;
+  return fallback;
+}
+
+/** Kitapçık sayısının veritabanı alanları. */
+export const bookletFields = (n: number) => ({ bookletB: n > 1, booklets: Math.max(2, n) });
 
 /** Kurumun denemesi (bölümler ayrıştırılmış, puanlama çözülmüş, sonuç sayısıyla); yoksa / başka kurumunsa null. */
 export async function findExam(ownerId: string, id: string) {
@@ -8,7 +22,8 @@ export async function findExam(ownerId: string, id: string) {
   if (!exam) return null;
   const { _count, ...rest } = exam;
   const secs = parseSections(rest.sections);
-  return { ...rest, secs, scoringResolved: resolveScoring(rest.type, secs, rest.scoring), resultCount: _count.results };
+  const letters = bookletLetters(bookletCount(rest));
+  return { ...rest, secs, letters, scoringResolved: resolveScoring(rest.type, secs, rest.scoring), resultCount: _count.results };
 }
 
 /** Kurumun denemesi; yoksa / başka kurumunsa notFound("Bulunamadı."). */
@@ -45,13 +60,13 @@ export async function createExam(ownerId: string, body: Record<string, unknown>)
       type,
       date: body.date ? new Date(String(body.date)) : new Date(),
       sections: JSON.stringify(sections),
-      bookletB: body.bookletB !== false,
+      ...bookletFields(bookletInput(body, 2)),
       wrongPer: t.wrongPer,
     },
   });
 }
 
-type SecIn = { name: string; count: number; keyA: string; keyB: string; topics?: string[]; bOrder?: number[] };
+type SecIn = { name: string; count: number; keyA: string; keyB?: string; keyC?: string; keyD?: string; topics?: string[]; bOrder?: unknown; cOrder?: unknown; dOrder?: unknown; items?: unknown };
 
 /**
  * Deneme ayarlarını ve cevap anahtarını kaydeder, ardından tüm sonuçları yeni anahtar/puanlamayla yeniden hesaplar.
@@ -67,26 +82,51 @@ export async function updateExam(ownerId: string, id: string, body: Record<strin
       .replace(/[^A-E]/g, "")
       .slice(0, n);
 
-  const sections = (body.sections as SecIn[]).map((s) => {
+  const n = bookletInput(body, bookletCount(exam));
+  const letters = bookletLetters(n);
+  const alts = letters.filter((b): b is AltBooklet => b !== "A");
+
+  // Kitapçık sayısı azalıyorsa, kaldırılan kitapçıkla kaydedilmiş sonuç olmamalı (yoksa A anahtarıyla puanlanırdı).
+  const orphan = await prisma.examResult.groupBy({ by: ["booklet"], where: { examId: id, booklet: { notIn: letters } }, _count: true });
+  if (orphan.length) {
+    const list = orphan.map((o) => `${o.booklet} kitapçıklı ${o._count} sonuç`).join(", ");
+    throw invalid(`Bu denemede ${list} var. Kitapçık sayısını azaltmadan önce bu sonuçları silin.`);
+  }
+
+  const orderOf = (raw: unknown, count: number, name: string, b: string) => {
+    if (!Array.isArray(raw) || !raw.length) return undefined;
+    const o = raw.map(Number);
+    const ok = o.length === count && new Set(o).size === count && o.every((i) => Number.isInteger(i) && i >= 0 && i < count);
+    if (!ok) throw invalid(`${name}: ${b} kitapçığı eşlemesi 1–${count} arası her soruyu bir kez içermeli.`);
+    return o;
+  };
+
+  const sections = (body.sections as SecIn[]).map((s, si) => {
     const count = Math.max(1, Math.min(120, Number(s.count) || 1));
+    const name = String(s.name ?? "").trim() || "Bölüm";
+    // Havuz soruları yalnızca soru sayısı değişmediyse korunur (gönderilmediyse kayıttakiler).
+    const rawItems = Array.isArray(s.items) ? s.items : exam.secs[si]?.items;
+    const items = Array.isArray(rawItems) && rawItems.length === count ? rawItems.map((x) => String(x).slice(0, 40)) : undefined;
     const topics = Array.isArray(s.topics) ? Array.from({ length: count }, (_, i) => String(s.topics![i] ?? "").trim().slice(0, 80)) : undefined;
-    const bOrder = Array.isArray(s.bOrder) && s.bOrder.length ? s.bOrder.map(Number) : undefined;
-    return {
-      name: String(s.name ?? "").trim() || "Bölüm",
+    let sec: ExamSection = {
+      name,
       count,
       keyA: clean(s.keyA, count),
-      keyB: clean(s.keyB, count),
+      keyB: "",
       ...(topics?.some(Boolean) ? { topics } : {}),
-      ...(bOrder ? { bOrder } : {}),
+      ...(items ? { items } : {}),
     };
+    const raw = { B: [s.keyB, s.bOrder], C: [s.keyC, s.cOrder], D: [s.keyD, s.dOrder] } as const;
+    for (const b of alts) {
+      const [k, o] = raw[b];
+      sec = setBooklet(sec, b, clean(String(k ?? ""), count), orderOf(o, count, name, b));
+    }
+    return trimBooklets(sec, n);
   });
   for (const s of sections) {
-    for (const ch of s.keyA + s.keyB) {
+    const keys = [s.keyA, s.keyB, s.keyC ?? "", s.keyD ?? ""].join("");
+    for (const ch of keys) {
       if (!allowed.includes(ch)) throw invalid(`${s.name}: '${ch}' bu sınav türünde geçerli bir şık değil (${allowed}).`);
-    }
-    if (s.bOrder) {
-      const ok = s.bOrder.length === s.count && new Set(s.bOrder).size === s.count && s.bOrder.every((i) => Number.isInteger(i) && i >= 0 && i < s.count);
-      if (!ok) throw invalid(`${s.name}: B kitapçığı eşlemesi 1–${s.count} arası her soruyu bir kez içermeli.`);
     }
   }
   const total = sections.reduce((a, s) => a + s.count, 0);
@@ -97,7 +137,7 @@ export async function updateExam(ownerId: string, id: string, body: Record<strin
     data: {
       name: String(body.name ?? exam.name).trim() || exam.name,
       date: body.date ? new Date(String(body.date)) : exam.date,
-      bookletB: typeof body.bookletB === "boolean" ? body.bookletB : exam.bookletB,
+      ...bookletFields(n),
       wrongPer: Math.max(0, Math.min(10, Number(body.wrongPer ?? exam.wrongPer))),
       sections: JSON.stringify(sections),
       scoring: scoringJson(body.scoring, sections.length),
