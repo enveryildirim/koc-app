@@ -129,6 +129,7 @@ model Student {
   results        ExamResult[]
   homeworks      HomeworkStatus[]
   attendances    Attendance[]
+  dispatches     ParentDispatch[]
 
   @@unique([ownerId, studentNo])
 }
@@ -390,4 +391,25 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@id([ownerId, key])
+}
+
+/// Haftalık veli raporu: öğrenci + hafta başına tek kayıt (reporting yazar).
+/// Haftanın öğretmen notu ve gönderim bilgisi. sentAt null = gönderilmedi.
+model ParentDispatch {
+  id        String    @id @default(cuid())
+  ownerId   String
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// Haftanın Pazartesi'si (YYYY-MM-DD)
+  weekStart String
+  note      String    @default("")
+  /// WHATSAPP | COPY | PRINT (ileride SMS)
+  channel   String    @default("")
+  /// Gönderilen metin (kayıt için)
+  message   String    @default("")
+  sentAt    DateTime?
+  updatedAt DateTime  @updatedAt
+
+  @@unique([studentId, weekStart])
+  @@index([ownerId, weekStart])
 }

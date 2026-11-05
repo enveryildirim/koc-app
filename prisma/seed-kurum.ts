@@ -30,6 +30,7 @@ const phone = () =>
 export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   // Kurum tabloları kullanıcıya ilişkili olmadığından elle temizlenir
   await prisma.setting.deleteMany();
+  await prisma.parentDispatch.deleteMany();
   await prisma.curriculumTopic.deleteMany();
   await prisma.lessonPlan.deleteMany();
   await prisma.calendarEvent.deleteMany();
@@ -323,6 +324,18 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       },
     });
   }
+  // Haftalık veli raporu: 8-A'da geçen haftanın raporu ilk altı veliye WhatsApp ile gönderilmiş.
+  const lastWeek = addDays(mondayOf(ymd(daysAgo(0))), -7);
+  await prisma.parentDispatch.createMany({
+    data: first.slice(0, 6).map((st, i) => ({
+      ownerId,
+      studentId: st.id,
+      weekStart: lastWeek,
+      channel: "WHATSAPP",
+      // Bu haftanın Pazartesi sabahı gönderilmiş; velilerin bir kısmı bugün açmış (parentViewedAt).
+      sentAt: new Date(`${addDays(lastWeek, 7)}T09:${String(10 + i * 3).padStart(2, "0")}:00`),
+    })),
+  });
 
   /* ---------------------------------- Takvim ---------------------------------- */
   const year = schoolYearOf(ymd(daysAgo(0)));

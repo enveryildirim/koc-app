@@ -274,6 +274,21 @@ Rakip analizinden sonra "erken uyarı" iş önceliği olarak seçildi. Öğrenci
 - **Seed:** her sınıftan iki öğrenci son 18 günde düşüşe geçer (net, devam, ödev). Yoklamalar 7 haftaya, ödev teslimleri 31 gün öncesine kadar yayıldı; böylece 28 gün önceki skor da aynı boyutlarla hesaplanır.
 - **Doğrulama:** bağımsız Python hesabı (SQLite'tan) 79/79 öğrencide skor ve beş boyutta sayfayla aynı; "risk seviyesine düşen" sayısı aynı. API: girişsiz 401, hatalı ayar normalize, varsayılana dönüş çalıştı. Eski `riskList` ve `risk.ts` kaldırıldı.
 
+## 4g. Haftalık veli raporu (5 Kasım 2026)
+
+Kurumun her hafta tek ekrandan bütün velilere kısa bir özet göndermesi için. POC'ta gönderim WhatsApp ve kopyalama ile kullanıcı tarafından yapılır; sistem kaydı tutar.
+
+- **Sayfa:** `/kurum/veli-bulteni` (menüde "Haftalık veli raporu"). Hafta seçici (varsayılan: geçen, tamamlanmış hafta; ileri gidilemez), sınıf seçimi, "Karneleri yazdır" (mevcut yazdırma sayfası, hafta aralığıyla).
+- **Dosyalar:** saf mesaj üretici `modules/reporting/weekly.ts` (`weeklyLines`, `weeklyMessage`, `weekLabel`, `lastWeekStart`, şablon); veri `reporting/internal/weekly.ts` (`weeklyReports`, `updateWeekly`, `weeklyTemplate`); arayüz `reporting/ui/veli/WeeklyPanel.tsx`; route `POST /api/kurum/veli/haftalik`.
+- **Özet:** mevcut veli karnesi hesabından (`parentReports`, hafta aralığıyla) türetilir: denemeler (net, sınıf ortalaması, tahmini puan), ödevler, devam (gelmediği dersler), önümüzdeki 7 gündeki velilere açık kayıtlar. Boş satırlar mesaja girmez.
+- **Mesaj:** şablon girişi + özet + haftanın öğretmen notu + karne bağlantısı (`/veli/<token>?bas&bit` = hafta) + kapanış. Şablon `Setting` > `weekly` (`{veli}`, `{ogrenci}`, `{hafta}`, `{kurum}`). Mesaj tarayıcıda üretilir; not yazılırken önizleme canlıdır. Bağlantının alan adı yüklemeden sonra eklenir (hydration uyumu).
+- **Kayıt:** `ParentDispatch` (öğrenci + hafta başına tek satır): `note`, `channel` (WHATSAPP / COPY / PRINT), `message` (gönderilen metin), `sentAt` (null = bekliyor). "Geri al" notu korur. "Veli açtı" = `parentViewedAt ≥ sentAt`.
+- **Gönderim:** satır başına WhatsApp (mesaj hazır açılır ve gönderildi işaretlenir) ve kopyala; toplu "bekleyen mesajları kopyala"; tarayıcı çoklu pencereyi engellediği için toplu WhatsApp yerine "Sıradaki: <öğrenci>" düğmesi. Bağlantısı olmayanlar için toplu bağlantı oluşturma.
+- **Başarı Skoru ile bağ:** risk altındaki ve notu olmayan öğrenci sayısı uyarı olarak çıkar; not alanında skorun açıklama cümleleri tıklanabilir öneri olarak durur. Skorun kendisi mesaja girmez.
+- **SMS'e geçiş:** `channel` için yeni değer ve `updateWeekly` içinde sağlayıcıyı çağıran bir dal eklenecek; ekranda "SMS ile gönder" düğmesi.
+- **Seed:** 8-A'da geçen haftanın raporu ilk altı veliye bu Pazartesi WhatsApp ile gönderilmiş; dördü açmış.
+- **Doğrulama:** sayfa 200, konsol hatası yok; not (kırpma), gönderildi (başka kurumun / olmayan öğrenci atlanır), geri al, şablon ve varsayılana dönüş çalıştı; Pazartesi olmayan hafta, geçersiz kanal ve işlem 400, girişsiz 401.
+
 ## 4e. Tasarım dili (4 Kasım 2026)
 
 Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu. Yeni ekran yazarken şu kurallara uyun:
@@ -328,7 +343,7 @@ Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu.
 - [ ] **Soru frekans analizi kitapçık bazında:** B eşlemesi artık var ve konu analizinde kullanılıyor, ama soru frekans analizi hâlâ kitapçık bazında ayrı.
 - [ ] **Kurum karşılaştırma:** Kurumlar arası karşılaştırma ve çoklu şube yok.
 - [ ] **Ödev raporu:** Sınıf ve ders bazında ödev raporu yok (öğrenci bazında var).
-- [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye otomatik SMS/e-posta (şu an WhatsApp linki ve kopyalama var), ödeme/paket satışı yok.
+- [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye otomatik SMS/e-posta (şu an WhatsApp linki ve kopyalama var; haftalık rapor kaydı SMS için hazır), ödeme/paket satışı yok.
 - [ ] **Excel biçimi:** Eski `.xls` desteklenmiyor; `.xlsx` veya CSV gerekiyor.
 - [ ] **OMR iyileştirmeleri:** Form yön işareti eklenmeli, gerçek taramalarla test edilmeli.
 - [ ] **Otomatik test yok:** Projede birim/e2e testi yok. Doğrulamalar elle, curl ile ve REA tarayıcı senaryolarıyla yapıldı.

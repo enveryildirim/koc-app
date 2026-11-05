@@ -47,6 +47,8 @@ Algoritma (`src/lib/omr/scan.ts`): uyarlamalı eşikleme → köşe karelerini b
 | Raporlar | deneme sekmeleri | Sıralı liste, öğrenci karnesi + hata karnesi, toplu karne yazdırma, soru frekans analizi, sınıf ortalamaları, öğrencinin tüm sınavları ve birleştirilmiş ortalama |
 | Ödev takip | `/kurum/odevler` | Sınıfa ödev verme, Yaptı / Eksik / Yapmadı işaretleme, öğrenci bazında ödev raporu |
 | Ders planlama & yoklama | `/kurum/ders-programi`, `/kurum/yoklama`, `/kurum/raporlar` | Haftalık program, öğretmenler, günlük yoklama, ek ders/etüt, devamsızlık / gelmeyenler / öğretmen ders sayısı / öğrenci ders listesi raporları |
+| Başarı Skoru | `/kurum/analiz?tab=skor` | Öğrenci başına 0–100 skor (düzey, gelişim, katılım, devam, ödev), açıklamalar, 4 haftalık değişim, kurum ayarları |
+| Haftalık veli raporu | `/kurum/veli-bulteni` | Haftanın özetini veliye WhatsApp / kopyalama ile gönderme, haftalık öğretmen notu, gönderim ve açılma takibi |
 
 Net hesabı: LGS'de 3 yanlış, TYT/AYT'de 4 yanlış 1 doğruyu götürür (deneme bazında değiştirilebilir). Çift işaretleme yanlış sayılır.
 

@@ -3,6 +3,7 @@ import "server-only";
 export * from "./index";
 export * from "./internal/analysis";
 export * from "./internal/score";
+export * from "./internal/weekly";
 export * from "./internal/parentReport";
 export * from "./internal/dashboard";
 export * from "./internal/attendanceReports";

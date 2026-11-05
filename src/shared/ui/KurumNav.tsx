@@ -7,7 +7,7 @@ import { AnswerRow } from "./Logo";
 /** Menü işe göre gruplanır; aktif madde doldurulmuş bir cevap baloncuğuyla gösterilir. */
 const GROUPS: { title: string; links: [string, string][] }[] = [
   { title: "Bugün", links: [["/kurum", "Özet"], ["/kurum/yoklama", "Yoklama"]] },
-  { title: "Öğrenciler", links: [["/kurum/ogrenciler", "Öğrenci listesi"], ["/kurum/odevler", "Ödev takibi"], ["/kurum/veli-karnesi", "Veli karnesi"]] },
+  { title: "Öğrenciler", links: [["/kurum/ogrenciler", "Öğrenci listesi"], ["/kurum/odevler", "Ödev takibi"], ["/kurum/veli-karnesi", "Veli karnesi"], ["/kurum/veli-bulteni", "Haftalık veli raporu"]] },
   { title: "Sınavlar", links: [["/kurum/denemeler", "Denemeler ve optik"], ["/kurum/soru-havuzu", "Soru havuzu"], ["/panel", "Online testler"]] },
   { title: "Planlama", links: [["/kurum/takvim", "Yıllık takvim"], ["/kurum/mufredat", "Müfredat"], ["/kurum/ders-programi", "Ders programı"]] },
   { title: "Raporlar", links: [["/kurum/analiz", "Analiz ve uyarılar"], ["/kurum/raporlar", "Devam raporları"]] },
