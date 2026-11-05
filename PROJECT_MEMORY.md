@@ -289,6 +289,17 @@ Kurumun her hafta tek ekrandan bütün velilere kısa bir özet göndermesi içi
 - **Seed:** 8-A'da geçen haftanın raporu ilk altı veliye bu Pazartesi WhatsApp ile gönderilmiş; dördü açmış.
 - **Doğrulama:** sayfa 200, konsol hatası yok; not (kırpma), gönderildi (başka kurumun / olmayan öğrenci atlanır), geri al, şablon ve varsayılana dönüş çalıştı; Pazartesi olmayan hafta, geçersiz kanal ve işlem 400, girişsiz 401.
 
+## 4h. Madde analizi (5 Kasım 2026)
+
+Deneme detayındaki "Soru frekans analizi" sekmesi "Madde analizi" oldu (`?tab=analiz`).
+
+- **Hesap:** `modules/exams/items.ts > itemAnalysis(sections, results, choiceCount)` (saf). Bütün kitapçıklar `orderFor()` ile A sırasına çevrilir; kitapçıklarda yalnızca soru sırası karıştığı için şıklar aynıdır ve dağılımlar birleştirilir. Soru numaraları A kitapçığına göredir. Eşlemesi olmayan kitapçığın cevapları o bölümde analize girmez ve ekranda uyarılır (`skipped`).
+- **Güçlük:** doğru oranı. Çok zor < %30, çok kolay > %85 (`ITEM_RULES`).
+- **Ayırt edicilik (D):** bölüm doğru sayısına göre üst %27 ile alt %27'nin doğru oranı farkı. Ölçüt bölümdür (Türkçe sorusu Türkçe başarısıyla). Ebel sınıfları: ≥ 0,40 çok iyi, 0,30 iyi, 0,20 düzeltilebilir, altı zayıf. **Eşitlik bozma:** bölüm doğru sayısı → bütün sınavdaki doğru sayısı → cevap dizisi. Bu olmadan D değeri sonuçların listelenme sırasına bağlıydı (doğrulamada yakalandı).
+- **Uyarılar:** `KEY` "Anahtar hatası olabilir" (üst grupta bir yanlış şık doğru şıktan çok ve ≥ %30 seçilmiş), `NEGATIVE_D` (D < 0), `LOW_D` (D < 0,20 ve en az 20 katılımcı).
+- **Seed:** LGS Deneme 3, Matematik 5. sorunun anahtarı kasıtlı olarak yanlış kaydedilir (öğrenciler doğru anahtarla cevaplar); uyarı bu soruda görünür.
+- **Doğrulama:** bağımsız Python hesabı LGS 3 (90), TYT 1 ve 2 (120'şer), AYT (80) denemelerinde bütün sorularda şık oranları, güçlük ve D için sayfanın Excel verisiyle aynı. Yüzde hesabı `(x × 100) / n` sırasıyla yapılır; `(x / n) × 100` kayan noktada 57,5'i 57'ye yuvarlıyordu.
+
 ## 4e. Tasarım dili (4 Kasım 2026)
 
 Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu. Yeni ekran yazarken şu kurallara uyun:
@@ -340,7 +351,6 @@ Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu.
 
 ### Yapılmayanlar / sonraki adımlar
 - [ ] **Resmi puan yok:** Tahmini puan var (bkz. 4c); resmi LGS/YKS puanı ve Türkiye geneli yüzdelik dilim yok (yalnızca kurum içi).
-- [ ] **Soru frekans analizi kitapçık bazında:** B eşlemesi artık var ve konu analizinde kullanılıyor, ama soru frekans analizi hâlâ kitapçık bazında ayrı.
 - [ ] **Kurum karşılaştırma:** Kurumlar arası karşılaştırma ve çoklu şube yok.
 - [ ] **Ödev raporu:** Sınıf ve ders bazında ödev raporu yok (öğrenci bazında var).
 - [ ] **Diğer modüller:** Muhasebe, mobil uygulama, veliye otomatik SMS/e-posta (şu an WhatsApp linki ve kopyalama var; haftalık rapor kaydı SMS için hazır), ödeme/paket satışı yok.

@@ -4,7 +4,7 @@ import { examPlanCoverage } from "@/modules/planning/server";
 import ExamPlanCoverage from "@/modules/planning/ui/ExamPlanCoverage";
 import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
-import { choicesFor, EXAM_TYPES, fmtDate, fmtNet, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
+import { choicesFor, discriminationLabel, EXAM_TYPES, fmtDate, fmtNet, ITEM_FLAGS, ITEM_RULES, itemAnalysis, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
 import { examAbsentees, examReport, findExam } from "@/modules/exams/server";
 import { examFormSpec, examKeys } from "@/modules/exams";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
@@ -38,7 +38,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     { key: "txt", label: "Okuyucu dosyası (TXT)", href: `${base}?tab=txt` },
     { key: "konu", label: "Konu analizi", href: `${base}?tab=konu` },
     { key: "plan", label: "Plan uyumu", href: `${base}?tab=plan` },
-    { key: "analiz", label: "Soru frekans analizi", href: `${base}?tab=analiz` },
+    { key: "analiz", label: "Madde analizi", href: `${base}?tab=analiz` },
     { key: "siniflar", label: "Sınıf ortalamaları", href: `${base}?tab=siniflar` },
     { key: "girmeyenler", label: "Girmeyenler", href: `${base}?tab=girmeyenler` },
   ];
@@ -300,90 +300,119 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     );
   }
 
-  /* --------------------------- Soru frekans analizi --------------------------- */
+  /* ------------------------------ Madde analizi ------------------------------ */
   if (tab === "analiz") {
-    const bk = (exam.letters as string[]).includes(sp.kitapcik ?? "") ? sp.kitapcik! : "A";
-    const list = rows.filter((r) => r.booklet === bk);
     const c = choicesFor(exam.type);
-    let offset = 0;
+    const letters = LETTERS.slice(0, c).split("");
+    const { items, skipped } = itemAnalysis(exam.secs, rows, c);
+    const hasTopics = items.some((x) => x.topic);
+    const flagged = items.filter((x) => x.flag);
+    const fmtD = (d: number | null) => (d === null ? "—" : d.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    const avgP = items.length ? Math.round(items.reduce((a, x) => a + x.p, 0) / items.length) : 0;
+    const n = items[0]?.n ?? 0;
     return (
       <>
         {header}
-        <div className="no-print mb-4 flex flex-wrap items-center gap-2">
-          <ClassFilter base={base} tab="analiz" classes={classes} sinif={sinif} extra={`&kitapcik=${bk}`} />
-          {multi && (
-            <div className="flex gap-1">
-              {exam.letters.map((k) => (
-                <Link key={k} href={`${base}?tab=analiz&kitapcik=${k}${sinif ? `&sinif=${sinif}` : ""}`} className={k === bk ? "btn-primary" : "btn-secondary"}>
-                  {k} kitapçığı
-                </Link>
-              ))}
-            </div>
-          )}
-          <span className="text-sm text-lead">{list.length} öğrenci</span>
+        <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+          <Kpi label="Ortalama güçlük" value={`%${avgP}`} hint={`${n} öğrencinin doğru oranı`} />
+          <Kpi label="Gözden geçirilecek soru" value={flagged.length} hint="anahtar şüphesi veya düşük ayırt edicilik" />
+          <Kpi label="Çok zor" value={items.filter((x) => x.p < ITEM_RULES.hard).length} hint={`doğru oranı %${ITEM_RULES.hard} altı`} />
+          <Kpi label="Çok kolay" value={items.filter((x) => x.p > ITEM_RULES.easy).length} hint={`doğru oranı %${ITEM_RULES.easy} üstü`} />
+        </div>
+        <div className="no-print mb-3 flex flex-wrap items-center gap-2">
+          <ClassFilter base={base} tab="analiz" classes={classes} sinif={sinif} extra="" />
           <ExportButton
-            fileName={`${fileBase} - soru analizi ${bk}`}
-            headers={["Ders", "Soru", "Cevap", ...LETTERS.slice(0, c).split("").map((l) => `${l} %`), "Boş %", "Başarı %"]}
-            rows={(() => {
-              const out: (string | number)[][] = [];
-              let off = 0;
-              for (const s of exam.secs) {
-                const key = keyFor(s, bk);
-                for (let i = 0; i < s.count; i++) {
-                  const ans = list.map((r) => r.answers[off + i] ?? " ");
-                  const n = Math.max(1, ans.length);
-                  const p = (ch: string) => Math.round((ans.filter((a) => a === ch).length / n) * 100);
-                  out.push([s.name, i + 1, key[i] ?? "", ...LETTERS.slice(0, c).split("").map(p), p(" "), key[i] ? p(key[i]) : 0]);
-                }
-                off += s.count;
-              }
-              return out;
-            })()}
+            fileName={`${fileBase} - madde analizi`}
+            headers={["Ders", "Soru (A)", ...(hasTopics ? ["Konu"] : []), "Cevap", ...letters.map((l) => `${l} %`), "Boş %", "Güçlük (doğru %)", "Ayırt edicilik", "Uyarı"]}
+            rows={items.map((x) => [
+              x.section,
+              x.q,
+              ...(hasTopics ? [x.topic] : []),
+              x.key,
+              ...letters.map((l) => x.choices[l]),
+              x.blank,
+              x.p,
+              x.d,
+              x.flag ? ITEM_FLAGS[x.flag] : "",
+            ])}
           />
         </div>
+        {skipped.length > 0 && (
+          <p className="mb-3 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
+            Kitapçık eşlemesi olmadığı için analize katılmayanlar:{" "}
+            {skipped.map((x) => `${x.section}, ${x.booklet} kitapçığı (${x.count} öğrenci)`).join("; ")}.{" "}
+            <Link className="font-semibold underline" href={`${base}?tab=anahtar`}>Cevap anahtarında eşlemeyi girin</Link>.
+          </p>
+        )}
         <p className="mb-4 text-sm text-lead">
-          Her soru için şıkların seçilme oranı. Doğru şık yeşil; başarı oranı %40’ın altındaki sorular kırmızı işaretlidir.
+          {multi ? "Bütün kitapçıklar A sırasına çevrilerek birleştirildi; soru numaraları A kitapçığına göredir. " : ""}
+          Ayırt edicilik, bölümde en başarılı %27 ile en başarısız %27 öğrencinin doğru oranı farkıdır: 0,40 ve üstü çok iyi, 0,30 iyi, 0,20 düzeltilebilir, altı zayıf.
+          {n > 0 && n < ITEM_RULES.minN ? ` Katılım ${ITEM_RULES.minN} öğrencinin altında; ayırt edicilik değerleri yalnızca fikir verir.` : ""}
         </p>
-        {exam.secs.map((s) => {
-          const start = offset;
-          offset += s.count;
-          const key = keyFor(s, bk);
+        {exam.secs.map((sec) => {
+          const list = items.filter((x) => x.section === sec.name);
           return (
-            <div key={s.name} className="card mb-4 overflow-x-auto">
-              <h3 className="border-b border-rule/70 px-4 py-2 font-semibold">{s.name}</h3>
+            <div key={sec.name} className="card mb-4 overflow-x-auto">
+              <h3 className="border-b border-rule/70 px-4 py-2 font-semibold">
+                {sec.name}
+                {list.some((x) => x.flag) && <span className="ml-2 text-xs font-normal text-red-700">{list.filter((x) => x.flag).length} soru gözden geçirilmeli</span>}
+              </h3>
               <table className="w-full text-sm">
                 <thead className="bg-paper">
                   <tr>
-                    <th className={th}>Soru</th>
+                    <th className={`${th} pin`}>Soru</th>
+                    {hasTopics && <th className={th}>Konu</th>}
                     <th className={th}>Cevap</th>
-                    {LETTERS.slice(0, c).split("").map((l) => (
+                    {letters.map((l) => (
                       <th key={l} className={`${th} text-right`}>{l}</th>
                     ))}
                     <th className={`${th} text-right`}>Boş</th>
-                    <th className={th}>Başarı</th>
+                    <th className={th}>Güçlük</th>
+                    <th className={`${th} text-right`}>Ayırt edicilik</th>
+                    <th className={th}>Uyarı</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rule/70">
-                  {Array.from({ length: s.count }, (_, i) => {
-                    const ans = list.map((r) => r.answers[start + i] ?? " ");
-                    const n = Math.max(1, ans.length);
-                    const pctOf = (ch: string) => Math.round((ans.filter((a) => a === ch).length / n) * 100);
-                    const ok = key[i] ? pctOf(key[i]) : 0;
+                  {list.map((x) => {
+                    const dl = x.d === null ? null : discriminationLabel(x.d);
                     return (
-                      <tr key={i}>
-                        <td className={`${td} font-semibold`}>{i + 1}</td>
-                        <td className={`${td} font-bold text-emerald-700`}>{key[i] ?? "?"}</td>
-                        {LETTERS.slice(0, c).split("").map((l) => (
-                          <td key={l} className={`${td} text-right tabular-nums ${l === key[i] ? "font-bold text-emerald-700" : "text-lead"}`}>%{pctOf(l)}</td>
+                      <tr key={x.q} className={x.flag === "KEY" ? "bg-red-50/40" : ""}>
+                        <td className={`${td} pin font-semibold`}>{x.q}</td>
+                        {hasTopics && <td className={`${td} max-w-[14rem] truncate text-lead`} title={x.topic}>{x.topic || "—"}</td>}
+                        <td className={`${td} font-bold text-emerald-700`}>{x.key || "?"}</td>
+                        {letters.map((l) => (
+                          <td
+                            key={l}
+                            className={`${td} text-right tabular-nums ${
+                              l === x.key ? "font-bold text-emerald-700" : l === x.topDistractor?.letter && x.choices[l] >= 20 ? "font-semibold text-amber-700" : "text-lead"
+                            }`}
+                          >
+                            %{x.choices[l]}
+                          </td>
                         ))}
-                        <td className={`${td} text-right tabular-nums text-lead/70`}>%{pctOf(" ")}</td>
-                        <td className={`${td} w-40`}>
+                        <td className={`${td} text-right tabular-nums text-lead/70`}>%{x.blank}</td>
+                        <td className={`${td} w-36`}>
                           <div className="flex items-center gap-2">
                             <div className="h-2 flex-1 overflow-hidden rounded bg-mist">
-                              <div className={ok < 40 ? "h-full bg-red-400" : "h-full bg-emerald-500"} style={{ width: `${ok}%` }} />
+                              <div className={x.p < 40 ? "h-full bg-red-400" : "h-full bg-emerald-500"} style={{ width: `${x.p}%` }} />
                             </div>
-                            <span className={`w-9 text-right text-xs font-semibold ${ok < 40 ? "text-red-600" : ""}`}>%{ok}</span>
+                            <span className={`w-9 text-right text-xs font-semibold ${x.p < 40 ? "text-red-600" : ""}`}>%{x.p}</span>
                           </div>
+                        </td>
+                        <td className={`${td} text-right tabular-nums`}>
+                          <b>{fmtD(x.d)}</b>
+                          {dl && <div className={`text-[11px] ${dl.cls}`}>{dl.label}</div>}
+                        </td>
+                        <td className={`${td} text-[13px]`}>
+                          {x.flag === "KEY" && x.topDistractor ? (
+                            <span className="text-red-700">
+                              {ITEM_FLAGS.KEY}: başarılı grubun %{x.topDistractor.upperPct} kadarı {x.topDistractor.letter} şıkkını seçti
+                            </span>
+                          ) : x.flag ? (
+                            <span className={x.flag === "NEGATIVE_D" ? "text-red-700" : "text-amber-700"}>{ITEM_FLAGS[x.flag]}</span>
+                          ) : (
+                            <span className="text-lead/60">—</span>
+                          )}
                         </td>
                       </tr>
                     );

@@ -147,6 +147,16 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       const { key: keyB, order: bOrder } = makeBooklet(keyA, 7 + ei * 13 + si);
       return { name: s.name, count: s.count, keyA, keyB, bOrder, topics: topicsFor(s.name, s.count) };
     });
+    // Öğrenciler doğru anahtarla cevaplar; madde analizi demosu için LGS Deneme 3'te Matematik 5. sorunun
+    // anahtarı kasıtlı olarak yanlış kaydedilir ("anahtar hatası olabilir" uyarısı).
+    const truth = sections.map((s) => ({ keyA: s.keyA, keyB: s.keyB }));
+    if (e.name === "LGS Deneme 3") {
+      const s = sections[1];
+      const wrong = LETTERS[(LETTERS.indexOf(s.keyA[4]) + 1) % t.choices];
+      const j = s.bOrder.indexOf(4);
+      s.keyA = s.keyA.slice(0, 4) + wrong + s.keyA.slice(5);
+      s.keyB = s.keyB.slice(0, j) + wrong + s.keyB.slice(j + 1);
+    }
     const scoring = resolveScoring(e.type, sections);
     const exam = await prisma.exam.create({
       data: { ownerId, name: e.name, type: e.type, date: daysAgo(e.ago), sections: JSON.stringify(sections), wrongPer: t.wrongPer },
@@ -157,8 +167,8 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       if (Math.random() < 0.06) continue; // sınava girmeyen
       const booklet = Math.random() < 0.5 ? "A" : "B";
       let answers = "";
-      for (const s of sections) {
-        const key = booklet === "B" ? s.keyB : s.keyA;
+      for (const [si, s] of sections.entries()) {
+        const key = booklet === "B" ? truth[si].keyB : truth[si].keyA;
         const drop = decliners.has(st.id) && e.ago <= DECLINE_DAYS ? 0.2 : 0;
         const base = sk(st.id, s.name) + (ei % 3) * 0.03 - drop; // denemeler ilerledikçe hafif gelişim
         for (let i = 0; i < s.count; i++) {
