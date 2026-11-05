@@ -26,8 +26,8 @@ export default function ClassManager({ classes }: { classes: { id: string; name:
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_320px]">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {classes.map((c) => (
           <div key={c.id} className="card flex items-center justify-between p-4">
             <div>

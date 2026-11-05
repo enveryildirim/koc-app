@@ -136,7 +136,7 @@ export default function VeliKarne({ r }: { r: ParentReport }) {
         )}
       </Section>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Section title="Ödevler">
           {r.homework.list.length === 0 ? (
             <Muted>Bu dönemde ödev yok.</Muted>

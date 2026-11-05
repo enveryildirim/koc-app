@@ -49,7 +49,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         actions={<PrintButton label="Öğrenci raporunu yazdır" />}
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi label="Girdiği deneme" value={results.length} />
         <Kpi label="Ödev yapma" value={homework.rate === null ? "—" : `%${homework.rate}`} hint={`${hw.DONE} yaptı · ${hw.PARTIAL} eksik · ${hw.NOT_DONE} yapmadı`} />
         <Kpi label="Devam" value={attendance.rate === null ? "—" : `%${attendance.rate}`} hint={`${att.ABSENT} gelmedi · ${att.LATE} geç · ${att.EXCUSED} izinli`} />
@@ -153,8 +153,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card overflow-hidden">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="card overflow-x-auto">
           <h2 className="border-b border-rule/70 px-4 py-3 font-semibold">Son ödevler</h2>
           <table className="w-full text-sm">
             <tbody className="divide-y divide-rule/70">
@@ -175,7 +175,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </tbody>
           </table>
         </section>
-        <section className="card overflow-hidden">
+        <section className="card overflow-x-auto">
           <h2 className="border-b border-rule/70 px-4 py-3 font-semibold">Son devamsızlıklar</h2>
           <table className="w-full text-sm">
             <tbody className="divide-y divide-rule/70">

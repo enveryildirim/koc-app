@@ -98,7 +98,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
         <table className="w-full text-sm">
           <thead className="bg-paper">
             <tr>
-              <th className={th}>Sınıf</th>
+              <th className={`${th} pin`}>Sınıf</th>
               {p.exams.map((e) => (
                 <th key={e.id} className={`${th} text-right`}>
                   <Link href={`/kurum/denemeler/${e.id}?tab=siniflar`} className="hover:text-brand-600">{e.name}</Link>
@@ -116,7 +116,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
               const change = present.length > 1 ? present[present.length - 1] - present[0] : null;
               return (
                 <tr key={r.id}>
-                  <td className={`${td} font-semibold`}>
+                  <td className={`${td} pin font-semibold`}>
                     <i className="mr-2 inline-block h-2.5 w-2.5 rounded-full" style={{ background: SERIES_COLORS[ri % SERIES_COLORS.length] }} />
                     {r.name}
                   </td>
@@ -137,7 +137,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
               );
             })}
             <tr className="border-t-2 border-graphite bg-paper font-semibold">
-              <td className={td}>Kurum ortalaması</td>
+              <td className={`${td} pin`}>Kurum ortalaması</td>
               {p.total.map((c, i) => (
                 <td key={i} className={`${td} text-right tabular-nums`}>
                   {c.net === null ? "—" : fmtNet(c.net)}
@@ -200,7 +200,7 @@ async function Risk({ ownerId, sinif }: { ownerId: string; sinif: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         <Kpi label="Riskli öğrenci" value={r.risky.length} hint={`${r.total} öğrenciden`} />
         {flagKeys.map((f) => (
           <Kpi key={f} label={RISK_FLAGS[f].label} value={r.flagCounts[f]} hint={`ağırlık ${RISK_FLAGS[f].weight}`} />
@@ -373,7 +373,7 @@ async function Teachers({ ownerId }: { ownerId: string }) {
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th className={th}>Sınıf</th>
+                  <th className={`${th} pin`}>Sınıf</th>
                   <th className={th}>Ders → bölüm</th>
                   <th className={th}>Tür</th>
                   <th className={`${th} text-right`}>İlk deneme</th>
@@ -386,7 +386,7 @@ async function Teachers({ ownerId }: { ownerId: string }) {
               <tbody className="divide-y divide-rule/70">
                 {t.rows.map((r, i) => (
                   <tr key={i}>
-                    <td className={`${td} font-medium`}>{r.className}</td>
+                    <td className={`${td} pin font-medium`}>{r.className}</td>
                     <td className={td}>
                       {r.subject}
                       {r.section !== r.subject && <span className="text-xs text-lead/70"> → {r.section}</span>}
@@ -451,7 +451,7 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
   const a = await planAlerts(ownerId, ymd());
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2">
         <Kpi label="Planlı ders" value={`${a.plannedCount} / ${a.pairCount}`} hint={`${schoolYearLabel(a.year)} · ders programındaki sınıf-ders çiftleri`} />
         <Kpi label="Plana göre geride" value={a.behind.length} hint="bitiş haftası geçmiş, işlenmemiş konusu olan" />
         <Kpi label="Gecikme yüzünden işlenmeden sorulan" value={a.late.length} hint="son 45 gündeki denemelerde (konu × sınıf)" />
@@ -471,7 +471,7 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
                 <table className="w-full text-sm">
                   <thead className="bg-paper">
                     <tr>
-                      <th className={th}>Sınıf</th>
+                      <th className={`${th} pin`}>Sınıf</th>
                       <th className={th}>Ders</th>
                       <th className={th}>Öğretmen</th>
                       <th className={`${th} text-right`}>Geride</th>
@@ -483,7 +483,7 @@ async function PlanTab({ ownerId }: { ownerId: string }) {
                   <tbody className="divide-y divide-rule/70">
                     {a.behind.map((r) => (
                       <tr key={r.plan!.id}>
-                        <td className={`${td} font-medium`}>{r.classroom}</td>
+                        <td className={`${td} pin font-medium`}>{r.classroom}</td>
                         <td className={td}>{r.subject}</td>
                         <td className={`${td} text-lead`}>{r.teachers.join(", ") || "—"}</td>
                         <td className={`${td} text-right font-semibold text-red-600`}>{r.plan!.progress.behindWeeks} hafta</td>

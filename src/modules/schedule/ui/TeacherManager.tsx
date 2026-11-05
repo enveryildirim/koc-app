@@ -30,8 +30,8 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <div className="card overflow-hidden">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-xs text-lead">
             <tr>

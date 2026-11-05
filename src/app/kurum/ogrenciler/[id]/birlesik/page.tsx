@@ -133,7 +133,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         {topics.length > 0 && (
           <>
             <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Konu analizi (tüm denemeler)</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-lg bg-red-50 p-3">
                 <div className="text-xs font-bold text-red-800">Eksik konular (%50 altı)</div>
                 {weak.length === 0 ? (

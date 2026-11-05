@@ -58,7 +58,7 @@ export default function HomeworkForm({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-3 md:grid-cols-2">
+    <form onSubmit={submit} className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {!homeworkId && (
         <div>
           <label className="label">Sınıf</label>

@@ -61,7 +61,7 @@ export default function StudentForm({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
         <label className="label">Öğrenci no *</label>
         <input className="input num" value={v.studentNo} onChange={set("studentNo")} required maxLength={6} inputMode="numeric" />

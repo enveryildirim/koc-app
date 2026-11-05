@@ -63,7 +63,7 @@ export default function PlanEditor(p: Props) {
 
   const subjects = p.subjectsByClass[f.classroomId] ?? [];
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="card space-y-4 p-5">
         <div className="grid grid-cols-2 gap-3">
           <div>

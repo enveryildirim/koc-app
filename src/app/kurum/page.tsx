@@ -45,7 +45,7 @@ export default async function Page() {
         }
       />
 
-      <div className="mb-10 grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Kpi label="Öğrenci" value={d.studentCount} hint={`${d.classCount} sınıfta`} />
         <Kpi label="Derse devam" value={attendance.rate === null ? "—" : `%${attendance.rate}`} hint={`Son 30 günde ${attendance.absent} kez gelinmedi`} />
         <Kpi label="Ödev yapma" value={homework.rate === null ? "—" : `%${homework.rate}`} hint={`Son 30 günde ${homework.notDone} ödev yapılmadı`} />
@@ -56,7 +56,7 @@ export default async function Page() {
         />
       </div>
 
-      <div className="grid gap-10 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <section aria-labelledby="bugun">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
             <h2 id="bugun" className="text-xl font-semibold">Bugünün dersleri</h2>

@@ -81,7 +81,7 @@ export default function CalendarView(p: Props) {
             <Link
               key={k}
               href={href({ gorunum: k, ay: k === "ay" && p.view !== "ay" ? (schoolYearOf(p.today) === p.year ? p.today.slice(0, 7) : `${p.year}-09`) : undefined })}
-              className={`rounded-md px-3 py-1 font-medium ${p.view === k ? "bg-white shadow-sm" : "text-lead"}`}
+              className={`rounded-md px-3 py-1 font-medium ${p.view === k ? "bg-surface shadow-sm" : "text-lead"}`}
             >
               {label}
             </Link>
@@ -141,7 +141,11 @@ function Chip({ item, onClick }: { item: CalendarItem; onClick: () => void }) {
 
 function MonthView({ month, today, items, onDay, onItem }: Props & { onDay: (d: string) => void; onItem: (i: CalendarItem) => void }) {
   const weeks = monthGrid(month);
+  const monthItems = items
+    .filter((x) => x.start <= `${month}-31` && x.end >= `${month}-01`)
+    .sort((a, b) => a.start.localeCompare(b.start));
   return (
+    <>
     <div className="card overflow-hidden">
       <div className="grid grid-cols-7 border-b border-rule bg-paper text-center text-xs font-semibold text-lead">
         {WEEKDAYS.map((d) => <div key={d} className="py-2">{d}</div>)}
@@ -156,14 +160,20 @@ function MonthView({ month, today, items, onDay, onItem }: Props & { onDay: (d: 
               <div
                 key={d}
                 onClick={() => onDay(d)}
-                className={`min-h-28 cursor-pointer border-r border-rule/70 p-1.5 last:border-0 hover:bg-paper ${
+                className={`min-h-14 cursor-pointer border-r border-rule/70 p-1 last:border-0 sm:min-h-28 sm:p-1.5 hover:bg-paper ${
                   holiday ? "bg-red-50/60" : i >= 5 ? "bg-paper/60" : ""
                 } ${inMonth ? "" : "opacity-40"}`}
               >
                 <div className={`mb-1 text-right text-xs ${d === today ? "font-bold text-brand-700" : "text-lead"}`}>
                   {d === today ? <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-white">{Number(d.slice(8))}</span> : Number(d.slice(8))}
                 </div>
-                <div className="space-y-0.5">
+                {/* Telefonda etiketler sığmaz: türe göre renkli noktalar, ayrıntı aşağıdaki listede. */}
+                <div className="flex flex-wrap justify-end gap-0.5 sm:hidden">
+                  {list.filter((x) => x.kind !== "HOLIDAY").slice(0, 4).map((x) => (
+                    <span key={x.key} className={`size-1.5 rounded-full ${(ALL_KINDS[x.kind] ?? ALL_KINDS.OTHER).dot}`} />
+                  ))}
+                </div>
+                <div className="hidden space-y-0.5 sm:block">
                   {list.slice(0, 3).map((x) => <Chip key={x.key} item={x} onClick={() => onItem(x)} />)}
                   {list.length > 3 && <div className="px-1 text-xs text-lead">+{list.length - 3} daha</div>}
                 </div>
@@ -173,12 +183,35 @@ function MonthView({ month, today, items, onDay, onItem }: Props & { onDay: (d: 
         </div>
       ))}
     </div>
+    {monthItems.length > 0 && (
+      <ul className="card mt-3 divide-y divide-rule/70 sm:hidden">
+        {monthItems.map((x) => {
+          const k = ALL_KINDS[x.kind] ?? ALL_KINDS.OTHER;
+          return (
+            <li key={x.key}>
+              <button type="button" onClick={() => onItem(x)} className="flex w-full items-start gap-3 px-3 py-2.5 text-left text-sm">
+                <span className="num w-12 shrink-0 text-[13px] text-lead">{Number(x.start.slice(8))} {monthShort(x.start)}</span>
+                <span className={`mt-1.5 size-2 shrink-0 rounded-full ${k.dot}`} />
+                <span className="min-w-0">
+                  {x.classroom && <b className="font-semibold">{x.classroom} </b>}
+                  {x.title}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+    </>
   );
 }
 
+const MONTHS_SHORT = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+const monthShort = (d: string) => MONTHS_SHORT[Number(d.slice(5, 7)) - 1];
+
 function YearView({ year, today, items, monthHref }: Props & { monthHref: (m: string) => string }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {schoolYearMonths(year).map((m) => {
         const inMonth = items.filter((x) => x.start <= `${m}-31` && x.end >= `${m}-01`);
         return (
@@ -218,7 +251,7 @@ function YearView({ year, today, items, monthHref }: Props & { monthHref: (m: st
 function ListView({ items, year, onItem }: Props & { onItem: (i: CalendarItem) => void }) {
   if (!items.length) return <div className="card p-10 text-center text-sm text-lead">{schoolYearLabel(year)} eğitim yılı için kayıt yok.</div>;
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-paper text-left text-xs text-lead">
           <tr>

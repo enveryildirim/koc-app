@@ -70,7 +70,7 @@ export default function ScheduleBoard({
 
   return (
     <>
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {days.map((day) => {
           const list = slots.filter((s) => s.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime));
           return (

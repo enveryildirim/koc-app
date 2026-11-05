@@ -119,22 +119,26 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
           </div>
         </div>
         {flash && <div className="bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{flash}</div>}
+        {/* Telefonda her satır kart olur: seçim kutusu solda; öğrenci, veli, durum ve işlemler alt alta. */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="table-stack w-full text-sm">
             <thead className="bg-paper text-left text-xs text-lead">
               <tr>
                 <th className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    className="accent-brand-600"
-                    checked={allSelected}
-                    onChange={() => setSelected(allSelected ? new Set() : new Set(students.map((s) => s.id)))}
-                  />
+                  <label className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      className="accent-brand-600 max-sm:size-4"
+                      checked={allSelected}
+                      onChange={() => setSelected(allSelected ? new Set() : new Set(students.map((s) => s.id)))}
+                    />
+                    <span className="sm:sr-only">Tümünü seç</span>
+                  </label>
                 </th>
-                <th className="px-3 py-2">Öğrenci</th>
-                <th className="px-3 py-2">Veli</th>
-                <th className="px-3 py-2">Durum</th>
-                <th className="px-3 py-2 text-right">İşlemler</th>
+                <th className="px-3 py-2 max-sm:hidden">Öğrenci</th>
+                <th className="px-3 py-2 max-sm:hidden">Veli</th>
+                <th className="px-3 py-2 max-sm:hidden">Durum</th>
+                <th className="px-3 py-2 text-right max-sm:hidden">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-rule/70">
@@ -143,11 +147,12 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                 const msg = s.token ? shareMessage(s, url, from, to, institution) : "";
                 return (
                   <FragmentRow key={s.id}>
-                    <tr className={selected.has(s.id) ? "bg-brand-50/50" : ""}>
-                      <td className="px-3 py-2">
+                    <tr className={`max-sm:grid max-sm:grid-cols-[2.5rem_1fr] max-sm:py-2 ${selected.has(s.id) ? "bg-brand-50/50" : ""}`}>
+                      <td className="px-3 py-2 max-sm:row-span-4">
                         <input
                           type="checkbox"
-                          className="accent-brand-600"
+                          aria-label={`${s.name} seç`}
+                          className="accent-brand-600 max-sm:size-4"
                           checked={selected.has(s.id)}
                           onChange={() => {
                             const n = new Set(selected);
@@ -157,18 +162,19 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                           }}
                         />
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 max-sm:col-start-2 max-sm:px-0 max-sm:py-0">
                         <Link href={`/kurum/ogrenciler/${s.id}`} className="font-medium hover:text-brand-600">{s.name}</Link>
-                        <div className="num text-xs text-lead/70">{s.studentNo}</div>
+                        <div className="num text-xs text-lead/70 max-sm:hidden">{s.studentNo}</div>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 max-sm:col-start-2 max-sm:px-0 max-sm:py-0 max-sm:text-[13px]">
+                        <span className="text-lead sm:hidden">Veli: </span>
                         {s.parentName || <span className="text-lead/70">—</span>}
-                        <div className="text-xs text-lead">
+                        <div className="text-xs text-lead max-sm:inline max-sm:pl-1">
                           {s.parentPhone || "telefon yok"}
                           {s.parentPhone && !waPhone(s.parentPhone) && <span className="ml-1 text-amber-600">(cep no değil)</span>}
                         </div>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 max-sm:col-start-2 max-sm:px-0 max-sm:py-1.5">
                         {!s.token ? (
                           <span className="badge bg-mist text-lead">Paylaşılmadı</span>
                         ) : s.viewedAt ? (
@@ -178,8 +184,8 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                         )}
                         {s.note && <div className="mt-1 text-xs text-amber-700">✎ Görüş eklendi</div>}
                       </td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-wrap justify-end gap-1">
+                      <td className="px-3 py-2 max-sm:col-start-2 max-sm:px-0 max-sm:py-0">
+                        <div className="flex flex-wrap justify-end gap-1 max-sm:justify-start">
                           {s.token ? (
                             <>
                               <a className="btn bg-emerald-600 px-2.5 py-1 text-xs text-white hover:bg-emerald-700" href={whatsappUrl(s, msg)} target="_blank" rel="noreferrer">
@@ -195,7 +201,7 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                           {s.token && (
                             <details className="relative">
                               <summary className="btn-secondary cursor-pointer list-none px-2 py-1 text-xs">⋯</summary>
-                              <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg bg-white p-1 text-left shadow-lg ring-1 ring-rule">
+                              <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg bg-surface p-1 text-left shadow-lg ring-1 ring-rule">
                                 <button className="block w-full rounded px-3 py-1.5 text-left text-xs hover:bg-paper" onClick={() => act("renew", [s.id])}>Yeni bağlantı üret</button>
                                 <button className="block w-full rounded px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50" onClick={() => act("revoke", [s.id])}>Bağlantıyı iptal et</button>
                               </div>
@@ -205,9 +211,9 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                       </td>
                     </tr>
                     {noteFor === s.id && (
-                      <tr className="bg-amber-50/50">
-                        <td />
-                        <td colSpan={4} className="px-3 py-3">
+                      <tr className="bg-amber-50/50 max-sm:block">
+                        <td className="max-sm:hidden" />
+                        <td colSpan={4} className="px-3 py-3 max-sm:block">
                           <NoteEditor
                             initial={s.note}
                             onSaved={(note) => {

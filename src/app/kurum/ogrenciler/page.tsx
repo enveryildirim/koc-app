@@ -78,7 +78,35 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       {students.length === 0 ? (
         <Empty>Öğrenci bulunamadı.</Empty>
       ) : (
-        <div className="card overflow-x-auto">
+        <>
+        {/* Telefonda kart: ad ve sınıf önde; numara, telefon ve veli altında. */}
+        <ul className="card divide-y divide-rule/70 sm:hidden">
+          {students.map((s) => (
+            <li key={s.id}>
+              <Link href={`/kurum/ogrenciler/${s.id}`} className="block px-3.5 py-2.5 active:bg-paper">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium">{s.firstName} {s.lastName}</span>
+                  {s.classroom?.name ? (
+                    <span className="shrink-0 text-[13px] font-semibold">{s.classroom.name}</span>
+                  ) : s.external ? (
+                    <span className="badge shrink-0 bg-violet-50 text-violet-700">Kurum dışı</span>
+                  ) : null}
+                </div>
+                <div className="mt-0.5 text-[13px] text-lead">
+                  <span className="num">No {s.studentNo}</span>
+                  {s.phone && <span className="num">, {s.phone}</span>}
+                  {(resultCounts.get(s.id) ?? 0) > 0 && <span>, {resultCounts.get(s.id)} deneme</span>}
+                </div>
+                {(s.parentName || s.parentPhone) && (
+                  <div className="text-[13px] text-lead">
+                    Veli: {s.parentName || "—"} {s.parentPhone && <span className="num">{s.parentPhone}</span>}
+                  </div>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="card hidden overflow-x-auto sm:block">
           <table className="w-full text-sm">
             <thead className="bg-paper">
               <tr>
@@ -112,6 +140,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>
   );

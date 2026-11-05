@@ -37,7 +37,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
       <PageHeader title="Ödev takibi" sub="Sınıflara ödev verin, öğrenci bazında yapılma durumunu izleyin." />
       <Tabs tabs={ODEV_TABS} active="list" />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-3 gap-2">
         <Kpi label="Aktif ödev" value={active} hint="Teslim tarihi geçmemiş" />
         <Kpi label="Ortalama yapma oranı" value={rate === null ? "–" : `%${rate}`} hint="Değerlendirilen öğrenci durumları" />
         <Kpi label="Bu hafta teslim" value={thisWeek} />
@@ -58,7 +58,31 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
       {list.length === 0 ? (
         <Empty>Bu filtreye uygun ödev yok.</Empty>
       ) : (
-        <div className="card overflow-x-auto">
+        <>
+        {/* Telefonda kart listesi: başlık önde, tarih ve durum altında. */}
+        <ul className="card divide-y divide-rule/70 sm:hidden">
+          {list.map((h) => {
+            const c = countStatuses(h.statuses);
+            const overdue = h.dueDate < startToday;
+            return (
+              <li key={h.id}>
+                <Link href={`/kurum/odevler/${h.id}`} className="block px-3.5 py-3 active:bg-paper">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-medium">{h.title}</span>
+                    <span className={`badge shrink-0 bg-mist ${overdue ? "text-lead" : "text-graphite"}`}>{overdue ? "Süresi doldu" : "Aktif"}</span>
+                  </div>
+                  <div className="mt-0.5 text-[13px] text-lead">
+                    <b className="font-semibold text-graphite">{h.classroom.name}</b> {h.subject}, teslim {fmt(h.dueDate)}
+                  </div>
+                  <div className="mt-2">
+                    <StatusBar c={c} total={c.total || 1} />
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="card hidden overflow-x-auto sm:block">
           <table className="w-full text-sm">
             <thead className="bg-paper">
               <tr>
@@ -90,17 +114,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
                       </span>
                     </td>
                     <td className={`${td} min-w-56`}>
-                      <div className="flex h-2.5 overflow-hidden rounded-full bg-mist" title={`Yaptı ${c.DONE} · Eksik ${c.PARTIAL} · Yapmadı ${c.NOT_DONE} · Bekliyor ${c.PENDING}`}>
-                        <div className="bg-emerald-500" style={{ width: `${(c.DONE / total) * 100}%` }} />
-                        <div className="bg-amber-400" style={{ width: `${(c.PARTIAL / total) * 100}%` }} />
-                        <div className="bg-red-500" style={{ width: `${(c.NOT_DONE / total) * 100}%` }} />
-                      </div>
-                      <div className="mt-1 flex gap-2 text-[11px] text-lead">
-                        <span className="text-emerald-700">{c.DONE} yaptı</span>
-                        <span className="text-amber-700">{c.PARTIAL} eksik</span>
-                        <span className="text-red-700">{c.NOT_DONE} yapmadı</span>
-                        {c.PENDING > 0 && <span>{c.PENDING} bekliyor</span>}
-                      </div>
+                      <StatusBar c={c} total={total} />
                     </td>
                   </tr>
                 );
@@ -108,7 +122,26 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
+  );
+}
+
+function StatusBar({ c, total }: { c: ReturnType<typeof countStatuses>; total: number }) {
+  return (
+    <>
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-mist" title={`Yaptı ${c.DONE} · Eksik ${c.PARTIAL} · Yapmadı ${c.NOT_DONE} · Bekliyor ${c.PENDING}`}>
+        <div className="bg-emerald-600/70" style={{ width: `${(c.DONE / total) * 100}%` }} />
+        <div className="bg-amber-500/70" style={{ width: `${(c.PARTIAL / total) * 100}%` }} />
+        <div className="bg-red-600/65" style={{ width: `${(c.NOT_DONE / total) * 100}%` }} />
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-lead">
+        <span className="text-emerald-700">{c.DONE} yaptı</span>
+        <span className="text-amber-700">{c.PARTIAL} eksik</span>
+        <span className="text-red-700">{c.NOT_DONE} yapmadı</span>
+        {c.PENDING > 0 && <span>{c.PENDING} bekliyor</span>}
+      </div>
+    </>
   );
 }

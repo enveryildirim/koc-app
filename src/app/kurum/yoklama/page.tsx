@@ -77,7 +77,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
       </div>
 
       {holidays.length > 0 && (
-        <p className="mb-5 rounded-md border-l-[3px] border-red-700 bg-white px-4 py-3 text-[15px]">
+        <p className="mb-5 rounded-md border-l-[3px] border-red-700 bg-surface px-4 py-3 text-[15px]">
           Takvimde tatil: {holidays.map((h) => `${h.title}${h.classroom ? ` (${h.classroom.name})` : ""}`).join(", ")}.{" "}
           <Link href={`/kurum/takvim?ay=${date.slice(0, 7)}`} className="font-semibold underline decoration-ink/40 underline-offset-4">Takvimde gör</Link>
         </p>

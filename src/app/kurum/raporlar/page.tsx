@@ -78,7 +78,7 @@ async function Absence({ ownerId, range }: P) {
   const avgRate = Math.round(rows.filter((r) => r.rate !== null).reduce((x, r) => x + (r.rate ?? 0), 0) / Math.max(1, rows.filter((r) => r.rate !== null).length));
   return (
     <>
-      <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi label="Öğrenci" value={rows.length} />
         <Kpi label="Yoklama kaydı" value={records} />
         <Kpi label="Toplam devamsızlık" value={totalAbs} />
@@ -89,11 +89,11 @@ async function Absence({ ownerId, range }: P) {
         headers={["Sıra", "Öğrenci No", "Ad Soyad", "Sınıf", "Ders", "Gelmedi", "Geç", "İzinli", "Devam %"]}
         rows={rows.map((r, i) => [i + 1, r.s.studentNo, fullName(r.s), r.s.classroom?.name ?? "", r.total, r.absent, r.late, r.excused, r.rate])}
       />
-      <Table head={["#", "Öğrenci", "Sınıf", "Ders", "Gelmedi", "Geç", "İzinli", "Devam %"]}>
+      <Table head={["#", "Öğrenci", "Sınıf", "Ders", "Gelmedi", "Geç", "İzinli", "Devam %"]} pin={1} hideOnMobile={0}>
         {rows.map((r, i) => (
           <tr key={r.s.id} className={r.rate !== null && r.rate < 80 ? "bg-red-50/50" : ""}>
-            <td className={td + " text-lead/70"}>{i + 1}</td>
-            <td className={td + " font-medium"}>
+            <td className={td + " text-lead/70 max-sm:hidden"}>{i + 1}</td>
+            <td className={td + " pin font-medium"}>
               <span className="num text-xs text-lead/70">{r.s.studentNo}</span> {fullName(r.s)}
             </td>
             <td className={td}>{r.s.classroom?.name ?? "—"}</td>
@@ -147,7 +147,7 @@ async function TeacherCounts({ ownerId, range }: P) {
   const totalMin = rows.reduce((x, r) => x + r.minutes, 0);
   return (
     <>
-      <div className="mb-4 grid grid-cols-3 gap-4">
+      <div className="mb-4 grid grid-cols-3 gap-2">
         <Kpi label="Öğretmen" value={rows.length} />
         <Kpi label="İşlenen ders" value={sessions} />
         <Kpi label="Toplam süre" value={`${hours(totalMin)} saat`} />
@@ -157,10 +157,10 @@ async function TeacherCounts({ ownerId, range }: P) {
         headers={["Öğretmen", "Branş", "Toplam ders", ...Object.values(LESSON_TYPES), "Toplam saat"]}
         rows={rows.map((r) => [r.t.name, r.t.branch, r.count, ...Object.keys(LESSON_TYPES).map((k) => r.byType[k] ?? 0), Math.round((r.minutes / 60) * 10) / 10])}
       />
-      <Table head={["Öğretmen", "Branş", "Toplam ders", ...Object.values(LESSON_TYPES), "Toplam saat"]}>
+      <Table pin={0} head={["Öğretmen", "Branş", "Toplam ders", ...Object.values(LESSON_TYPES), "Toplam saat"]}>
         {rows.map((r) => (
           <tr key={r.t.id}>
-            <td className={td + " font-medium"}>{r.t.name}</td>
+            <td className={td + " pin font-medium"}>{r.t.name}</td>
             <td className={td}>{r.t.branch}</td>
             <td className={td + " font-semibold"}>{r.count}</td>
             {Object.keys(LESSON_TYPES).map((k) => <td key={k} className={td}>{r.byType[k] || "—"}</td>)}
@@ -198,10 +198,10 @@ async function LessonList({ ownerId, range }: P) {
             .join(", "),
         ])}
       />
-      <Table head={["Öğrenci", "Sınıf", "Planlanan", "Katıldı", ...Object.values(LESSON_TYPES), "Derslere göre"]}>
+      <Table pin={0} head={["Öğrenci", "Sınıf", "Planlanan", "Katıldı", ...Object.values(LESSON_TYPES), "Derslere göre"]}>
         {rows.map(({ s, m }) => (
           <tr key={s.id}>
-            <td className={td + " whitespace-nowrap font-medium"}>{fullName(s)}</td>
+            <td className={td + " pin whitespace-nowrap font-medium"}>{fullName(s)}</td>
             <td className={td}>{s.classroom?.name}</td>
             <td className={td}>{m.planned}</td>
             <td className={td + " font-semibold"}>{m.attended}</td>
@@ -234,12 +234,17 @@ function ExportBar(props: React.ComponentProps<typeof ExportButton>) {
   );
 }
 
-function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
+/** pin: telefonda yana kayarken sabit kalan sütun; hideOnMobile: telefonda gizlenen sütun (ör. sıra no). */
+function Table({ head, children, pin, hideOnMobile }: { head: string[]; children: React.ReactNode; pin?: number; hideOnMobile?: number }) {
   return (
     <div className="card overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-paper">
-          <tr>{head.map((h) => <th key={h} className={th}>{h}</th>)}</tr>
+          <tr>
+            {head.map((h, i) => (
+              <th key={h} className={`${th} ${i === pin ? "pin" : ""} ${i === hideOnMobile ? "max-sm:hidden" : ""}`}>{h}</th>
+            ))}
+          </tr>
         </thead>
         <tbody className="divide-y divide-rule/70">{children}</tbody>
       </table>

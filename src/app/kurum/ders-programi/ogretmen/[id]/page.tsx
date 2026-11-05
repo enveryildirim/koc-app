@@ -61,7 +61,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         {teacher.name} · {teacher.branch} — {fmt(thisWeek, { day: "numeric", month: "long", year: "numeric" })} haftası
       </h1>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Kpi label="Haftalık ders" value={slots.length} />
         <Kpi label="Sınıf" value={classIds.length} hint={subjects.join(", ") || "—"} />
         <Kpi label="Planlı ders" value={`${planned.length} / ${pairs.length}`} />
@@ -137,7 +137,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </div>
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section>
               <h2 className="mb-2 text-lg font-semibold">Haftalık program</h2>
               <div className="card divide-y divide-rule/70 text-sm">

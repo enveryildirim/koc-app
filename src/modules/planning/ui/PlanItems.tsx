@@ -40,7 +40,7 @@ export default function PlanItems({ items, holidays, today, startDate }: { items
   let n = 0;
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-paper text-left text-xs text-lead">
           <tr>

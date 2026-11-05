@@ -21,10 +21,10 @@ export function AnswerRow({ marked = 2, size = 10, className = "" }: { marked?: 
 
 export default function Logo({ sub }: { sub?: string }) {
   return (
-    <span className="flex flex-col gap-1.5">
+    <span className="flex flex-col gap-1">
       <AnswerRow />
-      <span className="font-display text-[1.35rem] leading-none font-semibold [font-stretch:80%]">SınavKur</span>
-      {sub && <span className="text-sm leading-snug text-lead">{sub}</span>}
+      <span className="font-display text-[1.2rem] leading-none font-semibold [font-stretch:80%]">SınavKur</span>
+      {sub && <span className="truncate text-[13px] leading-snug text-lead">{sub}</span>}
     </span>
   );
 }

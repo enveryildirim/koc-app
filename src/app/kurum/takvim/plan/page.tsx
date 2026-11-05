@@ -45,7 +45,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
         ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-3 gap-2">
         <Kpi label="Planlı ders" value={`${planned.length} / ${rows.length}`} hint="ders programındaki sınıf-ders çiftleri" />
         <Kpi label="Plana göre geride" value={behind.length} hint={behind.length ? "aşağıda kırmızı" : "tüm planlar yolunda"} />
         <Kpi
@@ -57,7 +57,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
       {rows.length === 0 ? (
         <Empty>Ders programında ders yok. Önce ders programını oluşturun veya &quot;+ Yeni plan&quot; ile başlayın.</Empty>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-paper">
               <tr>

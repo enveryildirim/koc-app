@@ -6,13 +6,16 @@
  * (aktif menü halkası, odak, bağlantı). Durum renkleri ayrı ve sönük tutulur.
  */
 @theme {
-  --color-paper: #f4f5f1;
-  --color-graphite: #2a2d31;
-  --color-lead: #6b7078;
-  --color-rule: #dcdfd8;
-  --color-mist: #ebede7;
-  --color-ink: #b8325a;
-  --color-ink-soft: #f6e4ea;
+  /* Beyaz zemin; kontrast yumuşak gri çizgiler ve hafif tonlarla kurulur. */
+  --color-paper: #f5f6f3;
+  --color-surface: #ffffff;
+  --color-sidebar: #f3f4f1;
+  --color-graphite: #262a2e;
+  --color-lead: #5f656c;
+  --color-rule: #e2e5df;
+  --color-mist: #eceee9;
+  --color-ink: #a03d62;
+  --color-ink-soft: #f4e6eb;
 
   /* Eski "brand" sınıfları form mürekkebine bağlanır (bağlantılar, aktif sekmeler). */
   --color-brand-50: #f8edf1;
@@ -27,9 +30,9 @@
 }
 
 body {
-  background: var(--color-paper);
+  background: var(--color-surface);
   color: var(--color-graphite);
-  font-size: 15px;
+  font-size: 14.5px;
   line-height: 1.5;
 }
 
@@ -62,7 +65,7 @@ table,
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 @layer components {
@@ -71,17 +74,17 @@ table,
     @apply btn bg-graphite text-white hover:bg-black;
   }
   .btn-secondary {
-    @apply btn bg-white text-graphite ring-1 ring-rule ring-inset hover:ring-lead/60;
+    @apply btn bg-surface text-graphite ring-1 ring-rule ring-inset hover:ring-lead/60;
   }
   .btn-danger {
-    @apply btn bg-white text-red-700 ring-1 ring-red-200 ring-inset hover:bg-red-50;
+    @apply btn bg-surface text-red-700 ring-1 ring-red-200 ring-inset hover:bg-red-50;
   }
   /* Bağımsız içerik bloğu. Gölge yok; form kâğıdı üstünde beyaz sayfa. */
   .card {
-    @apply rounded-lg bg-white ring-1 ring-rule;
+    @apply rounded-lg bg-surface ring-1 ring-rule;
   }
   .input {
-    @apply w-full rounded-md border border-rule bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-lead/70 focus:border-graphite;
+    @apply w-full rounded-md border border-rule bg-surface px-2.5 py-1.5 text-sm text-graphite outline-none placeholder:text-lead/70 focus:border-graphite;
   }
   .label {
     @apply mb-1 block text-sm font-semibold text-graphite;
@@ -96,6 +99,30 @@ table,
   }
   .badge-plain::before {
     display: none;
+  }
+}
+
+/*
+ * Telefonda karşılaştırma tabloları: hücreler tek satırda kalır, tablo kendi kapsayıcısında yatay kayar.
+ * .pin verilen sütun (öğrenci, sınıf adı gibi satırın kimliği) kaydırırken solda sabit durur.
+ * .table-stack verilen tablolar telefonda kendi kart düzenini kurar, bu kurallardan muaftır.
+ */
+@media (max-width: 639px) {
+  :is(.overflow-x-auto, .overflow-auto) > table:not(.table-stack) :is(th, td) {
+    white-space: nowrap;
+  }
+  :is(.overflow-x-auto, .overflow-auto) > table {
+    min-width: 100%;
+  }
+  :is(th, td).pin {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: var(--color-surface);
+    box-shadow: inset -1px 0 0 var(--color-rule);
+  }
+  th.pin {
+    background-color: var(--color-paper);
   }
 }
 

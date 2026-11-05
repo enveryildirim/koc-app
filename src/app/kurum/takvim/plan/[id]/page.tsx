@@ -42,7 +42,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   return (
     <div>
       <PageHeader back={back} title={title} sub={`${schoolYearLabel(plan.year)} eğitim yılı yıllık planı`} actions={<PlanActions planId={plan.id} classrooms={others} />} />
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Kpi label="İşlenen" value={`${p.done} / ${p.total}`} hint={`%${p.rate}`} />
         <Kpi label="Bugüne kadar planlanan" value={p.due} hint="bitiş haftası geçmiş konular" />
         <Kpi label="Geciken konu" value={p.late} />
