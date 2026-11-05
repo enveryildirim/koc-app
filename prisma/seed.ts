@@ -101,15 +101,11 @@ function rand<T>(a: T[]) {
 }
 
 async function main() {
-  await prisma.user.deleteMany();
-
-  const user = await prisma.user.create({
-    data: {
-      name: "Örnek Eğitim Kurumu",
-      email: "demo@sinavkur.com",
-      passwordHash: await bcrypt.hash("demo1234", 10),
-    },
-  });
+  // Demo hesabı silinmez, güncellenir: kimliği sabit kalır. Soru havuzu (QuestionSource / QuestionItem ve
+  // storage/<ownerId>/ dosyaları) seed'e dahil değildir; hesap yeniden oluşturulsaydı sahipsiz kalırdı.
+  const demo = { name: "Örnek Eğitim Kurumu", email: "demo@sinavkur.com", passwordHash: await bcrypt.hash("demo1234", 10) };
+  const user = await prisma.user.upsert({ where: { email: demo.email }, update: demo, create: demo });
+  await prisma.test.deleteMany({ where: { ownerId: user.id } });
 
   for (const t of TESTS) {
     const test = await prisma.test.create({

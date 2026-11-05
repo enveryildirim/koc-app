@@ -1,4 +1,5 @@
 import { prisma } from "@/shared/db";
+import { normalizeLevel } from "@/shared/cognitive";
 import { invalid, notFound } from "@/shared/errors";
 import { bookletCount, bookletLetters, choicesFor, EXAM_TYPES, gradeExam, LETTERS, parseSections, resolveScoring, setBooklet, trimBooklets, type AltBooklet, type ExamSection } from "../domain";
 
@@ -66,7 +67,7 @@ export async function createExam(ownerId: string, body: Record<string, unknown>)
   });
 }
 
-type SecIn = { name: string; count: number; keyA: string; keyB?: string; keyC?: string; keyD?: string; topics?: string[]; bOrder?: unknown; cOrder?: unknown; dOrder?: unknown; items?: unknown };
+type SecIn = { name: string; count: number; keyA: string; keyB?: string; keyC?: string; keyD?: string; topics?: string[]; levels?: string[]; bOrder?: unknown; cOrder?: unknown; dOrder?: unknown; items?: unknown };
 
 /**
  * Deneme ayarlarını ve cevap anahtarını kaydeder, ardından tüm sonuçları yeni anahtar/puanlamayla yeniden hesaplar.
@@ -108,12 +109,14 @@ export async function updateExam(ownerId: string, id: string, body: Record<strin
     const rawItems = Array.isArray(s.items) ? s.items : exam.secs[si]?.items;
     const items = Array.isArray(rawItems) && rawItems.length === count ? rawItems.map((x) => String(x).slice(0, 40)) : undefined;
     const topics = Array.isArray(s.topics) ? Array.from({ length: count }, (_, i) => String(s.topics![i] ?? "").trim().slice(0, 80)) : undefined;
+    const levels = Array.isArray(s.levels) ? Array.from({ length: count }, (_, i) => normalizeLevel(s.levels![i])) : undefined;
     let sec: ExamSection = {
       name,
       count,
       keyA: clean(s.keyA, count),
       keyB: "",
       ...(topics?.some(Boolean) ? { topics } : {}),
+      ...(levels?.some(Boolean) ? { levels } : {}),
       ...(items ? { items } : {}),
     };
     const raw = { B: [s.keyB, s.bOrder], C: [s.keyC, s.cOrder], D: [s.keyD, s.dOrder] } as const;

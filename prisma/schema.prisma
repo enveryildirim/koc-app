@@ -141,7 +141,7 @@ model Exam {
   /// LGS | TYT | AYT | SERBEST
   type      String
   date      DateTime
-  /// JSON: [{ name, count, keyA, keyB, topics?, bOrder? }] — key: "ABCD..." (her soru için bir harf);
+  /// JSON: [{ name, count, keyA, keyB, topics?, levels?, bOrder? }] — key: "ABCD..." (her soru için bir harf);
   /// topics: A kitapçığı soru sırasıyla konu adları; bOrder[j] = B'deki j. sorunun A'daki indeksi
   sections  String
   /// Birden çok kitapçık var mı. false = tek kitapçık (A)
@@ -351,6 +351,8 @@ model QuestionItem {
   grade      String          @default("")
   /// 1 kolay, 2 orta, 3 zor
   difficulty Int             @default(2)
+  /// Bilişsel düzey: Bilgi | Kavrama | Uygulama | Analiz; boş = girilmemiş (shared/cognitive.ts)
+  level      String          @default("")
   /// Doğru cevap (A–E); boş = girilmemiş
   answer     String          @default("")
   /// Sorunun metni (ileride OCR / yapay zekâ ile doldurulur; aramada kullanılır)

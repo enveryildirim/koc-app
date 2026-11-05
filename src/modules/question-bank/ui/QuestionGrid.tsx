@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ANSWERS, DIFFICULTY, GRADES, type QuestionPatch } from "../index";
+import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 
 export type GridItem = {
   id: string;
@@ -9,6 +10,7 @@ export type GridItem = {
   topic: string;
   grade: string;
   difficulty: number;
+  level: string;
   answer: string;
   origin: string;
   usedCount: number;
@@ -22,7 +24,7 @@ const API = "/api/kurum/soru-havuzu/sorular";
 export default function QuestionGrid({ items, subjects, topics }: { items: GridItem[]; subjects: string[]; topics: Record<string, string[]> }) {
   const router = useRouter();
   const [sel, setSel] = useState<Set<string>>(new Set());
-  const [bulk, setBulk] = useState({ subject: "", topic: "", grade: "", difficulty: "", answer: "" });
+  const [bulk, setBulk] = useState({ subject: "", topic: "", grade: "", difficulty: "", level: "", answer: "" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -46,11 +48,12 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
     if (bulk.topic.trim()) set.topic = bulk.topic.trim();
     if (bulk.grade) set.grade = bulk.grade;
     if (bulk.difficulty) set.difficulty = Number(bulk.difficulty);
+    if (bulk.level) set.level = bulk.level;
     if (bulk.answer) set.answer = bulk.answer;
     if (!Object.keys(set).length) return setMsg({ ok: false, text: "Değiştirmek istediğiniz alanı doldurun." });
     if (await send("PATCH", [...sel], set)) {
       setMsg({ ok: true, text: `${sel.size} soru güncellendi.` });
-      setBulk({ subject: "", topic: "", grade: "", difficulty: "", answer: "" });
+      setBulk({ subject: "", topic: "", grade: "", difficulty: "", level: "", answer: "" });
     }
   }
 
@@ -103,6 +106,13 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
             </select>
           </label>
           <label>
+            <span className="text-xs text-lead">Bilişsel düzey</span>
+            <select className="input" value={bulk.level} onChange={(e) => setBulk({ ...bulk, level: e.target.value })}>
+              <option value="">—</option>
+              {COGNITIVE_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </label>
+          <label>
             <span className="text-xs text-lead">Cevap</span>
             <select className="input" value={bulk.answer} onChange={(e) => setBulk({ ...bulk, answer: e.target.value })}>
               <option value="">—</option>
@@ -129,7 +139,8 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
                   <b className="font-semibold">{q.subject}</b>
                   {q.topic ? <span className="text-lead"> · {q.topic}</span> : <span className="text-lead/70"> · konu yok</span>}
                 </span>
-                <span className="badge ml-auto bg-mist text-graphite">{DIFFICULTY[q.difficulty]}</span>
+                {q.level && <span className="badge badge-plain ml-auto bg-mist text-lead" title="Bilişsel düzey">{q.level}</span>}
+                <span className={`badge bg-mist text-graphite ${q.level ? "" : "ml-auto"}`}>{DIFFICULTY[q.difficulty]}</span>
               </div>
               <a href={`${API}/${q.id}/gorsel`} target="_blank" rel="noreferrer" className="block flex-1 bg-white p-2" title="Büyük aç">
                 {/* eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı route, next/image optimizasyonu kullanılmaz */}

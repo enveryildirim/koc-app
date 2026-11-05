@@ -1,4 +1,5 @@
 "use client";
+import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { subjectMatches } from "@/shared/subjects";
@@ -10,6 +11,7 @@ import {
   makeBooklet,
   maxScore,
   ORDER_FIELD,
+  parseLevelSpec,
   parseTopicSpec,
   randomKey,
   resolveScoring,
@@ -49,6 +51,7 @@ export default function KeyEditor({
   const [scoring, setScoring] = useState<Scoring>(initialScoring);
   // Konu ve eşleme metinleri (düzenlenirken serbest metin, kaydederken çözümlenir)
   const [topicText, setTopicText] = useState(initial.sections.map((s) => formatTopicSpec(s.topics)));
+  const [levelText, setLevelText] = useState(initial.sections.map((s) => formatTopicSpec(s.levels)));
   const [orderText, setOrderText] = useState<OrderTexts[]>(initial.sections.map(orderTexts));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,7 +76,9 @@ export default function KeyEditor({
     for (const [i, s] of v.sections.entries()) {
       const t = parseTopicSpec(topicText[i] ?? "", s.count);
       if (t.errors.length) return setMsg({ ok: false, text: `${s.name} konuları: ${t.errors[0]}` });
-      const sec: Sec = { ...s, topics: t.topics };
+      const lv = parseLevelSpec(levelText[i] ?? "", s.count);
+      if (lv.errors.length) return setMsg({ ok: false, text: `${s.name} bilişsel düzeyleri: ${lv.errors[0]}` });
+      const sec: Sec = { ...s, topics: t.topics, levels: lv.levels };
       for (const b of ALTS) {
         const o = alts.includes(b) ? parseOrder(orderText[i]?.[b] ?? "", s.count) : undefined;
         if (o === null) return setMsg({ ok: false, text: `${s.name}: ${b} eşlemesi 1–${s.count} arası her soru numarasını bir kez içermeli.` });
@@ -105,12 +110,14 @@ export default function KeyEditor({
   function addSection() {
     setV({ ...v, sections: [...v.sections, { name: "Yeni bölüm", count: 10, keyA: "", keyB: "" }] });
     setTopicText([...topicText, ""]);
+    setLevelText([...levelText, ""]);
     setOrderText([...orderText, {}]);
     setScoring({ ...scoring, coefs: [...scoring.coefs, 1] });
   }
   function removeSection(i: number) {
     setV({ ...v, sections: v.sections.filter((_, j) => j !== i) });
     setTopicText(topicText.filter((_, j) => j !== i));
+    setLevelText(levelText.filter((_, j) => j !== i));
     setOrderText(orderText.filter((_, j) => j !== i));
     setScoring({ ...scoring, coefs: scoring.coefs.filter((_, j) => j !== i) });
   }
@@ -148,6 +155,8 @@ export default function KeyEditor({
 
         const parsedTopics = parseTopicSpec(topicText[i] ?? "", s.count);
         const covered = parsedTopics.topics.filter(Boolean).length;
+        const parsedLevels = parseLevelSpec(levelText[i] ?? "", s.count);
+        const levelCovered = parsedLevels.levels.filter(Boolean).length;
         return (
           <div key={i} className="card p-5">
             <div className="flex flex-wrap items-end gap-3">
@@ -208,9 +217,9 @@ export default function KeyEditor({
               );
             })}
 
-            <details className="mt-4 rounded-lg bg-paper p-3" open={covered > 0}>
+            <details className="mt-4 rounded-lg bg-paper p-3" open={covered > 0 || levelCovered > 0}>
               <summary className="cursor-pointer text-sm font-medium">
-                Konular / kazanımlar{" "}
+                Konular, kazanımlar ve bilişsel düzey{" "}
                 <span className={`text-xs ${covered === s.count ? "text-emerald-700" : "text-lead"}`}>({covered}/{s.count} soruya konu atandı)</span>
               </summary>
               <p className="mt-2 text-xs text-lead">
@@ -230,6 +239,18 @@ export default function KeyEditor({
                 count={s.count}
                 onAdd={(line) => setTopicText(setAt(topicText, i, `${(topicText[i] ?? "").trimEnd()}${(topicText[i] ?? "").trim() ? "\n" : ""}${line}`))}
               />
+              <p className="mt-3 text-xs text-lead">
+                <b>Bilişsel düzey (isteğe bağlı):</b> aynı biçimde {COGNITIVE_LEVELS.join(", ")} yazın, ör. <code>1-6: Bilgi</code>. Kısaltma yeterli (<code>uyg</code>).{" "}
+                <span className={levelCovered === s.count ? "text-emerald-700" : ""}>({levelCovered}/{s.count} soru)</span>
+              </p>
+              <textarea
+                className="input mt-1 font-mono text-xs"
+                rows={3}
+                value={levelText[i] ?? ""}
+                placeholder={"1-6: Bilgi\n7-12: Kavrama\n13-18: Uygulama\n19-20: Analiz"}
+                onChange={(e) => setLevelText(setAt(levelText, i, e.target.value))}
+              />
+              {parsedLevels.errors.length > 0 && <p className="mt-1 text-xs text-red-600">{parsedLevels.errors[0]}</p>}
               {alts.length > 0 && (
                 <>
                   <p className="mt-3 text-xs text-lead">

@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { getFile, putFile, removeFiles, sniff } from "@/shared/storage";
+import { normalizeLevel } from "@/shared/cognitive";
 import { ANSWERS, LIMITS, type Crop, type QuestionMeta, type QuestionPatch } from "../index";
 
 const ORIGINS = new Set(["MANUAL", "AUTO", "AI"]);
@@ -35,6 +36,7 @@ function cleanPatch(p: Record<string, unknown>): QuestionPatch {
   if ("topic" in p) out.topic = str(p.topic, 120);
   if ("grade" in p) out.grade = str(p.grade, 20);
   if ("difficulty" in p) out.difficulty = cleanDifficulty(p.difficulty);
+  if ("level" in p) out.level = normalizeLevel(p.level);
   if ("answer" in p) out.answer = cleanAnswer(p.answer);
   return out;
 }
@@ -64,6 +66,7 @@ export async function createItems(ownerId: string, sourceId: string | null, meta
       topic: str(m.topic, 120),
       grade: str(m.grade, 20),
       difficulty: cleanDifficulty(m.difficulty),
+      level: normalizeLevel(m.level),
       answer: cleanAnswer(m.answer),
       origin: ORIGINS.has(String(m.origin)) ? String(m.origin) : "MANUAL",
       page: sourceId ? page : null,
@@ -114,7 +117,7 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
       orderBy: [{ createdAt: "desc" }, { page: "asc" }],
       skip: (Math.max(1, page) - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      select: { id: true, subject: true, topic: true, grade: true, difficulty: true, answer: true, origin: true, usedCount: true, page: true, source: { select: { name: true } } },
+      select: { id: true, subject: true, topic: true, grade: true, difficulty: true, level: true, answer: true, origin: true, usedCount: true, page: true, source: { select: { name: true } } },
     }),
   ]);
   return { total, items, pageSize: PAGE_SIZE };

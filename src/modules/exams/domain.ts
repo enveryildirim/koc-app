@@ -1,4 +1,5 @@
 /** Deneme sınavı (LGS / TYT / AYT / serbest) alan mantığı: şablonlar, net hesabı. */
+import { COGNITIVE_LEVELS, normalizeLevel } from "@/shared/cognitive";
 
 export type ExamSection = {
   name: string;
@@ -10,6 +11,8 @@ export type ExamSection = {
   keyD?: string;
   /** A kitapçığı soru sırasıyla konu (kazanım) adları; boş string = konu girilmemiş */
   topics?: string[];
+  /** A kitapçığı sırasıyla bilişsel düzey (shared/cognitive.ts); boş string = girilmemiş */
+  levels?: string[];
   /** B kitapçığı eşlemesi: bOrder[j] = B'deki j. sorunun A'daki indeksi (0 tabanlı) */
   bOrder?: number[];
   /** C / D kitapçığı eşlemeleri (bOrder ile aynı anlamda). Erişim: orderFor() */
@@ -328,4 +331,43 @@ export function topicStats(sections: ExamSection[], results: { answers: string; 
     }
   }
   return [...map.values()].map((x) => ({ ...x, rate: x.total ? Math.round((x.correct / x.total) * 100) : 0 }));
+}
+
+/* ------------------------------- Bilişsel düzey ------------------------------- */
+
+/** "1-5: Uygulama" satırlarını soru başına düzey dizisine çevirir; düzey adları kısaltılabilir ("uyg"). */
+export function parseLevelSpec(text: string, count: number): { levels: string[]; errors: string[] } {
+  const { topics, errors } = parseTopicSpec(text, count);
+  const bad = [...new Set(topics.filter((t) => t && !normalizeLevel(t)))];
+  if (bad.length) errors.push(`"${bad[0]}" tanınmadı; ${COGNITIVE_LEVELS.join(", ")} yazın`);
+  return { levels: topics.map((t) => normalizeLevel(t)), errors };
+}
+
+export type LevelStat = { level: string; questions: number; correct: number; total: number; rate: number };
+
+/**
+ * Bilişsel düzeye göre doğru oranları (bütün bölümler birlikte, COGNITIVE_LEVELS sırasıyla).
+ * Eşlemesi olmayan kitapçığın cevapları, konu analizinde olduğu gibi o bölümde hesaba katılmaz.
+ */
+export function levelStats(sections: ExamSection[], results: { answers: string; booklet: string }[]): LevelStat[] {
+  const map = new Map<string, LevelStat>(COGNITIVE_LEVELS.map((l) => [l, { level: l, questions: 0, correct: 0, total: 0, rate: 0 }]));
+  let offset = 0;
+  for (const s of sections) {
+    const start = offset;
+    offset += s.count;
+    if (!s.levels?.some(Boolean)) continue;
+    s.levels.forEach((l) => l && map.get(l) && map.get(l)!.questions++);
+    for (const r of results) {
+      const order = orderFor(s, r.booklet || "A");
+      if (!order) continue;
+      const key = keyFor(s, r.booklet || "A");
+      for (let j = 0; j < s.count; j++) {
+        const st = map.get(s.levels[order[j]] ?? "");
+        if (!st) continue;
+        st.total++;
+        if ((r.answers[start + j] ?? " ") === key[j]) st.correct++;
+      }
+    }
+  }
+  return [...map.values()].filter((x) => x.questions).map((x) => ({ ...x, rate: x.total ? Math.round((x.correct * 100) / x.total) : 0 }));
 }

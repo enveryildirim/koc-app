@@ -41,6 +41,8 @@ export type ItemStat = {
   q: number;
   key: string;
   topic: string;
+  /** Bilişsel düzey; girilmemişse "". */
+  level: string;
   /** Hesaba giren cevap sayısı. */
   n: number;
   /** Güçlük: doğru oranı (%). */
@@ -146,6 +148,7 @@ export function itemAnalysis(sections: ExamSection[], results: { answers: string
         q: i + 1,
         key,
         topic: s.topics?.[i] ?? "",
+        level: s.levels?.[i] ?? "",
         n,
         p,
         choices,

@@ -132,6 +132,10 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     if (!topicDifficulty.has(topic)) topicDifficulty.set(topic, (Math.random() - 0.5) * 0.4);
     return topicDifficulty.get(topic)!;
   };
+  // Bilişsel düzey: soru sırasına göre sabit bir desen; düzey zorluğu etkiler (bilgi kolay, analiz zor).
+  const LEVEL_PATTERN = ["Bilgi", "Kavrama", "Bilgi", "Uygulama", "Kavrama", "Uygulama", "Analiz", "Kavrama", "Uygulama", "Analiz"];
+  const LEVEL_SHIFT: Record<string, number> = { Bilgi: 0.12, Kavrama: 0.04, Uygulama: -0.06, Analiz: -0.16 };
+  const levelsFor = (count: number) => Array.from({ length: count }, (_, i) => LEVEL_PATTERN[i % LEVEL_PATTERN.length]);
   const examDefs = [
     { name: "LGS Deneme 1", type: "LGS", level: "8", ago: 42 },
     { name: "LGS Deneme 2", type: "LGS", level: "8", ago: 28 },
@@ -145,7 +149,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     const sections = t.sections.map((s, si) => {
       const keyA = randomKey(s.count, t.choices);
       const { key: keyB, order: bOrder } = makeBooklet(keyA, 7 + ei * 13 + si);
-      return { name: s.name, count: s.count, keyA, keyB, bOrder, topics: topicsFor(s.name, s.count) };
+      return { name: s.name, count: s.count, keyA, keyB, bOrder, topics: topicsFor(s.name, s.count), levels: levelsFor(s.count) };
     });
     // Öğrenciler doğru anahtarla cevaplar; madde analizi demosu için LGS Deneme 3'te Matematik 5. sorunun
     // anahtarı kasıtlı olarak yanlış kaydedilir ("anahtar hatası olabilir" uyarısı).
@@ -172,8 +176,9 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
         const drop = decliners.has(st.id) && e.ago <= DECLINE_DAYS ? 0.2 : 0;
         const base = sk(st.id, s.name) + (ei % 3) * 0.03 - drop; // denemeler ilerledikçe hafif gelişim
         for (let i = 0; i < s.count; i++) {
-          const topic = s.topics[booklet === "B" ? s.bOrder[i] : i];
-          const p = Math.min(0.97, Math.max(0.05, base + diff(s.name + topic)));
+          const aIdx = booklet === "B" ? s.bOrder[i] : i;
+          const topic = s.topics[aIdx];
+          const p = Math.min(0.97, Math.max(0.05, base + diff(s.name + topic) + LEVEL_SHIFT[s.levels[aIdx]]));
           if (Math.random() < 0.12 * (1 - p)) answers += " ";
           else if (Math.random() < p) answers += key[i];
           else answers += LETTERS[Math.floor(Math.random() * t.choices)];

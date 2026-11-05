@@ -20,9 +20,11 @@ export type QuestionMeta = {
   topic?: string;
   grade?: string;
   difficulty?: number;
+  /** Bilişsel düzey (shared/cognitive.ts) */
+  level?: string;
   answer?: string;
   origin?: QuestionOrigin;
 };
 
 /** Havuz listesinde toplu düzenlenebilen alanlar. */
-export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "answer">>;
+export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "level" | "answer">>;

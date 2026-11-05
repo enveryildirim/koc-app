@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { COGNITIVE_HINTS, type CognitiveLevel } from "@/shared/cognitive";
 import { notFound } from "next/navigation";
 import { examPlanCoverage } from "@/modules/planning/server";
 import ExamPlanCoverage from "@/modules/planning/ui/ExamPlanCoverage";
 import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
-import { choicesFor, discriminationLabel, EXAM_TYPES, fmtDate, fmtNet, ITEM_FLAGS, ITEM_RULES, itemAnalysis, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
+import { choicesFor, levelStats, discriminationLabel, EXAM_TYPES, fmtDate, fmtNet, ITEM_FLAGS, ITEM_RULES, itemAnalysis, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
 import { examAbsentees, examReport, findExam } from "@/modules/exams/server";
 import { examFormSpec, examKeys } from "@/modules/exams";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
@@ -239,9 +240,35 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     const genRate = new Map(general.map((g) => [g.section + "|" + g.topic, g.rate]));
     const noTopics = exam.secs.every((s) => !s.topics?.some(Boolean));
     const missingMap = exam.letters.filter((b) => b !== "A" && exam.secs.some((s) => s.topics?.some(Boolean) && !orderFor(s, b)));
+    const levels = levelStats(exam.secs, rows);
+    const genLevel = new Map((sinif ? levelStats(exam.secs, report.rows) : levels).map((l) => [l.level, l.rate]));
     return (
       <>
         {header}
+        {levels.length > 0 && (
+          <div className="card mb-4 p-4">
+            <h2 className="font-semibold">Bilişsel düzeye göre başarı</h2>
+            <p className="mb-3 text-xs text-lead">
+              Soruların bilişsel düzeyine göre doğru oranı. Bilgi ile analiz arasındaki fark büyükse öğrenciler ezberde iyi, yorum ve akıl yürütmede zayıf demektir.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {levels.map((l) => (
+                <div key={l.level} className="border-t-2 border-graphite pt-1.5" title={COGNITIVE_HINTS[l.level as CognitiveLevel]}>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[13px] font-semibold">{l.level}</span>
+                    <span className={`num font-display text-xl font-semibold [font-stretch:85%] ${l.rate < 50 ? "text-red-700" : ""}`}>%{l.rate}</span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded bg-mist">
+                    <div className={`h-full ${l.rate < 50 ? "bg-red-400" : l.rate < 70 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${l.rate}%` }} />
+                  </div>
+                  <div className="mt-0.5 text-xs text-lead">
+                    {l.questions} soru{sinif ? ` · kurum %${genLevel.get(l.level) ?? "—"}` : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {noTopics ? (
           <Empty>
             Bu denemede sorulara konu atanmamış. <Link className="font-semibold text-brand-600" href={`${base}?tab=anahtar`}>Cevap anahtarı</Link> ekranındaki
@@ -306,6 +333,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     const letters = LETTERS.slice(0, c).split("");
     const { items, skipped } = itemAnalysis(exam.secs, rows, c);
     const hasTopics = items.some((x) => x.topic);
+    const hasLevels = items.some((x) => x.level);
     const flagged = items.filter((x) => x.flag);
     const fmtD = (d: number | null) => (d === null ? "—" : d.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     const avgP = items.length ? Math.round(items.reduce((a, x) => a + x.p, 0) / items.length) : 0;
@@ -323,11 +351,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <ClassFilter base={base} tab="analiz" classes={classes} sinif={sinif} extra="" />
           <ExportButton
             fileName={`${fileBase} - madde analizi`}
-            headers={["Ders", "Soru (A)", ...(hasTopics ? ["Konu"] : []), "Cevap", ...letters.map((l) => `${l} %`), "Boş %", "Güçlük (doğru %)", "Ayırt edicilik", "Uyarı"]}
+            headers={["Ders", "Soru (A)", ...(hasTopics ? ["Konu"] : []), ...(hasLevels ? ["Bilişsel düzey"] : []), "Cevap", ...letters.map((l) => `${l} %`), "Boş %", "Güçlük (doğru %)", "Ayırt edicilik", "Uyarı"]}
             rows={items.map((x) => [
               x.section,
               x.q,
               ...(hasTopics ? [x.topic] : []),
+              ...(hasLevels ? [x.level] : []),
               x.key,
               ...letters.map((l) => x.choices[l]),
               x.blank,
@@ -362,6 +391,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <tr>
                     <th className={`${th} pin`}>Soru</th>
                     {hasTopics && <th className={th}>Konu</th>}
+                    {hasLevels && <th className={th}>Bilişsel</th>}
                     <th className={th}>Cevap</th>
                     {letters.map((l) => (
                       <th key={l} className={`${th} text-right`}>{l}</th>
@@ -379,6 +409,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                       <tr key={x.q} className={x.flag === "KEY" ? "bg-red-50/40" : ""}>
                         <td className={`${td} pin font-semibold`}>{x.q}</td>
                         {hasTopics && <td className={`${td} max-w-[14rem] truncate text-lead`} title={x.topic}>{x.topic || "—"}</td>}
+                        {hasLevels && <td className={`${td} text-lead`}>{x.level || "—"}</td>}
                         <td className={`${td} font-bold text-emerald-700`}>{x.key || "?"}</td>
                         {letters.map((l) => (
                           <td

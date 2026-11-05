@@ -1,4 +1,5 @@
 "use client";
+import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ANSWERS, DIFFICULTY, GRADES, LIMITS, detectQuestions, type Crop, type QuestionMeta, type QuestionOrigin } from "../index";
@@ -56,7 +57,7 @@ export default function CropStudio(props: {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [sensitivity, setSensitivity] = useState(3);
   const [autoDetect, setAutoDetect] = useState(true);
-  const [defaults, setDefaults] = useState({ subject: "", topic: "", grade: "", difficulty: 2 });
+  const [defaults, setDefaults] = useState({ subject: "", topic: "", grade: "", difficulty: 2, level: "" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -252,6 +253,7 @@ export default function CropStudio(props: {
       topic: b.topic.trim() || defaults.topic.trim(),
       grade: defaults.grade,
       difficulty: defaults.difficulty,
+      level: defaults.level,
       answer: b.answer,
       origin: b.origin,
     }));
@@ -381,6 +383,15 @@ export default function CropStudio(props: {
               <select className="input" value={defaults.difficulty} onChange={(e) => setDefaults({ ...defaults, difficulty: Number(e.target.value) })}>
                 {Object.entries(DIFFICULTY).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="label">Bilişsel düzey</span>
+              <select className="input" value={defaults.level} onChange={(e) => setDefaults({ ...defaults, level: e.target.value })}>
+                <option value="">—</option>
+                {COGNITIVE_LEVELS.map((l) => (
+                  <option key={l} value={l}>{l}</option>
                 ))}
               </select>
             </label>

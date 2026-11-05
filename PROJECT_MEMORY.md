@@ -300,6 +300,16 @@ Deneme detayındaki "Soru frekans analizi" sekmesi "Madde analizi" oldu (`?tab=a
 - **Seed:** LGS Deneme 3, Matematik 5. sorunun anahtarı kasıtlı olarak yanlış kaydedilir (öğrenciler doğru anahtarla cevaplar); uyarı bu soruda görünür.
 - **Doğrulama:** bağımsız Python hesabı LGS 3 (90), TYT 1 ve 2 (120'şer), AYT (80) denemelerinde bütün sorularda şık oranları, güçlük ve D için sayfanın Excel verisiyle aynı. Yüzde hesabı `(x × 100) / n` sırasıyla yapılır; `(x / n) × 100` kayan noktada 57,5'i 57'ye yuvarlıyordu.
 
+## 4i. Bilişsel düzey (5 Kasım 2026)
+
+- **Düzeyler:** Bilgi, Kavrama, Uygulama, Analiz (Bloom'un sadeleştirilmiş dört basamağı). Liste `shared/cognitive.ts` içinde, çünkü soru havuzu (`question-bank`) `exams`'e bağımlı olamaz. `normalizeLevel` kısaltmaları tanır ("uyg", "ANALİZ").
+- **Ad çakışması:** arayüzde "Düzey" zaten sınıf / sınav düzeyi (5–12, LGS…) anlamında; bu alan her yerde **"Bilişsel düzey"** diye yazılır.
+- **Nerede tutulur:** düzey sorunun özelliğidir, konunun değil. Denemede `sections[].levels` (A sırasıyla, `topics` gibi); soru havuzunda `QuestionItem.level`. Havuzdan kurulan denemeye kopyalanır (`from-bank.ts`).
+- **Giriş:** cevap anahtarı ekranında konuların altında, aynı "1-5: Uygulama" biçimi (`parseLevelSpec`; tanınmayan ad hata verir, API tarafı tanınmayanı boş bırakır). Soru havuzunda kesme ekranı varsayılanı ve toplu düzenleme; kartta rozet.
+- **Analiz:** `levelStats(sections, results)` (eşlemesiz kitapçık hariç). Konu analizi sekmesinin üstünde dört düzeyin doğru oranı (sınıf seçiliyse kurum oranı da); karnede "Bilişsel düzeye göre başarı" satırı (kurum çizgisiyle); madde analizinde "Bilişsel" sütunu ve Excel'de.
+- **Seed:** sorulara sabit desenle düzey atanır; düzey zorluğu etkiler (bilgi +0,12 … analiz −0,16).
+- **Doğrulama:** LGS 3 ve TYT 2'de düzey oranları bağımsız hesapla aynı; madde analizi 90/90; karne 200; API kısaltmayı düzeltti, tanınmayanı boş bıraktı; soru havuzu toplu düzey atama çalıştı.
+
 ## 4e. Tasarım dili (4 Kasım 2026)
 
 Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu. Yeni ekran yazarken şu kurallara uyun:
@@ -382,5 +392,6 @@ Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu.
 - **Tailwind v4:** Özel sınıflar `globals.css`'te (`btn`, `btn-primary`, `card`, `input`, `badge`…). `btn` bir `@utility`; diğerleri onu `@apply` ile kullanıyor.
 - **Yazdırma:** `no-print` sınıfı yazdırmada gizlenir. Kurum düzeni yazdırırken `print:block` olur; karneler `break-after-page` ile ayrı sayfalara düşer.
 - **Takılı süreçler:** `next start` kapatılırken alt süreç `next-server` açık kalabiliyor ve portu tutuyor. Gerekirse `pkill -f next-server` kullanın.
-- **Seed ID'leri:** Seed her çalıştığında ID'ler değişir. ID'leri sabit kodlamayın, veritabanından sorgulayın.
+- **Seed ID'leri:** Seed her çalıştığında kurum kayıtlarının ID'leri değişir. ID'leri sabit kodlamayın, veritabanından sorgulayın.
+- **Demo hesabı ve soru havuzu:** Seed demo hesabını silmez, e-postayla bulup günceller (upsert); hesap kimliği sabit kalır. Soru havuzu (QuestionSource / QuestionItem ve `storage/<ownerId>/`) seed'e dahil değildir ve korunur. Eskiden seed bütün kullanıcıları silip demo hesabını yeniden oluşturuyordu; elle yüklenen havuz soruları eski kimliğe bağlı kalıp görünmez oluyordu (5 Kasım 2026'da düzeltildi, kopan 10 soru geri bağlandı). Seed kurum tablolarını (öğrenci, deneme, ödev…) hâlâ tamamen sıfırlar.
 - **Tarih işleme:** Yerel tarih için `shared/date.ts > ymd()` kullanılmalı. Ders oturumu tarihleri string olarak tutulur.

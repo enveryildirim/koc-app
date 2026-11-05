@@ -43,7 +43,16 @@ export async function createExamFromBank(ownerId: string, body: Record<string, u
     if (bad >= 0) throw invalid(`${s.name}: ${bad + 1}. sorunun cevabı (${qs[bad].answer}) bu sınav türünde yok (${allowed}).`);
     const keyA = qs.map((q) => q.answer).join("");
     const topics = qs.map((q) => q.topic.slice(0, 80));
-    let sec: ExamSection = { name: s.name, count: qs.length, keyA, keyB: "", ...(topics.some(Boolean) ? { topics } : {}), items: s.ids };
+    const levels = qs.map((q) => q.level);
+    let sec: ExamSection = {
+      name: s.name,
+      count: qs.length,
+      keyA,
+      keyB: "",
+      ...(topics.some(Boolean) ? { topics } : {}),
+      ...(levels.some(Boolean) ? { levels } : {}),
+      items: s.ids,
+    };
     for (const b of alts) {
       const m = makeBooklet(keyA, Math.floor(Math.random() * 233280));
       sec = setBooklet(sec, b, m.key, m.order);

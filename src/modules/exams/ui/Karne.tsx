@@ -1,4 +1,4 @@
-import { EXAM_TYPES, fmtDate, fmtNet, keyFor, topicStats } from "../domain";
+import { EXAM_TYPES, fmtDate, fmtNet, keyFor, levelStats, topicStats } from "../domain";
 import type { ExamReport as Report } from "../internal/results";
 
 type Row = Report["rows"][number];
@@ -34,6 +34,8 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
     .map((s) => ({ name: s.name, list: myTopics.filter((t) => t.section === s.name && t.total > 0) }))
     .filter((x) => x.list.length > 0);
   const weakTopics = myTopics.filter((t) => t.total > 0 && t.rate < 50).sort((a, b) => a.rate - b.rate);
+  const myLevels = levelStats(secs, [row]).filter((l) => l.total > 0);
+  const allLevels = new Map(levelStats(secs, report.rows).map((l) => [l.level, l.rate]));
 
   return (
     <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-rule print:p-6 print:shadow-none print:ring-0">
@@ -137,6 +139,30 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
         ))}
         <p className="pt-1 text-[10px] text-lead/70">Biçim: soru no: verdiğiniz cevap → doğru cevap (– boş)</p>
       </div>
+
+      {myLevels.length > 0 && (
+        <>
+          <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Bilişsel düzeye göre başarı</h2>
+          <div className="grid grid-cols-4 gap-x-4 text-xs">
+            {myLevels.map((l) => {
+              const k = allLevels.get(l.level) ?? 0;
+              return (
+                <div key={l.level}>
+                  <div className="flex justify-between">
+                    <span>{l.level}</span>
+                    <b className="tabular-nums">%{l.rate}</b>
+                  </div>
+                  <div className="relative mt-0.5 h-2 rounded bg-mist">
+                    <div className={`h-full rounded ${l.rate < 50 ? "bg-red-400" : l.rate < 70 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${l.rate}%` }} />
+                    <div className="absolute top-[-2px] h-3 w-0.5 bg-slate-700" style={{ left: `${k}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="pt-1 text-[10px] text-lead/70">Bilgi: hatırlama · Kavrama: anlama · Uygulama: problem çözme · Analiz: akıl yürütme · siyah çizgi: kurum ortalaması</p>
+        </>
+      )}
 
       {topicsBySection.length > 0 && (
         <>

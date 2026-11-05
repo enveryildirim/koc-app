@@ -15,7 +15,7 @@ export async function bankItemsByIds(ownerId: string, ids: string[]) {
   if (!ids.length) return [];
   return prisma.questionItem.findMany({
     where: { ownerId, id: { in: ids } },
-    select: { id: true, subject: true, topic: true, answer: true, crop: true },
+    select: { id: true, subject: true, topic: true, level: true, answer: true, crop: true },
   });
 }
 
