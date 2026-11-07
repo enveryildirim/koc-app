@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fullName } from "@/modules/enrollment";
 import { requireStaff } from "@/modules/identity/server";
-import { attendanceSheet, teachesSubject } from "@/modules/schedule/server";
+import { attendanceSheet, listCourses, teachesSubject } from "@/modules/schedule/server";
+import { listAssessments } from "@/modules/assessment/server";
+import AssessmentList from "@/modules/assessment/ui/AssessmentList";
 import { topicsForLesson } from "@/modules/planning/server";
 import LessonTopics from "@/modules/planning/ui/LessonTopics";
 import QuickAttendance from "@/modules/schedule/ui/QuickAttendance";
@@ -25,7 +27,12 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   // Öğretmen yalnızca kendi dersini açar; etüt mesulü yönetici yetkisindedir.
   if (me.role === "TEACHER" && lesson.teacherId !== me.teacherId && !(await teachesSubject(me.ownerId, me.teacherId, lesson.classroomId, lesson.subject))) notFound();
 
-  const topics = await topicsForLesson(me.ownerId, lesson.classroomId, lesson.subject, lesson.date);
+  const [topics, courses] = await Promise.all([
+    topicsForLesson(me.ownerId, lesson.classroomId, lesson.subject, lesson.date),
+    listCourses(me.ownerId, { classroomId: lesson.classroomId }),
+  ]);
+  const course = courses.find((c) => c.name === lesson.subject);
+  const todays = course ? (await listAssessments(me.ownerId, { courseIds: [course.id], from: lesson.date })).filter((a) => a.date === lesson.date) : [];
   const taken = Object.keys(marks).length > 0;
   const dateLabel = new Date(lesson.date + "T12:00:00").toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" });
   const back = `/ogretmen?tarih=${lesson.date}`;
@@ -53,6 +60,15 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         date={lesson.date}
         doneHref={back}
       />
+      {course && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Sözlü / yazılı</h2>
+            <Link href={`/ogretmen/degerlendirme/yeni?ders=${course.id}`} className="btn-secondary py-2">+ Başlat</Link>
+          </div>
+          {todays.length > 0 && <AssessmentList items={todays} hrefBase="/ogretmen/degerlendirme" empty="" />}
+        </section>
+      )}
     </div>
   );
 }

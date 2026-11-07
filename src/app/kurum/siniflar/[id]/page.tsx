@@ -4,6 +4,7 @@ import { findClassroom, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { listCourses, listTeachers, syncCourses } from "@/modules/schedule/server";
 import { PageHeader } from "@/shared/ui/kurum";
+import { classAssessmentSummary, fmtPercent } from "@/modules/assessment/server";
 import ClassMentor from "@/modules/enrollment/ui/ClassMentor";
 import ClassMembers from "@/modules/enrollment/ui/ClassMembers";
 import CourseManager from "@/modules/schedule/ui/CourseManager";
@@ -18,11 +19,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!cls) notFound();
 
   await syncCourses(ownerId); // programdan gelen ama derse bağlanmamış satırlar (eski veri)
-  const [courses, teachers, inClass, all] = await Promise.all([
+  const [courses, teachers, inClass, all, summary] = await Promise.all([
     listCourses(ownerId, { classroomId: cls.id }),
     listTeachers(ownerId),
     listStudents(ownerId, { inClass: cls.id }, "name"),
     listStudents(ownerId, { external: false }, "name"),
+    classAssessmentSummary(ownerId, cls.id),
   ]);
 
   const row = (s: (typeof all)[number]) => ({ id: s.id, name: `${s.firstName} ${s.lastName}`, studentNo: s.studentNo, homeClass: s.classroom?.name ?? null });
@@ -59,6 +61,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           classroomId={cls.id}
           courses={courses}
           teachers={teachers.map((t) => ({ id: t.id, name: t.name, role: t.role }))}
+          notes={Object.fromEntries(
+            courses.filter((c) => c.kind !== "STUDY").map((c) => {
+              const s = summary.get(c.id);
+              if (!s) return [c.id, { text: "Son 30 günde sözlü / yazılı yok", warn: true }];
+              return [c.id, {
+                text: `Son 30 gün: ${s.count} değerlendirme · ort. ${fmtPercent(s.avg)}${s.unassessed ? ` · ${s.unassessed} öğrenci değerlendirilmedi` : ""}`,
+                warn: s.unassessed > 0,
+              }];
+            }),
+          )}
         />
         <ClassMembers classroomId={cls.id} own={own} members={members} candidates={candidates} />
       </div>

@@ -25,7 +25,8 @@ const MODULES = {
   schedule: ["identity", "enrollment"],
   "online-test": ["identity"],
   planning: ["identity", "enrollment", "exams", "homework", "schedule"],
-  reporting: ["identity", "enrollment", "exams", "homework", "schedule", "planning", "curriculum"],
+  assessment: ["identity", "enrollment", "schedule", "planning"],
+  reporting: ["identity", "enrollment", "exams", "homework", "schedule", "planning", "curriculum", "assessment"],
 };
 const DB_IN_APP = "error";
 

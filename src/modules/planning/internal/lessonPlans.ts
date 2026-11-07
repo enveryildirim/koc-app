@@ -238,3 +238,9 @@ export async function plansForPairs<T extends { classroomId: string; subject: st
     };
   });
 }
+
+/** Plan satırı (bağlı olduğu sınıf ve dersle); yoksa / başka kurumunsa null. Değerlendirmeyi konuya bağlarken kullanılır. */
+export async function findPlanItem(ownerId: string, itemId: string) {
+  const i = await prisma.planItem.findFirst({ where: { id: itemId, plan: { ownerId } }, include: { plan: { select: { classroomId: true, subject: true } } } });
+  return i ? { id: i.id, topic: i.topic, classroomId: i.plan.classroomId, subject: i.plan.subject } : null;
+}

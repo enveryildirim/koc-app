@@ -12,6 +12,8 @@ import VeliCard from "@/modules/reporting/ui/veli/VeliCard";
 import { combinedTopics } from "@/modules/exams";
 import { defaultPeriod, studentOverview, studentSuccessScore } from "@/modules/reporting/server";
 import ScoreCard from "@/modules/reporting/ui/score/ScoreCard";
+import { studentAssessments } from "@/modules/assessment/server";
+import StudentAssessments from "@/modules/assessment/ui/StudentAssessments";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +22,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { id } = await params;
   const st = await findStudent(ownerId, id);
   if (!st) notFound();
-  const [{ results, homework, attendance }, classes, institution, score] = await Promise.all([
+  const [{ results, homework, attendance }, classes, institution, score, assessments] = await Promise.all([
     studentOverview(ownerId, st.id),
     classroomsOf(ownerId),
     institutionName(ownerId),
     studentSuccessScore(ownerId, st.id),
+    studentAssessments(ownerId, st.id),
   ]);
   const period = defaultPeriod();
 
@@ -77,6 +80,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       </div>
 
       {score && <ScoreCard s={score} />}
+
+      <StudentAssessments items={assessments} hrefBase="/kurum/degerlendirme" />
 
       <VeliCard
         institution={institution}

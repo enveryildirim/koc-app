@@ -25,6 +25,10 @@ export default async function OgretmenLayout({ children }: { children: React.Rea
           </form>
         </div>
       </header>
+      <nav className="mx-auto flex max-w-2xl gap-1 px-3 pt-3 sm:px-4">
+        <Link href="/ogretmen" className="btn-secondary flex-1 py-2">Bugün</Link>
+        <Link href="/ogretmen/degerlendirme" className="btn-secondary flex-1 py-2">Sözlü ve yazılı</Link>
+      </nav>
       <main className="mx-auto max-w-2xl px-3 py-3 sm:px-4">{children}</main>
     </div>
   );

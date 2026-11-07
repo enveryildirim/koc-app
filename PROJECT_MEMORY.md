@@ -378,6 +378,14 @@ PoC 1. adımı (temel) yapıldı:
 - **Seed:** etüt mesulleri ve yeni öğretmenlere link; Selin Akar, Mahmut Kara ve Ercan Sevim'in son 5 günde bazı yoklamaları bilerek boş (eksik giriş örneği); SEVİYE-2 Tecvid, 9-A Bilişim Teknolojileri, 10-A Programlama yıllık planları.
 - **Bilinen:** link şifresiz (bilinçli PoC kararı); anahtar veritabanında düz durur (veli linki gibi). Değerlendirme (sözlü/yazılı) ders ekranına 3. adımda eklenecek.
 
+## 4l. Sözlü / yazılı / uygulama değerlendirmesi (7 Kasım 2026, PoC 3. adım)
+
+- **Yönetici** (`/kurum/degerlendirme`, menü "Sözlü ve yazılı"): değerlendirme listesi (sınıf süzgeci), yeni değerlendirme, puan cetvelleri (düzenle / sil / 5 hazır örnek: Kur'an okuma, Ezber, Bilgi sözlüsü, Proje / uygulama, Yazılı 100). Sonuç sayfası: öğrenci × kriter tablosu, kriter ortalamaları, "Puan gir" (aynı telefon bileşeni), **kâğıt form** (sınıf listesi × kriterler, boş kutular).
+- **Öğretmen** (telefon): üstte "Bugün / Sözlü ve yazılı"; derslerim (etüt mesulüne sınıfının bütün dersleri, dışarıda alınanlar dahil) → "Başlat": tür (ders türüne göre varsayılan), cetvel (ders türüne uygun önce), plan konusu (bu haftaki seçili), tarih, başlık. Puan girişi: ilk puansız öğrenci açık gelir; kriter başına hızlı düğmeler (≤10 ise bütün değerler, büyükse 0/%25/%50/%75/%100) + sayı; not; Gelmedi; "Kaydet ve sonraki". Ders ekranında da "Sözlü / yazılı + Başlat" ve günün değerlendirmeleri.
+- **Analiz (öğrenci, sınıf):** öğrenci profilinde "Sözlü ve yazılı" (derse göre ortalama, en düşük üstte, son iki notta 10 puan düşüşse "düşüşte", son 3 not). Sınıf sayfasında her dersin altında son 30 gün özeti; hiç değerlendirme yoksa ya da değerlendirilmemiş öğrenci varsa sarı.
+- **Seed:** 5 cetvel; SEVİYE-2 Kur'an (4 sözlü), Tecvid (2 sözlü, plan konusuna bağlı), 9-A Bilişim (2 proje), 9-A Matematik dışarıda ("Okul 1. yazılı", etüt mesulü), 10-A Fizik yazılı, 11-A Web projesi, 9-B İslam Tarihi sözlü. Sözlülerde sınıfın bir kısmı puanlanır; her sınıftan bir öğrencinin son notu düşer.
+- **Doğrulama:** cetvel hatalı puan/boş kriter 400, öğretmen cetvel ekleyemez 401; öğretmen kendi dersine plan konusuyla açtı, başkasının dersine 404, başka dersin konusu 400; puan sınır aşımı/eksik kriter/sınıf dışı öğrenci 400, gelmedi ve silme çalıştı, yüzde doğru (77/100 → %77); başkasının değerlendirmesine puan/silme/ekran 404; etüt mesulü dışarıdaki derse yazılı açtı. Sayfalar 200; `tsc`, `lint`, `build` temiz.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

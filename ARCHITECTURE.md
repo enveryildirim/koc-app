@@ -25,7 +25,8 @@ src/
 | `curriculum` | CurriculumTopic | identity | `/kurum/mufredat`, `/api/kurum/mufredat/*` |
 | `online-test` | Test, Question, Option, Attempt, Answer | identity | `/panel`, `/sinav/*`, `/s/[code]`, `/sonuc/[id]`, `/api/{tests,t,attempts}` |
 | `planning` | CalendarEvent, LessonPlan, PlanItem | identity, enrollment, exams, homework, schedule | `/kurum/takvim/*`, `/api/kurum/{takvim,plan}/*` |
-| `reporting` | Student.parent* (veli paylaşım alanları), Setting, ParentDispatch | hepsi (online-test ve question-bank hariç) | `/kurum` (özet), `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
+| `assessment` | Rubric, Assessment, AssessmentScore | identity, enrollment, schedule, planning | `/kurum/degerlendirme/*`, `/ogretmen/degerlendirme/*`, `/api/kurum/{degerlendirme,puan-cetvelleri}/*` |
+| `reporting` | Student.parent* (veli paylaşım alanları), Setting, ParentDispatch | hepsi (online-test ve question-bank hariç; assessment dahil) | `/kurum` (özet), `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 
 Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← {exams, homework, schedule} ← planning ← reporting`; `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
 
@@ -84,6 +85,13 @@ modules/<m>/
 - **Yetki:** `requireOwner` / `ownerOrThrow` kurum hesabını ve **etüt mesulünü** (yönetici yetkisi) kabul eder; öğretmen panele girerse `/ogretmen`'e yönlenir, kurum API'leri 401 döner. `requireStaff` öğretmen ekranı içindir. `actorOrThrow` öğretmenin de kullandığı rotalar içindir (yoklama, işlenen konu); TEACHER için kaydın o öğretmene ait olduğunu ilgili modül denetler (`schedule > teachesSubject`: programda satırı ya da dersin sorumlusu).
 - **Eşitleme:** öğretmenin adı/rolü schedule'dadır; değişince `identity > syncAccessLink`, silinince `revokeAccessLink` çağrılır.
 - **Öğretmen ekranı:** `/ogretmen` ("Bugün": eksik girişler + günün dersleri, veri `reporting > teacherAgenda`) ve `/ogretmen/ders` (işlenen konu + telefona uygun yoklama `QuickAttendance`).
+
+## Değerlendirme (`assessment`)
+
+- **Puan cetveli** (`Rubric`) yöneticinindir; kriterler `[{ name, max }]` (1–8 kriter, 1–100). Değerlendirme açılınca kriterler `Assessment.criteria`'ya **kopyalanır**; cetvel sonradan değişse/silinse de puanlar bozulmaz.
+- **Değerlendirme** derse (`Course`) bağlıdır; isteğe bağlı plan satırına (`planItemId`, `planTopic`) bağlanır — ezber parçası gibi. Puan: kriter sırasıyla `scores`, `total`, `percent` (0–100) ya da `absent`.
+- **Yetki:** öğretmen yalnızca girdiği / sorumlu olduğu derste açar, puan girer, siler (`courseFor` → `schedule > teachesSubject`). Öğrenci sınıfın üyesi olmalı (`listStudents({ inClass })`). Cetvel API'leri yalnızca yönetici.
+- **Okumalar:** `listAssessments`, `assessmentSheet`, `studentAssessments` (profil), `classAssessmentSummary` (sınıf sayfası: son 30 gün sayı, ortalama, değerlendirilmemiş öğrenci).
 
 ## Soru havuzu (`question-bank`)
 

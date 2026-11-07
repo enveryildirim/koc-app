@@ -6,6 +6,7 @@ import { nationalHolidays, schoolYearOf } from "../src/modules/planning/calendar
 import { defaultPlanStart, layoutPlan, mondayOf, parsePlan } from "../src/modules/planning/plan";
 import { addDays } from "../src/shared/date";
 import { SAMPLE_CURRICULUM } from "../src/modules/curriculum/sample";
+import { RUBRIC_PRESETS, maxTotalOf } from "../src/modules/assessment/index";
 
 const FIRST = [
   "Ahmet", "Ayşe", "Mehmet", "Zeynep", "Mustafa", "Elif", "Emre", "Esra", "Burak", "Merve", "Can", "Selin", "Kerem", "Nil",
@@ -40,6 +41,8 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   await prisma.course.deleteMany();
   await prisma.classMember.deleteMany();
   await prisma.accessLink.deleteMany();
+  await prisma.assessment.deleteMany();
+  await prisma.rubric.deleteMany();
   await prisma.teacher.deleteMany();
   await prisma.homeworkStatus.deleteMany();
   await prisma.homework.deleteMany();
@@ -619,4 +622,59 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       return { ...r, ownerId, order };
     }),
   });
+
+  /* --------------------------- Sözlü / yazılı / uygulama --------------------------- */
+  // Hazır cetveller ve son haftalardan değerlendirmeler. Sözlülerde sınıfın bir kısmı değerlendirilir
+  // (sınıf sayfasında "değerlendirilmedi" uyarısı görünsün); bazı öğrenciler son notta düşer.
+  const rubricByName = new Map<string, { id: string; name: string; criteria: { name: string; max: number }[] }>();
+  for (const p of RUBRIC_PRESETS) {
+    const r = await prisma.rubric.create({ data: { ownerId, name: p.name, kind: p.kind, criteria: JSON.stringify(p.criteria) } });
+    rubricByName.set(p.name, { id: r.id, name: p.name, criteria: p.criteria });
+  }
+  const assessSkill = new Map<string, number>();
+  const skillOf = (id: string) => {
+    if (!assessSkill.has(id)) assessSkill.set(id, 0.45 + Math.random() * 0.5);
+    return assessSkill.get(id)!;
+  };
+  const dropping = new Set(extraClasses.flatMap((c) => c.students.slice(2, 3).map((s) => s.id)));
+  const ASSESS: { cls: string; course: string; rubric: string; type: string; days: number[]; share: number; title?: string; plan?: boolean }[] = [
+    { cls: "SEVİYE-2", course: "Kur'ân-ı Kerîm", rubric: "Kur'an okuma", type: "ORAL", days: [27, 20, 13, 6], share: 0.6 },
+    { cls: "SEVİYE-2", course: "Tecvid", rubric: "Bilgi sözlüsü", type: "ORAL", days: [24, 10], share: 0.7, plan: true },
+    { cls: "9-A", course: "Bilişim Teknolojileri", rubric: "Proje / uygulama", type: "PRACTICE", days: [24, 10], share: 1 },
+    { cls: "9-A", course: "Matematik", rubric: "Yazılı (100 puan)", type: "WRITTEN", days: [12], share: 1, title: "Okul 1. yazılı" },
+    { cls: "10-A", course: "Fizik", rubric: "Yazılı (100 puan)", type: "WRITTEN", days: [15], share: 1, title: "Fizik ara sınavı" },
+    { cls: "11-A", course: "Web Tasarım", rubric: "Proje / uygulama", type: "PRACTICE", days: [8], share: 1, title: "Kişisel web sayfası projesi" },
+    { cls: "9-B", course: "İslam Tarihi", rubric: "Bilgi sözlüsü", type: "ORAL", days: [16], share: 0.5 },
+  ];
+  for (const def of ASSESS) {
+    const cls = extraClasses.find((c) => c.name === def.cls)!;
+    const course = await prisma.course.findUnique({ where: { classroomId_name: { classroomId: cls.id, name: def.course } } });
+    const rubric = rubricByName.get(def.rubric)!;
+    const doneItems = def.plan
+      ? (await prisma.planItem.findMany({ where: { plan: { classroomId: cls.id, subject: def.course }, doneDate: { not: null } }, orderBy: { order: "desc" } }))
+      : [];
+    for (const [k, ago] of def.days.entries()) {
+      const item = doneItems[k] ?? null;
+      const a = await prisma.assessment.create({
+        data: {
+          ownerId, courseId: course!.id, teacherId: course!.teacherId, date: ymd(daysAgo(ago)),
+          title: def.title ?? item?.topic ?? def.rubric, type: def.type, rubricName: rubric.name,
+          criteria: JSON.stringify(rubric.criteria), maxTotal: maxTotalOf(rubric.criteria),
+          planItemId: item?.id ?? null, planTopic: item?.topic ?? "",
+        },
+      });
+      const last = k === def.days.length - 1;
+      const picked = cls.students.filter(() => Math.random() < def.share);
+      await prisma.assessmentScore.createMany({
+        data: picked.map((st) => {
+          if (Math.random() < 0.05) return { assessmentId: a.id, studentId: st.id, scores: "[]", absent: true };
+          const p = Math.min(1, Math.max(0.1, skillOf(st.id) + (Math.random() - 0.5) * 0.2 - (dropping.has(st.id) && last ? 0.3 : 0)));
+          const scores = rubric.criteria.map((c) => Math.round(c.max * Math.min(1, Math.max(0, p + (Math.random() - 0.5) * 0.15))));
+          const total = scores.reduce((x, y) => x + y, 0);
+          return { assessmentId: a.id, studentId: st.id, scores: JSON.stringify(scores), total, percent: Math.round((total * 1000) / maxTotalOf(rubric.criteria)) / 10, absent: false };
+        }),
+      });
+    }
+  }
+
 }

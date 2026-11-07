@@ -136,3 +136,20 @@ export async function deleteCourse(ownerId: string, id: string) {
   if (n > 0) throw conflict(`Bu dersin programda ${n} saati var. Önce programdan kaldırın.`);
   await prisma.course.delete({ where: { id: c.id } });
 }
+
+/** Ders (sınıf adı ve sorumlusuyla); yoksa / başka kurumunsa null. */
+export async function findCourse(ownerId: string, id: string) {
+  return prisma.course.findFirst({
+    where: { id, ownerId },
+    include: { classroom: { select: { id: true, name: true } }, teacher: { select: { id: true, name: true } } },
+  });
+}
+
+/** Öğretmenin dersleri: sorumlusu olduğu ya da programda girdiği dersler (dışarıda alınanlar dahil). */
+export async function coursesForTeacher(ownerId: string, teacherId: string) {
+  const all = await listCourses(ownerId);
+  const viaSlots = new Set(
+    (await prisma.scheduleSlot.findMany({ where: { ownerId, teacherId, courseId: { not: null } }, select: { courseId: true } })).map((s) => s.courseId!),
+  );
+  return all.filter((c) => c.teacherId === teacherId || viaSlots.has(c.id));
+}

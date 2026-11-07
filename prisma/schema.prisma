@@ -167,6 +167,7 @@ model Student {
   attendances    Attendance[]
   dispatches     ParentDispatch[]
   memberships    ClassMember[]
+  scores         AssessmentScore[]
 
   @@unique([ownerId, studentNo])
 }
@@ -269,6 +270,7 @@ model Course {
   external    Boolean        @default(false)
   createdAt   DateTime       @default(now())
   slots       ScheduleSlot[]
+  assessments Assessment[]
 
   @@unique([classroomId, name])
   @@index([ownerId])
@@ -479,4 +481,64 @@ model ParentDispatch {
 
   @@unique([studentId, weekStart])
   @@index([ownerId, weekStart])
+}
+
+/// Puan cetveli (yönetici tanımlar). Değerlendirme açılınca kriterler değerlendirmeye kopyalanır.
+model Rubric {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  /// Önerildiği ders türü (COURSE_KINDS) ya da boş = hepsi
+  kind      String   @default("")
+  /// JSON: [{ name, max }]
+  criteria  String
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+/// Sözlü / yazılı / uygulama değerlendirmesi: bir derste, bir tarihte
+model Assessment {
+  id         String            @id @default(cuid())
+  ownerId    String
+  courseId   String
+  course     Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  /// Açan öğretmen ya da etüt mesulü (Teacher.id); kurum hesabı açtıysa boş
+  teacherId  String?
+  /// YYYY-MM-DD
+  date       String
+  title      String
+  /// ORAL | WRITTEN | PRACTICE
+  type       String
+  rubricName String            @default("")
+  /// JSON: [{ name, max }] — cetvelden kopya
+  criteria   String
+  maxTotal   Int
+  /// Bağlı plan satırı (ör. ezber parçası); isteğe bağlı
+  planItemId String?
+  planTopic  String            @default("")
+  createdAt  DateTime          @default(now())
+  scores     AssessmentScore[]
+
+  @@index([ownerId, date])
+  @@index([courseId])
+}
+
+model AssessmentScore {
+  id           String     @id @default(cuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// JSON: number[] (kriter sırasıyla); gelmediyse []
+  scores       String     @default("[]")
+  total        Float?
+  /// 0–100; gelmediyse null
+  percent      Float?
+  note         String     @default("")
+  absent       Boolean    @default(false)
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([assessmentId, studentId])
+  @@index([studentId])
 }

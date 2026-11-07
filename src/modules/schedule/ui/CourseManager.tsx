@@ -14,7 +14,10 @@ function hours(min: number) {
 }
 
 /** Sınıfın dersleri: liste, düzenleme ve yeni ders. Telefonda tek sütun. */
-export default function CourseManager({ classroomId, courses, teachers }: { classroomId: string; courses: CourseRow[]; teachers: Teacher[] }) {
+/** Dersin yanında gösterilecek kısa özet (ör. değerlendirme durumu); sayfa hesaplar. */
+type CourseNote = { text: string; warn?: boolean };
+
+export default function CourseManager({ classroomId, courses, teachers, notes = {} }: { classroomId: string; courses: CourseRow[]; teachers: Teacher[]; notes?: Record<string, CourseNote> }) {
   const router = useRouter();
   const [edit, setEdit] = useState<(Draft & { id: string }) | null>(null);
   const [add, setAdd] = useState<Draft | null>(null);
@@ -112,6 +115,7 @@ export default function CourseManager({ classroomId, courses, teachers }: { clas
                     {c.external && <span className="badge bg-zinc-100 text-zinc-700">Dışarıda</span>}
                   </span>
                   <span className="block text-[13px] text-lead">{c.teacherName ?? "Sorumlu yok"}</span>
+                  {notes[c.id] && <span className={`block text-[12.5px] ${notes[c.id].warn ? "text-amber-700" : "text-lead"}`}>{notes[c.id].text}</span>}
                 </span>
                 <span className="shrink-0 text-right text-[13px] text-lead">
                   {c.slotCount ? <span className="num">{c.slotCount} saat · {hours(c.weeklyMinutes)} sa/hafta</span> : "Programda yok"}
