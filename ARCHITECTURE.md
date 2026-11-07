@@ -24,7 +24,7 @@ src/
 | `question-bank` | QuestionSource, QuestionItem | identity | `/kurum/soru-havuzu/*`, `/api/kurum/soru-havuzu/*` |
 | `curriculum` | CurriculumTopic | identity | `/kurum/mufredat`, `/api/kurum/mufredat/*` |
 | `online-test` | Test, Question, Option, Attempt, Answer | identity | `/panel`, `/sinav/*`, `/s/[code]`, `/sonuc/[id]`, `/api/{tests,t,attempts}` |
-| `planning` | CalendarEvent, LessonPlan, PlanItem | identity, enrollment, exams, homework, schedule | `/kurum/takvim/*`, `/api/kurum/{takvim,plan}/*` |
+| `planning` | CalendarEvent, LessonPlan, PlanItem | identity, enrollment, exams, homework, schedule | `/kurum/takvim/*` (haftalık plan içe aktarma dahil), `/api/kurum/{takvim,plan}/*` |
 | `assessment` | Rubric, Assessment, AssessmentScore | identity, enrollment, schedule, planning | `/kurum/degerlendirme/*`, `/ogretmen/degerlendirme/*`, `/api/kurum/{degerlendirme,puan-cetvelleri}/*` |
 | `reporting` | Student.parent* (veli paylaşım alanları), Setting, ParentDispatch | hepsi (online-test ve question-bank hariç; assessment dahil) | `/kurum` (özet), `/kurum/takip`, `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 

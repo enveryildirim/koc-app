@@ -409,6 +409,16 @@ PoC 1. adımı (temel) yapıldı:
 - **Doğrulama:** örnek dosya kayıtlı biçimle okunup kaydedildi: 19 sonuç, 009999 atlandı, kitapçığı boş satır ayrıca bildirildi; A ve B kitapçıklı iki öğrencinin doğru sayısı bağımsız hesapla aynı (28, 27). Çakışan/eksik biçim 400, öğretmen biçim değiştiremez 401; biçim ve ders yeni sınava kopyalandı; olmayan ders 400. Cevapsız soruyla sınav 400, çalışma kağıdı 200 (anahtar " BC"); çalışma kağıdında tek sekme, kitapçıkta anahtar sayfası. Öğretmen kendi dersine ödev 200, başka derse 400, başkasının ödevi 404; SEVİYE-2 ödevi 16 ek üyeye atandı. `tsc`, `lint`, `build` temiz.
 - **Test kazası:** çalışma kağıdı testinde havuzdaki bir sorunun cevabı silindi (Matematik · Üslü, ilk soru `cmw3novzk0008huhmhoflao44`). Soru havuzu seed ile sıfırlanmadığı için geri gelmedi; asıl değer bilinmiyor (sonraki soruların sırasına göre muhtemelen "A"). Kullanıcının kontrol edip girmesi gerekiyor.
 
+## 4o. Haftalık plan içe aktarma (7 Kasım 2026, PoC 6. adım)
+
+- **Sayfa:** `/kurum/takvim/plan/haftalik` (Yıllık planlar → "Haftalık planı içe aktar"). Excel (.xlsx), CSV ya da yapıştırma; "Örnek şablonu indir" ve "Örnekle dene". Örnek dosya `notes/ornek-haftalik-plan.csv` (Seviye-2 PDF'inin Eylül–Kasım haftalarından elle aktarıldı, tarihler 2026–27'ye kaydırıldı).
+- **Tablo:** ilk sütun hafta tarihi ("7 Eylül 2026", 07.09.2026, 2026-09-07 ya da Excel tarihi), diğer sütunlar dersler. Saf dönüştürme `planning/weekly.ts` (`parseWeeklyTable`, `buildSubjectPlans`, `izinRanges`, `parseDelimitedTable`).
+- **Kurallar:** her ders sütunu bir yıllık plan; art arda aynı konu birleşir ("Konu | 2"); boş hücre önceki konuyu bir hafta uzatır (sondaki boşluklar hariç); dersin ilk dolu haftasından başlar. Bütün hücreleri boş ya da "izin / izni / tatil" yazan satır izin haftası: etiket hücredeki açıklama.
+- **Kaydetme** (`planning > importWeeklyPlans`, `POST /api/kurum/plan/haftalik`): seçilen sınıflar × dersler; izin haftaları sınıfa özel tatil olarak takvime (aynı aralıkta tatil varsa eklenmez; velilere açık). Var olan plan atlanır ya da "yeniden yaz" ile güncellenir (aynı adlı konuların "işlendi" bilgisi korunur). Tablodaki bir ders haftası takvimde zaten tatilse uyarı döner (dağıtım o haftayı atlar, tarihler kayar).
+- **Önizleme:** ders adları düzeltilebilir; seçili sınıfta o adla ders kaydı yoksa uyarı (yoklama ve "işlendi" adla eşleşir).
+- **Sınırlar:** bir konu en fazla 20 hafta sürebilir (plan metni sınırı); plan yılı başlangıç tarihinden (`schoolYearOf`, Eylül–Ağustos) belirlenir. Ağustos'ta başlayan bir tablo (ör. 9. sınıflar) önceki eğitim yılına düşer.
+- **Doğrulama:** örnek CSV: 13 hafta, 2 izin, 5 ders; SEVİYE-2'ye ilk kayıtta Tecvid planı var olduğu için atlandı, 4 plan + 2 tatil oluştu; "yeniden yaz" ile 5 plan güncellendi; Tecvid "Medd-i lâzım" 23 Kasım'a düştü (9 Kasım izni atlandı), tablodakiyle aynı; boş sınıf / olmayan sınıf 400, girişsiz 401. `tsc`, `lint`, `build` temiz. Demo veri sonra yeniden yüklendi.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

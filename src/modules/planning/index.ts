@@ -2,3 +2,4 @@
 export * from "./calendar";
 export * from "./plan";
 export * from "./topics";
+export * from "./weekly";

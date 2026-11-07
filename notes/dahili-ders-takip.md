@@ -232,7 +232,14 @@ Her satır ilgili öğrenci ya da ders sayfasına götürür. Rakamlar ve grafik
 3. ✅ **Değerlendirme** (7 Kasım): puan cetveli, sözlü/yazılı/uygulama girişi, kâğıt form; öğrenci ve sınıf özetleri. Ayrıntı: PROJECT_MEMORY.md 4l.
 4. ✅ **Takibat** (7 Kasım): "Dikkat isteyenler", sınıf/ders/öğretmen analizleri, veli karnesi ve haftalık mesaja sözlü/yazılı. Ayrıntı: PROJECT_MEMORY.md 4m.
 5. ✅ **Sınav tarafı** (7 Kasım): hocanın sınavı, çalışma kağıdı, sınava özel FMT biçimi, ödev → ders ve telefondan ödev. Ayrıntı: PROJECT_MEMORY.md 4n.
-6. **Müfredat:** haftalık plan içe aktarma.
+6. ✅ **Müfredat** (7 Kasım): haftalık plan içe aktarma (Excel / CSV / yapıştırma), izin haftaları takvime. Ayrıntı: PROJECT_MEMORY.md 4o.
+
+**PoC'un altı adımı tamamlandı (7 Kasım 2026).** Sonra konuşulacaklar:
+- Dönem / devre sonu karnesi ve Başarı Skoru'nun genel versiyonu
+- Müdür, rehber ve öğrenci rolleri; şifreli giriş
+- Birden fazla birim (kurumlar arası karşılaştırma)
+- Gerçek kâğıt ve telefon fotoğrafıyla optik okuma testi
+- Seviye müfredatının tamamının tabloya aktarılması (PDF düzeni bilgisayarla güvenilir okunamıyor)
 
 **PoC dışında:** müdür/rehber/öğrenci rolleri, şifreli giriş, çoklu birim, Osmanlıca metin yazma, otomatik SMS, dönem sonu karnesi, genel Başarı Skoru, gerçek kâğıtla optik test (kullanıcı yapacak).
 

@@ -28,7 +28,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
       <PageHeader
         title="Yıllık ders planı"
         sub={`${schoolYearLabel(year)} eğitim yılı · sınıf ve ders bazında konu dağılımı ve işlenme takibi`}
-        actions={<Link href={`/kurum/takvim/plan/yeni?yil=${year}${classroomId ? `&sinif=${classroomId}` : ""}`} className="btn-primary">+ Yeni plan</Link>}
+        actions={
+          <>
+            <Link href="/kurum/takvim/plan/haftalik" className="btn-secondary">Haftalık planı içe aktar</Link>
+            <Link href={`/kurum/takvim/plan/yeni?yil=${year}${classroomId ? `&sinif=${classroomId}` : ""}`} className="btn-primary">+ Yeni plan</Link>
+          </>
+        }
       />
       <Tabs tabs={PLANNING_TABS} active="plan" />
 
