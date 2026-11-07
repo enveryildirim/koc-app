@@ -39,7 +39,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       <div>
         {header}
         <Tabs tabs={tabs} active={tab} />
-        <TeacherManager teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch, slotCount: t.slotCount }))} />
+        <TeacherManager teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch, role: t.role, slotCount: t.slotCount }))} />
       </div>
     );
   }

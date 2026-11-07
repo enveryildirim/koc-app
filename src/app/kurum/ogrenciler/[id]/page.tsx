@@ -46,7 +46,25 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     <div className="space-y-6">
       <PageHeader
         title={`${st.firstName} ${st.lastName}`}
-        sub={`No: ${st.studentNo} · ${st.classroom?.name ?? (st.external ? "Kurum dışı öğrenci" : "Sınıfsız")}`}
+        sub={
+          <>
+            No: {st.studentNo} ·{" "}
+            {st.classroom ? (
+              <Link href={`/kurum/siniflar/${st.classroom.id}`} className="hover:underline">{st.classroom.name}</Link>
+            ) : st.external ? "Kurum dışı öğrenci" : "Sınıfsız"}
+            {st.memberships.length > 0 && (
+              <>
+                {" · Ayrıca: "}
+                {st.memberships.map((m, i) => (
+                  <span key={m.id}>
+                    {i > 0 && ", "}
+                    <Link href={`/kurum/siniflar/${m.classroom.id}`} className="hover:underline">{m.classroom.name}</Link>
+                  </span>
+                ))}
+              </>
+            )}
+          </>
+        }
         back={{ href: "/kurum/ogrenciler", label: "Öğrenciler" }}
         actions={<PrintButton label="Öğrenci raporunu yazdır" />}
       />

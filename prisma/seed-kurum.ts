@@ -37,6 +37,8 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   await prisma.attendance.deleteMany();
   await prisma.lessonSession.deleteMany();
   await prisma.scheduleSlot.deleteMany();
+  await prisma.course.deleteMany();
+  await prisma.classMember.deleteMany();
   await prisma.teacher.deleteMany();
   await prisma.homeworkStatus.deleteMany();
   await prisma.homework.deleteMany();
@@ -282,11 +284,170 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     await prisma.scheduleSlot.createMany({ data: slots });
   }
 
+
+  /* ------------------------------ Ders takip demosu ------------------------------ */
+  // Genel ders yapısı: okul, mesleki, dini, hazırlık ve etüt dersleri; etüt mesulleri; başka sınıftan katılanlar.
+  // Bütün adlar kurgusaldır.
+
+  // Mevcut sınıfların dersleri programdan çıkarılır (12. sınıflar hazırlık)
+  for (const c of classes) {
+    const slots = await prisma.scheduleSlot.findMany({ where: { classroomId: c.id }, orderBy: { lessonType: "desc" } });
+    const ids = new Map<string, string>();
+    for (const sl of slots) {
+      if (!ids.has(sl.subject)) {
+        const course = await prisma.course.create({
+          data: { ownerId, classroomId: c.id, name: sl.subject, kind: c.level === "12" ? "PREP" : "SCHOOL", teacherId: sl.teacherId },
+        });
+        ids.set(sl.subject, course.id);
+      }
+      await prisma.scheduleSlot.update({ where: { id: sl.id }, data: { courseId: ids.get(sl.subject) } });
+    }
+  }
+
+  const mentorNames = ["Kemal Yurt", "Bekir Saran", "Tuncay Ilgaz", "Ercan Sevim", "Nihat Duru", "Hakan Toprak", "Orhan Bilge"];
+  const mentor: Record<string, string> = {};
+  for (const name of mentorNames) {
+    const t = await prisma.teacher.create({ data: { ownerId, name, branch: "Etüt", role: "MENTOR" } });
+    mentor[name] = t.id;
+  }
+  const staff: Record<string, string> = {};
+  for (const [name, branch] of [
+    ["Gökhan Ural", "Fizik"],
+    ["Sevda Gül", "Coğrafya"],
+    ["Aylin Tekin", "Biyoloji"],
+    ["Selin Akar", "Bilişim"],
+    ["Cem Oral", "Bilişim"],
+    ["Mahmut Kara", "Din Eğitimi"],
+    ["Yasin Er", "Din Eğitimi"],
+  ]) {
+    const t = await prisma.teacher.create({ data: { ownerId, name, branch } });
+    staff[name] = t.id;
+  }
+  const mentorOf: Record<string, string> = { "8-A": "Kemal Yurt", "8-B": "Kemal Yurt", "12-A": "Bekir Saran", "12-B": "Tuncay Ilgaz" };
+  for (const c of classes) await prisma.classroom.update({ where: { id: c.id }, data: { mentorId: mentor[mentorOf[c.name]] } });
+
+  type CourseDef = { name: string; kind: string; teacher: string; weekly: number; external?: boolean };
+  const newClassDefs: { name: string; level: string; mentor: string; size: number; courses: CourseDef[] }[] = [
+    { name: "9-A", level: "9", mentor: "Ercan Sevim", size: 18, courses: [] },
+    { name: "9-B", level: "9", mentor: "Nihat Duru", size: 17, courses: [] },
+    { name: "10-A", level: "10", mentor: "Hakan Toprak", size: 16, courses: [] },
+    { name: "11-A", level: "11", mentor: "Orhan Bilge", size: 15, courses: [] },
+  ];
+  const common = (m: string): CourseDef[] => [
+    { name: "İslam Tarihi", kind: "RELIGIOUS", teacher: "Mahmut Kara", weekly: 2 },
+    { name: "Etüt", kind: "STUDY", teacher: m, weekly: 4 },
+    { name: "Matematik", kind: "SCHOOL", teacher: m, weekly: 0, external: true },
+  ];
+  newClassDefs[0].courses = [
+    { name: "Fizik", kind: "SCHOOL", teacher: "Gökhan Ural", weekly: 2 },
+    { name: "Coğrafya", kind: "SCHOOL", teacher: "Sevda Gül", weekly: 2 },
+    { name: "Biyoloji", kind: "SCHOOL", teacher: "Aylin Tekin", weekly: 2 },
+    { name: "Bilişim Teknolojileri", kind: "VOCATIONAL", teacher: "Selin Akar", weekly: 4 },
+    ...common("Ercan Sevim"),
+    { name: "Türkçe", kind: "SCHOOL", teacher: "Ercan Sevim", weekly: 0, external: true },
+  ];
+  newClassDefs[1].courses = [
+    { name: "Fizik", kind: "SCHOOL", teacher: "Gökhan Ural", weekly: 2 },
+    { name: "Coğrafya", kind: "SCHOOL", teacher: "Sevda Gül", weekly: 2 },
+    { name: "Biyoloji", kind: "SCHOOL", teacher: "Aylin Tekin", weekly: 2 },
+    { name: "Bilişim Teknolojileri", kind: "VOCATIONAL", teacher: "Selin Akar", weekly: 4 },
+    ...common("Nihat Duru"),
+    { name: "Türkçe", kind: "SCHOOL", teacher: "Nihat Duru", weekly: 0, external: true },
+  ];
+  newClassDefs[2].courses = [
+    { name: "Fizik", kind: "SCHOOL", teacher: "Gökhan Ural", weekly: 2 },
+    { name: "Coğrafya", kind: "SCHOOL", teacher: "Sevda Gül", weekly: 2 },
+    { name: "Biyoloji", kind: "SCHOOL", teacher: "Aylin Tekin", weekly: 2 },
+    { name: "Programlama", kind: "VOCATIONAL", teacher: "Selin Akar", weekly: 4 },
+    ...common("Hakan Toprak"),
+    { name: "Türkçe", kind: "SCHOOL", teacher: "Hakan Toprak", weekly: 0, external: true },
+  ];
+  newClassDefs[3].courses = [
+    { name: "Web Tasarım", kind: "VOCATIONAL", teacher: "Cem Oral", weekly: 3 },
+    { name: "Grafik", kind: "VOCATIONAL", teacher: "Cem Oral", weekly: 3 },
+    { name: "Programlama", kind: "VOCATIONAL", teacher: "Selin Akar", weekly: 2 },
+    { name: "Biyoloji", kind: "SCHOOL", teacher: "Aylin Tekin", weekly: 2 },
+    ...common("Orhan Bilge"),
+    { name: "Türk Dili ve Edebiyatı", kind: "SCHOOL", teacher: "Orhan Bilge", weekly: 0, external: true },
+  ];
+  const teacherId = (name: string) => mentor[name] ?? staff[name];
+
+  // Hafta içi 4 ders saati; sınıf ve öğretmen çakışmadan, aynı ders aynı güne iki kez düşmeden yerleştirilir
+  const PERIODS = [["14:40", "15:20"], ["15:30", "16:10"], ["16:40", "17:20"], ["17:30", "18:10"]];
+  const teacherBusy = new Set<string>();
+  const extraClasses: (typeof classes)[number][] = [];
+  let extraNo = 2001;
+  for (const [ci, def] of newClassDefs.entries()) {
+    const cls = await prisma.classroom.create({ data: { ownerId, name: def.name, level: def.level, mentorId: mentor[def.mentor] } });
+    const rows = [];
+    for (let i = 0; i < def.size; i++) {
+      let fn: string, ln: string;
+      do {
+        fn = pick(FIRST);
+        ln = pick(LAST);
+      } while (used.has(fn + ln));
+      used.add(fn + ln);
+      rows.push({ ownerId, classroomId: cls.id, studentNo: String(extraNo++), firstName: fn, lastName: ln, phone: phone(), parentName: `${pick(FIRST)} ${ln}`, parentPhone: phone() });
+    }
+    await prisma.student.createMany({ data: rows });
+    extraClasses.push({ ...cls, students: await prisma.student.findMany({ where: { classroomId: cls.id } }) });
+
+    const classBusy = new Set<string>();
+    const slots = [];
+    for (const cd of def.courses) {
+      const course = await prisma.course.create({
+        data: { ownerId, classroomId: cls.id, name: cd.name, kind: cd.kind, teacherId: teacherId(cd.teacher), external: cd.external ?? false },
+      });
+      const days = new Set<number>();
+      for (let n = 0; n < cd.weekly; n++) {
+        let placed = false;
+        for (const sameDayOk of [false, true]) {
+          for (let k = 0; k < 5 && !placed; k++) {
+            const day = ((ci + n * 2 + k) % 5) + 1;
+            if (!sameDayOk && days.has(day)) continue;
+            for (let p = 0; p < PERIODS.length && !placed; p++) {
+              const key = `${day}-${p}`;
+              if (classBusy.has(key) || teacherBusy.has(`${cd.teacher}-${key}`)) continue;
+              classBusy.add(key);
+              teacherBusy.add(`${cd.teacher}-${key}`);
+              days.add(day);
+              slots.push({
+                ownerId, classroomId: cls.id, teacherId: teacherId(cd.teacher), courseId: course.id, subject: cd.name,
+                lessonType: cd.kind === "STUDY" ? "ETUT" : "GRUP", dayOfWeek: day, startTime: PERIODS[p][0], endTime: PERIODS[p][1],
+              });
+              placed = true;
+            }
+          }
+          if (placed) break;
+        }
+      }
+    }
+    await prisma.scheduleSlot.createMany({ data: slots });
+  }
+
+  // Seviye-2: dini ders grubu. Öğrenciler ana sınıflarında (10-A, 11-A) kalır, buraya ek üye olarak katılır.
+  const seviye = await prisma.classroom.create({ data: { ownerId, name: "SEVİYE-2", level: "Seviye-2", mentorId: mentor["Hakan Toprak"] } });
+  const joiners = [...extraClasses[2].students.slice(0, 8), ...extraClasses[3].students.slice(0, 8)];
+  await prisma.classMember.createMany({ data: joiners.map((st) => ({ ownerId, classroomId: seviye.id, studentId: st.id })) });
+  const WEEKEND = [["09:00", "09:40"], ["09:50", "10:30"], ["10:40", "11:20"], ["11:30", "12:10"]];
+  const seviyeCourses: [string, string][] = [["Kur'ân-ı Kerîm", "Mahmut Kara"], ["Tecvid", "Mahmut Kara"], ["İlmihal", "Yasin Er"], ["Kitâbet", "Yasin Er"]];
+  const seviyeSlots = [];
+  for (const [i, [name, t]] of seviyeCourses.entries()) {
+    const course = await prisma.course.create({ data: { ownerId, classroomId: seviye.id, name, kind: "RELIGIOUS", teacherId: staff[t] } });
+    for (const day of [6, 7]) {
+      // Mahmut Kara ve Yasin Er aynı saatte iki derse girmesin diye sıralar kaydırılır
+      const p = day === 6 ? i : (i + 2) % 4;
+      seviyeSlots.push({ ownerId, classroomId: seviye.id, teacherId: staff[t], courseId: course.id, subject: name, lessonType: "GRUP", dayOfWeek: day, startTime: WEEKEND[p][0], endTime: WEEKEND[p][1] });
+    }
+  }
+  await prisma.scheduleSlot.createMany({ data: seviyeSlots });
+  extraClasses.push({ ...seviye, students: joiners });
+
   /* ------------------------- Son 7 haftanın yoklamaları ------------------------- */
   const allSlots = await prisma.scheduleSlot.findMany();
-  const studentsByClass = new Map(classes.map((c) => [c.id, c.students]));
+  const studentsByClass = new Map([...classes, ...extraClasses].map((c) => [c.id, c.students]));
   const absentProne = new Set(
-    classes
+    [...classes, ...extraClasses.slice(0, -1)]
       .flatMap((c) => c.students)
       .filter(() => Math.random() < 0.12)
       .map((s) => s.id),

@@ -24,7 +24,7 @@ export type TakeAttendanceInput = {
  * Yoklama kaydeder ve oturum kimliğini döndürür.
  * Ders şunlardan biriyle seçilir: `sessionId` (var olan oturum), `slotId` (slotId+date oturumu yoksa oluşturulur)
  * ya da `extra` (programda olmayan ek ders → yeni oturum). Yalnızca oturumun sınıfındaki öğrenciler ve geçerli
- * durumlar kaydedilir; diğerleri sessizce yok sayılır.
+ * durumlar kaydedilir (ek üyeler dahil); diğerleri sessizce yok sayılır.
  */
 export async function takeAttendance(ownerId: string, input: TakeAttendanceInput) {
   const date = String(input.date ?? "");
@@ -63,7 +63,7 @@ export async function takeAttendance(ownerId: string, input: TakeAttendanceInput
   const statuses = input.statuses ?? {};
   const ids = Object.keys(statuses);
   if (ids.length) {
-    const valid = await listStudents(ownerId, { ids, classroomId: session.classroomId });
+    const valid = await listStudents(ownerId, { ids, inClass: session.classroomId });
     const ok = new Set(valid.map((s) => s.id));
     const sessionId = session.id;
     await prisma.$transaction(
@@ -92,10 +92,10 @@ export async function deleteSession(ownerId: string, id: string) {
 /**
  * Bir günün dersleri: o günün programındaki dersler (varsa o günkü oturumlarıyla) + programda olmayan
  * (ek ya da programdan silinmiş) oturumlar. Başlangıç saati ve sınıfa göre sıralı.
- * `taken`: en az bir öğrencinin yoklaması girilmiş; `total`: sınıfın öğrenci sayısı.
+ * `taken`: en az bir öğrencinin yoklaması girilmiş; `total`: sınıfın öğrenci sayısı (ek üyeler dahil).
  */
 export async function lessonsOn(ownerId: string, date: string) {
-  const withCount = { include: { _count: { select: { students: true } } } } as const;
+  const withCount = { include: { _count: { select: { students: true, members: true } } } } as const;
   const [slots, sessions] = await Promise.all([
     prisma.scheduleSlot.findMany({
       where: { ownerId, dayOfWeek: dayOfWeek(date) },
@@ -128,7 +128,7 @@ export async function lessonsOn(ownerId: string, date: string) {
         startTime: sl.startTime,
         endTime: sl.endTime,
         ...summary(s),
-        total: sl.classroom._count.students,
+        total: sl.classroom._count.students + sl.classroom._count.members,
         extra: false,
       };
     }),
@@ -145,14 +145,14 @@ export async function lessonsOn(ownerId: string, date: string) {
         startTime: s.startTime,
         endTime: s.endTime,
         ...summary(s),
-        total: s.classroom._count.students,
+        total: s.classroom._count.students + s.classroom._count.members,
         extra: true,
       })),
   ].sort((a, b) => a.startTime.localeCompare(b.startTime) || a.classroom.localeCompare(b.classroom, "tr"));
 }
 
 /**
- * Yoklama listesi: dersin bilgisi, sınıfın öğrencileri (ada göre) ve varsa daha önce girilmiş durumlar.
+ * Yoklama listesi: dersin bilgisi, sınıfın öğrencileri (ek üyeler dahil, ada göre) ve varsa daha önce girilmiş durumlar.
  * Ders bulunamazsa / başka kurumunsa null. `extra`: programa bağlı olmayan oturum.
  */
 export async function attendanceSheet(ownerId: string, target: AttendanceTarget) {
@@ -176,7 +176,7 @@ export async function attendanceSheet(ownerId: string, target: AttendanceTarget)
   }
 
   const [students, existing] = await Promise.all([
-    listStudents(ownerId, { classroomId: lesson.classroomId }, "name"),
+    listStudents(ownerId, { inClass: lesson.classroomId }, "name"),
     sessionId ? prisma.attendance.findMany({ where: { sessionId } }) : Promise.resolve([]),
   ]);
   return {

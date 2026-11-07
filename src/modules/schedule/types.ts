@@ -11,7 +11,19 @@ export type SlotRow = {
   endTime: string;
 };
 export type Opt = { id: string; name: string };
-export type TeacherRow = { id: string; name: string; branch: string; slotCount: number };
+export type TeacherRow = { id: string; name: string; branch: string; role: string; slotCount: number };
+export type CourseRow = {
+  id: string;
+  classroomId: string;
+  name: string;
+  kind: string;
+  teacherId: string | null;
+  teacherName: string | null;
+  external: boolean;
+  /** Programdaki haftalık ders sayısı ve dakikası */
+  slotCount: number;
+  weeklyMinutes: number;
+};
 
 export const TYPE_STYLE: Record<string, string> = {
   GRUP: "border-rule bg-surface text-graphite",

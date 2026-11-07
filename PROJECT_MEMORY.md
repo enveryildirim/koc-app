@@ -2,7 +2,7 @@
 
 Bu dosya projede ne yapıldığını, neden öyle yapıldığını ve kalan işleri kaydeder. Projeye yeni başlayan bir geliştirici veya yapay zekâ asistanı önce bunu okumalı.
 
-Son güncelleme: 5 Kasım 2026 · Dal: `deneme-sinavza`
+Son güncelleme: 7 Kasım 2026 · Dal: `dahili-ders-takip`
 
 ---
 
@@ -93,6 +93,8 @@ src/app/                 # sayfa + route dosyaları (ince katman)
 | `Homework` / `HomeworkStatus` | Durum: PENDING/DONE/PARTIAL/NOT_DONE |
 | `Teacher`, `ScheduleSlot` | Haftalık program (`dayOfWeek` 1=Pzt … 7=Paz, `lessonType` GRUP/ETUT/OZEL) |
 | `LessonSession` / `Attendance` | Belirli tarihteki ders (`date` "YYYY-MM-DD"), `@@unique([slotId, date])`; yoklama PRESENT/ABSENT/LATE/EXCUSED |
+| `Course` | Sınıfın dersi (`kind` SCHOOL/VOCATIONAL/RELIGIOUS/PREP/STUDY, `teacherId`, `external`); `@@unique([classroomId, name])`; program satırı `courseId` ile bağlanır |
+| `ClassMember` | Ek sınıf üyeliği (öğrencinin ana sınıfı `Student.classroomId`); `@@unique([classroomId, studentId])` |
 
 ### Net hesabı (`modules/exams/domain.ts > gradeExam`)
 - Net = D − Y / `wrongPer`. Varsayılan `wrongPer`: LGS = 3, TYT/AYT = 4. Deneme bazında değiştirilebilir.
@@ -349,6 +351,22 @@ Arayüz, ürünün en karakteristik nesnesi olan **optik form** üzerine kurulu.
   - BÜYÜK HARFLİ etiket, bağlantı sonunda "→" ve düğmelerde emoji kullanılmaz.
   - Aynı eylem her yerde aynı adla anılır ("Kurum hesabı açın", "Ek ders ekle").
 - **Hareket:** tek bir an var: açılış sayfasındaki optik formun dolması. `prefers-reduced-motion` açıksa bütün animasyonlar kapanır.
+
+## 4j. Ders takip temeli (7 Kasım 2026, dal `dahili-ders-takip`)
+
+Hedef ve kararlar: `notes/dahili-ders-takip.md`. Kurum modeli: 9–12. sınıflar; okul, mesleki, dini, hazırlık ve etüt dersleri; her sınıfın bir etüt mesulü; öğrenci birden fazla sınıfa üye olabilir; bazı dersler başka kurumda alınır. **Proje geneldir: gerçek kurum ve kişi adları kullanılmaz.**
+
+PoC 1. adımı (temel) yapıldı:
+- **Veri:** `Course`, `ClassMember`, `Classroom.mentorId`, `Teacher.role` (TEACHER / MENTOR), `ScheduleSlot.courseId`. Ayrıntı: ARCHITECTURE.md > "Ders, sınıf üyeliği ve etüt mesulü".
+- **Sınıf sayfası** `/kurum/siniflar/[id]` (Sınıflar sekmesindeki kartlardan): etüt mesulü seçimi, dersler (ekle / düzenle / sil; tür, sorumlu, "başka kurumda alınıyor"), öğrenciler (ana sınıf + başka sınıftan katılanlar; ad veya numarayla arayıp ekleme, çıkarma).
+- **Öğretmenler:** rol sütunu ve seçimi. Rol gönderilmeden düzenlenirse mevcut rol korunur.
+- **Yoklama:** sınıfın ek üyeleri listeye girer ve kaydedilebilir; gün listesindeki toplam ek üyeleri içerir.
+- **Öğrenci profili:** başlıkta ana sınıf ve "Ayrıca:" ek sınıflar (bağlantılı).
+- **Sıralama:** dersler ve sınıf sayfasındaki öğrenciler Türkçe sıralanır (SQLite "İ, Ö, Ş"yi sona atıyordu).
+- **API:** `POST /api/kurum/dersler`, `PATCH|DELETE /api/kurum/dersler/[id]`, `PATCH /api/kurum/siniflar/[id]` (`name`, `level`, `mentorId`), `POST /api/kurum/siniflar/[id]/uyeler`, `DELETE /api/kurum/siniflar/[id]/uyeler/[studentId]`.
+- **Seed:** mevcut 8/12 sınıflarına dersler (12'ler hazırlık) ve etüt mesulleri; yeni 9-A, 9-B, 10-A, 11-A (öğrenci no 2001–2066) okul/mesleki/dini/etüt dersleri ve başka kurumda alınan Matematik/Türkçe (Edebiyat) ile; SEVİYE-2 dini ders grubu (10-A ve 11-A'dan 16 ek üye, hafta sonu programı). Yeni program sınıf ve öğretmen çakışmasız yerleştirilir. Bütün adlar kurgusal.
+- **Doğrulama (7 Kasım):** sayfalar 200, olmayan sınıf 404; ders ekleme/aynı ad 409/geçersiz tür 400/boş ad 400; yeniden adlandırma program satırlarını güncelledi, var olan ada 409; programda saati olan ders silinemedi (409); etüt mesulü olmayan atama 400; ek üye: ana sınıfı aynı 409, tekrar 409, çıkarma 200 → tekrar 404; ek üyesi olan sınıf silinemedi; programa yeni ad eklenince ders kendiliğinden oluştu (tür tahmini doğru); SEVİYE-2 yoklamasında 2 üye kaydedildi, sınıf dışı öğrenci yok sayıldı; yoklama sayfası 16/16 ek üyeyi gösterdi; başka kurum her işlemde 404/400; girişsiz 401. `tsc`, `lint`, `build` temiz.
+- **Bilinen:** eski seed'deki öğretmen programında birkaç saat çakışması var (bu adımdan önce de vardı; yeni eklenenlerde yok). Ödev ve yıllık plan henüz derse `courseId` ile değil, (sınıf, ders adı) ile bağlı.
 
 ## 5. Özellik durumu
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
+import { TEACHER_ROLE_KEYS } from "../labels";
 
 /** Kurumun öğretmenleri (ada göre), her biri programdaki haftalık ders sayısıyla. */
 export async function listTeachers(ownerId: string) {
@@ -17,11 +18,14 @@ async function ownedTeacher(ownerId: string, id: string) {
   return t;
 }
 
-function parseTeacher(body: Record<string, unknown>) {
+/** Rol gönderilmezse `fallbackRole` kalır (düzenlemede mevcut rol korunur). */
+function parseTeacher(body: Record<string, unknown>, fallbackRole = "TEACHER") {
   const name = String(body.name ?? "").trim();
   const branch = String(body.branch ?? "").trim();
+  const role = String(body.role ?? fallbackRole);
   if (!name || !branch) throw invalid("Ad ve branş gerekli.");
-  return { name, branch };
+  if (!TEACHER_ROLE_KEYS.includes(role)) throw invalid("Geçersiz rol.");
+  return { name, branch, role };
 }
 
 export async function createTeacher(ownerId: string, body: Record<string, unknown>) {
@@ -30,7 +34,7 @@ export async function createTeacher(ownerId: string, body: Record<string, unknow
 
 export async function updateTeacher(ownerId: string, id: string, body: Record<string, unknown>) {
   const t = await ownedTeacher(ownerId, id);
-  await prisma.teacher.update({ where: { id: t.id }, data: parseTeacher(body) });
+  await prisma.teacher.update({ where: { id: t.id }, data: parseTeacher(body, t.role) });
 }
 
 /** Öğretmeni siler; programdaki dersleri ve geçmiş ders oturumları da silinir (cascade). */

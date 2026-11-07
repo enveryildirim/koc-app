@@ -102,8 +102,27 @@ model Classroom {
   sessions  LessonSession[]
   events    CalendarEvent[]
   plans     LessonPlan[]
+  courses   Course[]
+  members   ClassMember[]
+  /// Sınıfın etüt mesulü (Teacher, role = MENTOR). Yazan: enrollment; öğretmen doğrulaması route'ta (schedule)
+  mentorId  String?
+  mentor    Teacher?        @relation("ClassMentor", fields: [mentorId], references: [id], onDelete: SetNull)
 
   @@unique([ownerId, name])
+}
+
+/// Ek sınıf üyeliği: öğrencinin ana sınıfı (Student.classroomId) dışında üye olduğu sınıflar
+model ClassMember {
+  id          String    @id @default(cuid())
+  ownerId     String
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([classroomId, studentId])
+  @@index([studentId])
 }
 
 model Student {
@@ -130,6 +149,7 @@ model Student {
   homeworks      HomeworkStatus[]
   attendances    Attendance[]
   dispatches     ParentDispatch[]
+  memberships    ClassMember[]
 
   @@unique([ownerId, studentNo])
 }
@@ -208,8 +228,33 @@ model Teacher {
   ownerId  String
   name     String
   branch   String
+  /// TEACHER (öğretmen) | MENTOR (etüt mesulü: yönetici yetkisi + öğretmen işleri)
+  role     String          @default("TEACHER")
   slots    ScheduleSlot[]
   sessions LessonSession[]
+  courses  Course[]
+  mentorOf Classroom[]     @relation("ClassMentor")
+}
+
+/// Sınıfın dersi. Program satırları, değerlendirmeler ve (ad üzerinden) ödev / plan buna bağlanır
+model Course {
+  id          String         @id @default(cuid())
+  ownerId     String
+  classroomId String
+  classroom   Classroom      @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  name        String
+  /// SCHOOL | VOCATIONAL | RELIGIOUS | PREP | STUDY (bkz. schedule > COURSE_KINDS)
+  kind        String         @default("SCHOOL")
+  /// Dersin sorumlusu: öğretmen ya da (dışarıda alınan derste) etüt mesulü
+  teacherId   String?
+  teacher     Teacher?       @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  /// Ders başka kurumda alınıyor; bilgilerini sorumlusu (genelde etüt mesulü) girer
+  external    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  slots       ScheduleSlot[]
+
+  @@unique([classroomId, name])
+  @@index([ownerId])
 }
 
 /// Haftalık ders programındaki tekrar eden ders
@@ -221,6 +266,9 @@ model ScheduleSlot {
   teacherId   String
   teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   subject     String
+  /// Dersin kaydı; (classroomId, subject) ile eşlenir, programa ders eklenince kendiliğinden oluşur
+  courseId    String?
+  course      Course?         @relation(fields: [courseId], references: [id], onDelete: SetNull)
   /// GRUP | ETUT | OZEL
   lessonType  String          @default("GRUP")
   /// 1 = Pazartesi … 7 = Pazar

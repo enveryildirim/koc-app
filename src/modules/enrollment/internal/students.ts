@@ -14,6 +14,11 @@ export type StudentFilter = {
   ids?: string[];
   /** Ad, soyad veya numarada geçen metin. */
   q?: string;
+  /**
+   * Sınıfın bütün öğrencileri: ana sınıfı burası olanlar + ek üyeler (ClassMember).
+   * Ders, yoklama ve değerlendirme listeleri bunu kullanır; `classroomId` yalnızca ana sınıfa bakar.
+   */
+  inClass?: string;
 };
 export type StudentOrder = "class" | "name" | "number";
 
@@ -30,13 +35,19 @@ export async function listStudents(ownerId: string, f: StudentFilter = {}, order
   else if (f.hasClassroom !== undefined) where.classroomId = f.hasClassroom ? { not: null } : null;
   if (f.external !== undefined) where.external = f.external;
   if (f.ids) where.id = { in: f.ids };
-  if (f.q) where.OR = [{ firstName: { contains: f.q } }, { lastName: { contains: f.q } }, { studentNo: { contains: f.q } }];
+  const and: Prisma.StudentWhereInput[] = [];
+  if (f.q) and.push({ OR: [{ firstName: { contains: f.q } }, { lastName: { contains: f.q } }, { studentNo: { contains: f.q } }] });
+  if (f.inClass) and.push({ OR: [{ classroomId: f.inClass }, { memberships: { some: { classroomId: f.inClass } } }] });
+  if (and.length) where.AND = and;
   return prisma.student.findMany({ where, include: { classroom: true }, orderBy: ORDER[order] });
 }
 
 /** Kurumun öğrencisi (sınıfıyla); yoksa / başka kurumunsa null. */
 export async function findStudent(ownerId: string, id: string) {
-  return prisma.student.findFirst({ where: { id, ownerId }, include: { classroom: true } });
+  return prisma.student.findFirst({
+    where: { id, ownerId },
+    include: { classroom: true, memberships: { include: { classroom: { select: { id: true, name: true } } } } },
+  });
 }
 
 /** Kurumun öğrencisi (sınıfıyla); yoksa / başka kurumunsa notFound. */

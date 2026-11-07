@@ -3,7 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function ClassManager({ classes }: { classes: { id: string; name: string; level: string; students: number }[] }) {
+type ClassCard = { id: string; name: string; level: string; students: number; members: number; mentor: string | null };
+
+export default function ClassManager({ classes }: { classes: ClassCard[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [level, setLevel] = useState("");
@@ -31,10 +33,13 @@ export default function ClassManager({ classes }: { classes: { id: string; name:
         {classes.map((c) => (
           <div key={c.id} className="card flex items-center justify-between p-4">
             <div>
-              <Link href={`/kurum/ogrenciler?sinif=${c.id}`} className="text-lg font-bold hover:text-brand-600">{c.name}</Link>
-              <div className="text-xs text-lead">{c.level ? `${c.level}. seviye · ` : ""}{c.students} öğrenci</div>
+              <Link href={`/kurum/siniflar/${c.id}`} className="text-lg font-bold hover:text-brand-600">{c.name}</Link>
+              <div className="text-xs text-lead">
+                {c.level ? `Düzey ${c.level} · ` : ""}{c.students} öğrenci{c.members ? ` + ${c.members} ek üye` : ""}
+              </div>
+              <div className="text-xs text-lead">{c.mentor ? `Etüt mesulü: ${c.mentor}` : "Etüt mesulü atanmadı"}</div>
             </div>
-            {c.students === 0 && (
+            {c.students === 0 && c.members === 0 && (
               <button className="text-sm text-lead/70 hover:text-red-600" onClick={() => del(c.id)}>Sil</button>
             )}
           </div>
@@ -44,11 +49,11 @@ export default function ClassManager({ classes }: { classes: { id: string; name:
         <h2 className="font-semibold">Yeni sınıf</h2>
         <div>
           <label className="label">Sınıf / şube adı</label>
-          <input className="input" placeholder="ör. 8-C" value={name} onChange={(e) => setName(e.target.value)} required />
+          <input className="input" placeholder="ör. 9-A" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div>
-          <label className="label">Seviye</label>
-          <input className="input" placeholder="ör. 8" value={level} onChange={(e) => setLevel(e.target.value)} />
+          <label className="label">Düzey</label>
+          <input className="input" placeholder="ör. 9 ya da Seviye-2" value={level} onChange={(e) => setLevel(e.target.value)} />
         </div>
         {err && <p className="text-sm text-red-600">{err}</p>}
         <button className="btn-primary w-full">Ekle</button>

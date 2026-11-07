@@ -17,10 +17,10 @@ src/
 | Modül | Sahip olduğu tablolar | Bağımlı olduğu modüller | Ekranlar |
 |---|---|---|---|
 | `identity` | User | — | `/giris`, `/kayit`, `/api/auth/*` |
-| `enrollment` | Classroom, Student (veli alanları hariç) | identity | `/kurum/ogrenciler`, `/api/kurum/{siniflar,ogrenciler}` |
+| `enrollment` | Classroom, Student (veli alanları hariç), ClassMember | identity | `/kurum/ogrenciler`, `/kurum/siniflar/[id]`, `/api/kurum/{siniflar,ogrenciler}` |
 | `exams` | Exam, ExamResult | identity, enrollment, question-bank | `/kurum/denemeler/*`, `/api/kurum/denemeler/*` |
 | `homework` | Homework, HomeworkStatus | identity, enrollment | `/kurum/odevler/*`, `/api/kurum/odevler/*` |
-| `schedule` | Teacher, ScheduleSlot, LessonSession, Attendance | identity, enrollment | `/kurum/ders-programi`, `/kurum/yoklama/*`, `/api/kurum/{ogretmenler,program,yoklama}` |
+| `schedule` | Teacher, Course, ScheduleSlot, LessonSession, Attendance | identity, enrollment | `/kurum/ders-programi`, `/kurum/yoklama/*`, `/api/kurum/{ogretmenler,dersler,program,yoklama}` |
 | `question-bank` | QuestionSource, QuestionItem | identity | `/kurum/soru-havuzu/*`, `/api/kurum/soru-havuzu/*` |
 | `curriculum` | CurriculumTopic | identity | `/kurum/mufredat`, `/api/kurum/mufredat/*` |
 | `online-test` | Test, Question, Option, Attempt, Answer | identity | `/panel`, `/sinav/*`, `/s/[code]`, `/sonuc/[id]`, `/api/{tests,t,attempts}` |
@@ -70,6 +70,13 @@ modules/<m>/
 2. Fonksiyonu `internal/` içine yazın, `server.ts`'ten dışa açın. İlk parametre `ownerId` olsun.
 3. Sayfa veya route bu fonksiyonu çağırsın. Route ise `api()` ile sarın.
 4. Yeni bir modül gerekiyorsa `eslint.config.mjs > MODULES` tablosuna ekleyin.
+
+## Ders, sınıf üyeliği ve etüt mesulü
+
+- **Ders (`Course`, schedule):** sınıfın dersi; (classroomId, name) tektir. Türü (`kind`): okul, mesleki, dini, hazırlık, etüt. Tür yalnızca varsayılanları belirler. `external` = başka kurumda alınan ders (bilgisini sorumlusu, genelde etüt mesulü girer).
+- **Programla bağ:** program satırı eklenince/değişince `courseIdFor` aynı adlı dersi bulur ya da oluşturur (tür addan tahmin edilir: `guessCourseKind`). Eski satırlar `syncCourses` ile bağlanır (sınıf sayfası açılırken). Ders yeniden adlandırılırsa program satırlarının adı da değişir; geçmiş yoklama oturumları değişmez.
+- **Ana sınıf ve ek üyelik (enrollment):** `Student.classroomId` ana sınıftır; mevcut özellikler (deneme, karne, skor) buna bakar. `ClassMember` ek sınıflardır. Bir sınıfın bütün öğrencileri `listStudents({ inClass })`; yoklama bunu kullanır.
+- **Etüt mesulü:** `Teacher.role = MENTOR`; sınıfa `Classroom.mentorId` ile bağlanır. Classroom enrollment'ındır ama Teacher schedule'ındır; bu yüzden öğretmenin etüt mesulü olduğu route'ta (`schedule > findTeacher`) doğrulanır, sonra `enrollment > setClassroomMentor` yazar.
 
 ## Soru havuzu (`question-bank`)
 

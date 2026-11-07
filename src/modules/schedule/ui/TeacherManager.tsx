@@ -3,11 +3,22 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TeacherRow } from "../types";
+import { TEACHER_ROLES, TEACHER_ROLE_KEYS } from "../labels";
+
+function RoleSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+      {TEACHER_ROLE_KEYS.map((k) => (
+        <option key={k} value={k}>{TEACHER_ROLES[k]}</option>
+      ))}
+    </select>
+  );
+}
 
 export default function TeacherManager({ teachers }: { teachers: TeacherRow[] }) {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", branch: "" });
-  const [edit, setEdit] = useState<{ id: string; name: string; branch: string } | null>(null);
+  const [form, setForm] = useState({ name: "", branch: "", role: "TEACHER" });
+  const [edit, setEdit] = useState<{ id: string; name: string; branch: string; role: string } | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -37,6 +48,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
             <tr>
               <th className="px-4 py-3">Öğretmen</th>
               <th className="px-4 py-3">Branş</th>
+              <th className="px-4 py-3">Rol</th>
               <th className="px-4 py-3">Haftalık ders</th>
               <th />
             </tr>
@@ -47,6 +59,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
                 <tr key={t.id}>
                   <td className="px-4 py-2"><input className="input" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></td>
                   <td className="px-4 py-2"><input className="input" value={edit.branch} onChange={(e) => setEdit({ ...edit, branch: e.target.value })} /></td>
+                  <td className="px-4 py-2"><RoleSelect value={edit.role} onChange={(role) => setEdit({ ...edit, role })} /></td>
                   <td className="px-4 py-2 text-lead">{t.slotCount}</td>
                   <td className="whitespace-nowrap px-4 py-2 text-right">
                     <button className="btn-primary py-1" disabled={busy} onClick={async () => (await send(`/api/kurum/ogretmenler/${t.id}`, "PUT", edit)) && setEdit(null)}>Kaydet</button>
@@ -59,9 +72,10 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
                     <Link href={`/kurum/ders-programi/ogretmen/${t.id}`} className="hover:text-brand-700 hover:underline">{t.name}</Link>
                   </td>
                   <td className="px-4 py-3">{t.branch}</td>
+                  <td className="px-4 py-3">{t.role === "MENTOR" ? <span className="badge bg-orange-50 text-orange-700">Etüt mesulü</span> : <span className="text-lead">Öğretmen</span>}</td>
                   <td className="px-4 py-3 text-lead">{t.slotCount}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button className="text-sm text-lead hover:text-brand-600" onClick={() => setEdit({ id: t.id, name: t.name, branch: t.branch })}>Düzenle</button>
+                    <button className="text-sm text-lead hover:text-brand-600" onClick={() => setEdit({ id: t.id, name: t.name, branch: t.branch, role: t.role })}>Düzenle</button>
                     <button
                       className="ml-3 text-sm text-lead/70 hover:text-red-600"
                       onClick={() => {
@@ -79,7 +93,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
             )}
             {teachers.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-lead">Henüz öğretmen yok.</td>
+                <td colSpan={5} className="px-4 py-8 text-center text-lead">Henüz öğretmen yok.</td>
               </tr>
             )}
           </tbody>
@@ -89,7 +103,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
         className="card space-y-3 self-start p-5"
         onSubmit={async (e) => {
           e.preventDefault();
-          if (await send("/api/kurum/ogretmenler", "POST", form)) setForm({ name: "", branch: "" });
+          if (await send("/api/kurum/ogretmenler", "POST", form)) setForm({ name: "", branch: "", role: "TEACHER" });
         }}
       >
         <h3 className="font-semibold">Öğretmen ekle</h3>
@@ -100,6 +114,11 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
         <div>
           <label className="label">Branş</label>
           <input className="input" placeholder="Matematik" value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} required />
+        </div>
+        <div>
+          <label className="label">Rol</label>
+          <RoleSelect value={form.role} onChange={(role) => setForm({ ...form, role })} />
+          <p className="mt-1 text-[13px] text-lead">Etüt mesulü bir sınıfın sorumlusudur; yönetici yetkisiyle öğretmenin yaptığı her şeyi yapabilir.</p>
         </div>
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <button className="btn-primary w-full" disabled={busy}>Ekle</button>

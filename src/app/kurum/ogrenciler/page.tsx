@@ -49,7 +49,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       <>
         {header}
         <Tabs tabs={tabs} active={tab} />
-        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, level: c.level, students: c.studentCount }))} />
+        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, level: c.level, students: c.studentCount, members: c.memberCount, mentor: c.mentor?.name ?? null }))} />
       </>
     );
   }
