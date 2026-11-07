@@ -190,6 +190,13 @@ model Exam {
   wrongPer  Int          @default(4)
   /// Tahmini puan ayarı JSON: { base, coefs: number[] } (bölüm sırasıyla). Boş = türün varsayılanı
   scoring   String       @default("")
+  /// Optik okuyucu (FMT) TXT biçimi JSON: { nameStart, nameLen, noStart, noLen, bookletStart, sectionStarts[] }. Boş = varsayılan
+  readerFormat String    @default("")
+  /// EXAM | WORKSHEET (çalışma kağıdı: puanlanmaz, yalnızca yazdırılır)
+  purpose   String       @default("EXAM")
+  /// Hocanın kendi sınavıysa bağlı ders (Course); kurum denemesinde boş
+  courseId  String?
+  course    Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
   createdAt DateTime     @default(now())
   results   ExamResult[]
 }
@@ -271,6 +278,7 @@ model Course {
   createdAt   DateTime       @default(now())
   slots       ScheduleSlot[]
   assessments Assessment[]
+  exams       Exam[]
 
   @@unique([classroomId, name])
   @@index([ownerId])

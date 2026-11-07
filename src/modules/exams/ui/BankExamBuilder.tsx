@@ -24,13 +24,16 @@ function shuffle<T>(a: T[]) {
 }
 
 /** Havuzdan deneme kurma: bölüm seç, havuzdan soru ekle (elle ya da zorluk dağılımıyla rastgele), sırala, oluştur. */
-export default function BankExamBuilder({ items: initial }: { items: Item[] }) {
+type CourseOpt = { id: string; label: string };
+
+export default function BankExamBuilder({ items: initial, courses = [], initialCourse = "" }: { items: Item[]; courses?: CourseOpt[]; initialCourse?: string }) {
   const router = useRouter();
   const [items, setItems] = useState(initial);
   const byId = useMemo(() => new Map(items.map((q) => [q.id, q])), [items]);
   const subjects = useMemo(() => [...new Set(items.map((q) => q.subject))].sort((a, b) => a.localeCompare(b, "tr")), [items]);
 
-  const [meta, setMeta] = useState({ name: "", type: "SERBEST", date: toInputDate(new Date()), booklets: 2 });
+  const [meta, setMeta] = useState({ name: "", type: "SERBEST", date: toInputDate(new Date()), booklets: 2, purpose: "EXAM", courseId: initialCourse });
+  const worksheet = meta.purpose === "WORKSHEET";
   const [secs, setSecs] = useState<Sec[]>(templateOf("SERBEST"));
   const [active, setActive] = useState(0);
   const [f, setF] = useState({ subject: "", topic: "", difficulty: "", unused: false });
@@ -104,13 +107,14 @@ export default function BankExamBuilder({ items: initial }: { items: Item[] }) {
   const problems = secs.flatMap((s) =>
     s.items.flatMap((id, i) => {
       const a = byId.get(id)?.answer ?? "";
-      return !a ? [`${s.name} ${i + 1}: cevap yok`] : !allowed.includes(a) ? [`${s.name} ${i + 1}: ${a} şıkkı ${EXAM_TYPES[meta.type].label} türünde yok`] : [];
+      // Çalışma kağıdında cevap zorunlu değil (anahtar isteğe bağlı yazdırılır)
+      return !a ? (worksheet ? [] : [`${s.name} ${i + 1}: cevap yok`]) : !allowed.includes(a) ? [`${s.name} ${i + 1}: ${a} şıkkı ${EXAM_TYPES[meta.type].label} türünde yok`] : [];
     }),
   );
   const total = chosen.size;
 
   async function create() {
-    if (!meta.name.trim()) return setMsg({ ok: false, text: "Deneme adı girin." });
+    if (!meta.name.trim()) return setMsg({ ok: false, text: worksheet ? "Çalışma kağıdına ad verin." : "Deneme adı girin." });
     if (!total) return setMsg({ ok: false, text: "Bölümlere soru ekleyin." });
     if (problems.length) return setMsg({ ok: false, text: `Önce şunları düzeltin: ${problems.slice(0, 3).join("; ")}${problems.length > 3 ? "…" : ""}` });
     setBusy(true);
@@ -118,7 +122,7 @@ export default function BankExamBuilder({ items: initial }: { items: Item[] }) {
     const res = await fetch("/api/kurum/denemeler/havuzdan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...meta, sections: secs.map((s) => ({ name: s.name, items: s.items })) }),
+      body: JSON.stringify({ ...meta, courseId: meta.courseId || null, sections: secs.map((s) => ({ name: s.name, items: s.items })) }),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -132,8 +136,34 @@ export default function BankExamBuilder({ items: initial }: { items: Item[] }) {
     <div>
       {/* Deneme bilgileri */}
       <div className="card mb-4 flex flex-wrap items-end gap-3 px-4 py-3">
+        <div className="w-full">
+          <span className="label">Ne hazırlıyorsunuz?</span>
+          <div className="flex flex-wrap gap-1.5">
+            {[["EXAM", "Sınav / deneme (puanlanır)"], ["WORKSHEET", "Çalışma kağıdı (puanlanmaz, yalnızca yazdırılır)"]].map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setMeta({ ...meta, purpose: k, booklets: k === "WORKSHEET" ? 1 : meta.booklets })}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold ${meta.purpose === k ? "bg-graphite text-white" : "ring-1 ring-rule"}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+        {courses.length > 0 && (
+          <label>
+            <span className="label">Ders <span className="font-normal text-lead">(hocanın sınavı)</span></span>
+            <select className="input" value={meta.courseId} onChange={(e) => setMeta({ ...meta, courseId: e.target.value })}>
+              <option value="">— Kurum denemesi —</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="min-w-56 flex-1">
-          <span className="label">Deneme adı</span>
+          <span className="label">{worksheet ? "Çalışma kağıdı adı" : "Deneme adı"}</span>
           <input className="input" value={meta.name} onChange={(e) => setMeta({ ...meta, name: e.target.value })} placeholder="Ör. 8. sınıf Kasım kurum denemesi" />
         </label>
         <label>

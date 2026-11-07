@@ -1,9 +1,9 @@
 import { api } from "@/shared/http";
-import { ownerOrThrow } from "@/modules/identity/server";
+import { actorOrThrow } from "@/modules/identity/server";
 import { createHomework } from "@/modules/homework/server";
 
-/** Yeni ödev: sınıfın tüm öğrencileri için PENDING durum kaydı oluşturur. */
+/** Yeni ödev: sınıfın tüm öğrencileri (ek üyeler dahil) için PENDING durum kaydı. Öğretmen yalnızca kendi dersine. */
 export const POST = api(async (req) => {
-  const ownerId = await ownerOrThrow();
-  return createHomework(ownerId, await req.json());
+  const a = await actorOrThrow();
+  return createHomework(a.ownerId, await req.json(), { teacherId: a.role === "TEACHER" ? a.teacherId! : undefined });
 });

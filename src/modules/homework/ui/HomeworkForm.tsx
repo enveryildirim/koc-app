@@ -9,12 +9,15 @@ type Values = { classroomId: string; subject: string; title: string; description
 export default function HomeworkForm({
   classrooms,
   subjects,
+  subjectsByClass,
   initial,
   homeworkId,
   onDone,
 }: {
   classrooms: { id: string; name: string }[];
   subjects: string[];
+  /** Sınıfın dersleri (ders kaydından); seçili sınıfın dersleri öneri listesinin başında gelir */
+  subjectsByClass?: Record<string, string[]>;
   initial?: Partial<Values>;
   homeworkId?: string;
   onDone?: () => void;
@@ -73,7 +76,7 @@ export default function HomeworkForm({
         <label className="label">Ders</label>
         <input className="input" list="odev-dersler" value={v.subject} onChange={set("subject")} placeholder="Ör. Matematik" required />
         <datalist id="odev-dersler">
-          {subjects.map((s) => (
+          {[...new Set([...(subjectsByClass?.[v.classroomId] ?? []), ...subjects])].map((s) => (
             <option key={s} value={s} />
           ))}
         </datalist>

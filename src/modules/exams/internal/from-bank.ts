@@ -3,6 +3,7 @@ import { invalid } from "@/shared/errors";
 import { bankItemsByIds, markBankItemsUsed } from "@/modules/question-bank/server";
 import { bookletLetters, choicesFor, EXAM_TYPES, LETTERS, makeBooklet, orderFor, setBooklet, type AltBooklet, type ExamSection } from "../domain";
 import { bookletFields } from "./exams";
+import { findCourse } from "@/modules/schedule/server";
 
 /**
  * Soru havuzundan deneme: her bölüm için seçilen soruların cevapları A anahtarını, konuları konu listesini oluşturur.
@@ -14,6 +15,13 @@ import { bookletFields } from "./exams";
 export async function createExamFromBank(ownerId: string, body: Record<string, unknown>) {
   const type = typeof body.type === "string" && EXAM_TYPES[body.type] ? body.type : "SERBEST";
   const name = String(body.name ?? "").trim().slice(0, 120);
+  const purpose = body.purpose === "WORKSHEET" ? "WORKSHEET" : "EXAM";
+  let courseId: string | null = null;
+  if (body.courseId) {
+    const c = await findCourse(ownerId, String(body.courseId));
+    if (!c) throw invalid("Ders bulunamadı.");
+    courseId = c.id;
+  }
   if (!name) throw invalid("Deneme adı gerekli.");
   if (!Array.isArray(body.sections) || !body.sections.length) throw invalid("En az bir bölüm gerekli.");
   const n = body.booklets !== undefined ? Math.round(Number(body.booklets)) : body.bookletB === false ? 1 : 2;
@@ -37,11 +45,12 @@ export async function createExamFromBank(ownerId: string, body: Record<string, u
 
   const sections: ExamSection[] = filled.map((s) => {
     const qs = s.ids.map((id) => found.get(id)!);
+    // Çalışma kağıdında cevap zorunlu değil; eksik cevap anahtarda boşluk olarak kalır
     const missing = qs.findIndex((q) => !q.answer);
-    if (missing >= 0) throw invalid(`${s.name}: ${missing + 1}. sorunun cevabı girilmemiş.`);
-    const bad = qs.findIndex((q) => !allowed.includes(q.answer));
+    if (missing >= 0 && purpose === "EXAM") throw invalid(`${s.name}: ${missing + 1}. sorunun cevabı girilmemiş.`);
+    const bad = qs.findIndex((q) => q.answer && !allowed.includes(q.answer));
     if (bad >= 0) throw invalid(`${s.name}: ${bad + 1}. sorunun cevabı (${qs[bad].answer}) bu sınav türünde yok (${allowed}).`);
-    const keyA = qs.map((q) => q.answer).join("");
+    const keyA = qs.map((q) => q.answer || " ").join("");
     const topics = qs.map((q) => q.topic.slice(0, 80));
     const levels = qs.map((q) => q.level);
     let sec: ExamSection = {
@@ -70,6 +79,8 @@ export async function createExamFromBank(ownerId: string, body: Record<string, u
       sections: JSON.stringify(sections),
       ...bookletFields(n),
       wrongPer: EXAM_TYPES[type].wrongPer,
+      purpose,
+      courseId,
     },
   });
   await markBankItemsUsed(ownerId, all);

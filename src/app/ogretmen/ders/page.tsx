@@ -5,6 +5,7 @@ import { requireStaff } from "@/modules/identity/server";
 import { attendanceSheet, listCourses, teachesSubject } from "@/modules/schedule/server";
 import { listAssessments } from "@/modules/assessment/server";
 import AssessmentList from "@/modules/assessment/ui/AssessmentList";
+import { homeworkForLesson } from "@/modules/homework/server";
 import { topicsForLesson } from "@/modules/planning/server";
 import LessonTopics from "@/modules/planning/ui/LessonTopics";
 import QuickAttendance from "@/modules/schedule/ui/QuickAttendance";
@@ -32,6 +33,8 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     listCourses(me.ownerId, { classroomId: lesson.classroomId }),
   ]);
   const course = courses.find((c) => c.name === lesson.subject);
+  const homework = await homeworkForLesson(me.ownerId, lesson.classroomId, lesson.subject, lesson.date);
+  const here = sp.ders ? `/ogretmen/ders?ders=${sp.ders}` : `/ogretmen/ders?program=${sp.program}&tarih=${sp.tarih}`;
   const todays = course ? (await listAssessments(me.ownerId, { courseIds: [course.id], from: lesson.date })).filter((a) => a.date === lesson.date) : [];
   const taken = Object.keys(marks).length > 0;
   const dateLabel = new Date(lesson.date + "T12:00:00").toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" });
@@ -69,6 +72,34 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
           {todays.length > 0 && <AssessmentList items={todays} hrefBase="/ogretmen/degerlendirme" empty="" />}
         </section>
       )}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Ödev</h2>
+          <Link href={`/ogretmen/odev/yeni?sinif=${lesson.classroomId}&ders=${encodeURIComponent(lesson.subject)}&geri=${encodeURIComponent(here)}`} className="btn-secondary py-2">+ Ödev ver</Link>
+        </div>
+        {homework.length > 0 && (
+          <ul className="card divide-y divide-rule/70">
+            {homework.map((h) => {
+              const past = h.dueDate < new Date();
+              return (
+                <li key={h.id}>
+                  <Link href={`/ogretmen/odev/${h.id}`} className="flex items-center gap-3 px-3.5 py-2.5 active:bg-paper">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{h.title}</span>
+                      <span className="text-[13px] text-lead">teslim {h.dueDate.toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}</span>
+                    </span>
+                    {past && h.pending > 0 ? (
+                      <span className="badge bg-amber-50 text-amber-800">{h.pending} işaretlenmedi</span>
+                    ) : (
+                      <span className="num text-[13px] text-lead">{h.done}/{h.total} yaptı</span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

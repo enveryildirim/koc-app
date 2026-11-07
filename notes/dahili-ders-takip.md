@@ -231,7 +231,7 @@ Her satır ilgili öğrenci ya da ders sayfasına götürür. Rakamlar ve grafik
 2. ✅ **Roller ve telefon girişi** (7 Kasım): öğretmen ve etüt mesulü linki, "Bugün" ekranı, ders ekranı (yoklama + işlenen konu). Ayrıntı: PROJECT_MEMORY.md 4k.
 3. ✅ **Değerlendirme** (7 Kasım): puan cetveli, sözlü/yazılı/uygulama girişi, kâğıt form; öğrenci ve sınıf özetleri. Ayrıntı: PROJECT_MEMORY.md 4l.
 4. ✅ **Takibat** (7 Kasım): "Dikkat isteyenler", sınıf/ders/öğretmen analizleri, veli karnesi ve haftalık mesaja sözlü/yazılı. Ayrıntı: PROJECT_MEMORY.md 4m.
-5. **Sınav tarafı:** hocanın sınavı, çalışma kağıdı, FMT biçimi, ödev → ders.
+5. ✅ **Sınav tarafı** (7 Kasım): hocanın sınavı, çalışma kağıdı, sınava özel FMT biçimi, ödev → ders ve telefondan ödev. Ayrıntı: PROJECT_MEMORY.md 4n.
 6. **Müfredat:** haftalık plan içe aktarma.
 
 **PoC dışında:** müdür/rehber/öğrenci rolleri, şifreli giriş, çoklu birim, Osmanlıca metin yazma, otomatik SMS, dönem sonu karnesi, genel Başarı Skoru, gerçek kâğıtla optik test (kullanıcı yapacak).

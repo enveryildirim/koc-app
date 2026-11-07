@@ -1,21 +1,21 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { LETTERS } from "../domain";
+import { contiguous, readLine, readerFormatError, writeLine, type ReaderFormat } from "../reader";
 
-/** Optik okuyucu dosyasındaki alanların konumu (1'den başlayan sütun numaraları). */
-type Def = { nameStart: number; nameLen: number; noStart: number; noLen: number; bookletStart: number; ansStart: number };
-
-const STORAGE = "sinavkur.optikTanim";
 const norm = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "") || "0";
-
-function defaultDef(): Def {
-  return { nameStart: 1, nameLen: 25, noStart: 26, noLen: 6, bookletStart: 32, ansStart: 33 };
-}
 
 type Props = {
   examId: string;
-  total: number;
+  /** Bölümler (ad, soru sayısı) — biçimde her bölümün başlangıç sütunu ayrı */
+  sections: { name: string; count: number }[];
+  /** Sınavda kayıtlı biçim (yoksa varsayılan) ve kayıtlı olup olmadığı */
+  format: ReaderFormat;
+  saved: boolean;
+  /** Biçimi kopyalanabilecek diğer sınavlar (kayıtlı biçimi olanlar) */
+  others: { id: string; name: string; format: ReaderFormat }[];
   /** Denemenin kitapçıkları; tek harfse kitapçık sütunu okunmaz. */
   booklets: string[];
   choices: number;
@@ -25,50 +25,51 @@ type Props = {
   keys: Record<string, string>;
 };
 
-export default function TxtImport({ examId, total, booklets, choices, sampleNos, students, keys }: Props) {
+/**
+ * Optik okuyucu (FMT) TXT içe aktarma. Biçim bu sınava kaydedilir; sonraki yüklemelerde yeniden tanımlamak gerekmez.
+ * Her bölümün cevapları ayrı sütundan başlayabilir.
+ */
+export default function TxtImport({ examId, sections, format, saved, others, booklets, choices, sampleNos, students, keys }: Props) {
+  const router = useRouter();
   const bookletB = booklets.length > 1;
-  const [def, setDef] = useState<Def>(defaultDef);
+  const total = sections.reduce((a, s) => a + s.count, 0);
+  const [def, setDef] = useState<ReaderFormat>(format);
+  const [dirty, setDirty] = useState(false);
+  const [fmtMsg, setFmtMsg] = useState("");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ saved: number; skipped: string[]; badBooklet?: string[] } | null>(null);
+  const fmtError = readerFormatError(def, sections);
 
-  useEffect(() => {
-    try {
-      const s = localStorage.getItem(STORAGE);
-      if (s) setDef({ ...defaultDef(), ...JSON.parse(s) });
-    } catch {}
-  }, []);
-  const updateDef = (k: keyof Def, v: number) => {
-    const d = { ...def, [k]: Math.max(1, v || 1) };
-    setDef(d);
-    try {
-      localStorage.setItem(STORAGE, JSON.stringify(d));
-    } catch {}
+  const updateDef = (patch: Partial<ReaderFormat>) => {
+    setDef((d) => ({ ...d, ...patch }));
+    setDirty(true);
+    setFmtMsg("");
   };
+  const setStart = (i: number, v: number) => updateDef({ sectionStarts: def.sectionStarts.map((x, j) => (j === i ? Math.max(1, v || 1) : x)) });
+
+  async function saveFormat(f: ReaderFormat | null) {
+    setFmtMsg("");
+    const res = await fetch(`/api/kurum/denemeler/${examId}/okuyucu`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ format: f }),
+    });
+    if (!res.ok) return setFmtMsg((await res.json().catch(() => ({}))).error ?? "Kaydedilemedi.");
+    setDirty(false);
+    setFmtMsg(f ? "Biçim bu sınava kaydedildi." : "Varsayılan biçime dönüldü.");
+    router.refresh();
+  }
 
   const lines = useMemo(() => text.replace(/\r/g, "").split("\n").filter((l) => l.trim()), [text]);
   const parsed = useMemo(
     () =>
       lines.map((l) => {
-        const cut = (start: number, len: number) => l.slice(start - 1, start - 1 + len);
-        const studentNo = cut(def.noStart, def.noLen).trim();
-        const raw = cut(def.ansStart, total).padEnd(total, " ");
-        const answers = raw
-          .toUpperCase()
-          .split("")
-          .map((ch) => (LETTERS.slice(0, choices).includes(ch) ? ch : ch === "*" ? "*" : " "))
-          .join("");
-        const bk = bookletB ? cut(def.bookletStart, 1).trim().toUpperCase() : "A";
-        return {
-          name: cut(def.nameStart, def.nameLen).trim(),
-          studentNo,
-          booklet: bk,
-          bookletOk: !bookletB || booklets.includes(bk),
-          answers,
-          match: students[norm(studentNo)],
-        };
+        const r = readLine(l, def, sections, choices);
+        const bk = bookletB ? r.booklet : "A";
+        return { name: r.name, studentNo: r.studentNo, booklet: bk, bookletOk: !bookletB || booklets.includes(bk), answers: r.answers, match: students[norm(r.studentNo)] };
       }),
-    [lines, def, total, choices, bookletB, booklets, students],
+    [lines, def, sections, choices, bookletB, booklets, students],
   );
 
   async function onFile(f?: File) {
@@ -82,7 +83,6 @@ export default function TxtImport({ examId, total, booklets, choices, sampleNos,
   }
 
   function sample() {
-    const pad = (s: string, n: number) => s.slice(0, n).padEnd(n, " ");
     const out = sampleNos.slice(0, 25).map((no) => {
       const bk = booklets[Math.floor(Math.random() * booklets.length)];
       const key = keys[bk] ?? keys.A;
@@ -96,13 +96,7 @@ export default function TxtImport({ examId, total, booklets, choices, sampleNos,
         else ans += LETTERS[Math.floor(Math.random() * choices)];
       }
       const name = (students[norm(no)] ?? "").split(" (")[0].toLocaleUpperCase("tr-TR");
-      const line = Array(def.ansStart + total).fill(" ");
-      const put = (start: number, s: string) => s.split("").forEach((ch, i) => (line[start - 1 + i] = ch));
-      put(def.nameStart, pad(name, def.nameLen));
-      put(def.noStart, no.padStart(def.noLen, "0"));
-      if (bookletB) put(def.bookletStart, bk);
-      put(def.ansStart, ans);
-      return line.join("");
+      return writeLine({ name, studentNo: no, booklet: bookletB ? bk : "", answers: ans }, def, sections);
     });
     setText(out.join("\n"));
     setResult(null);
@@ -123,22 +117,24 @@ export default function TxtImport({ examId, total, booklets, choices, sampleNos,
   }
 
   const matched = parsed.filter((p) => p.match).length;
+  const width = Math.max(def.nameStart + def.nameLen, def.noStart + def.noLen, def.bookletStart + 1, ...sections.map((s, i) => def.sectionStarts[i] + s.count));
   const ruler = useMemo(() => {
-    const n = Math.min(Math.max(def.ansStart + total, 40), 260);
+    const n = Math.min(Math.max(width, 40), 400);
     return Array.from({ length: n }, (_, i) => ((i + 1) % 10 === 0 ? String(((i + 1) / 10) % 10) : (i + 1) % 5 === 0 ? "+" : "·")).join("");
-  }, [def.ansStart, total]);
+  }, [width]);
+  const SEC_CLS = ["bg-emerald-100", "bg-teal-100", "bg-lime-100", "bg-green-100"];
   const highlight = (l: string) => {
     const zones: [number, number, string][] = [
       [def.nameStart, def.nameLen, "bg-sky-100"],
       [def.noStart, def.noLen, "bg-amber-100"],
-      ...(bookletB ? [[def.bookletStart, 1, "bg-violet-200"] as [number, number, string]] : []),
-      [def.ansStart, total, "bg-emerald-50"],
+      ...(bookletB && def.bookletStart ? [[def.bookletStart, 1, "bg-violet-200"] as [number, number, string]] : []),
+      ...sections.map((s, i) => [def.sectionStarts[i], s.count, SEC_CLS[i % SEC_CLS.length]] as [number, number, string]),
     ];
     return l.split("").map((ch, i) => {
       const z = zones.find(([s, len]) => i + 1 >= s && i + 1 < s + len);
       return (
         <span key={i} className={z?.[2]}>
-          {ch === " " ? " " : ch}
+          {ch === " " ? " " : ch}
         </span>
       );
     });
@@ -147,21 +143,53 @@ export default function TxtImport({ examId, total, booklets, choices, sampleNos,
   return (
     <div className="space-y-4">
       <div className="card p-5">
-        <h2 className="font-semibold">1. Optik tanımı</h2>
-        <p className="mt-1 text-sm text-lead">
-          Optik okuyucunuzun ürettiği dosyada her alanın hangi sütundan başladığını girin (ilk karakter = 1). Tanım tarayıcınızda saklanır.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <Num label="Ad soyad başlangıç" v={def.nameStart} on={(n) => updateDef("nameStart", n)} cls="bg-sky-100" />
-          <Num label="Ad soyad uzunluk" v={def.nameLen} on={(n) => updateDef("nameLen", n)} cls="bg-sky-100" />
-          <Num label="Öğrenci no başlangıç" v={def.noStart} on={(n) => updateDef("noStart", n)} cls="bg-amber-100" />
-          <Num label="Öğrenci no uzunluk" v={def.noLen} on={(n) => updateDef("noLen", n)} cls="bg-amber-100" />
-          {bookletB && <Num label="Kitapçık sütunu" v={def.bookletStart} on={(n) => updateDef("bookletStart", n)} cls="bg-violet-200" />}
-          <Num label={`Cevaplar başlangıç (${total} sütun)`} v={def.ansStart} on={(n) => updateDef("ansStart", n)} cls="bg-emerald-50" />
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-semibold">1. Okuyucu biçimi (FMT)</h2>
+          <span className={`text-[13px] ${saved && !dirty ? "text-emerald-700" : "text-amber-700"}`}>
+            {dirty ? "Kaydedilmemiş değişiklik var" : saved ? "Bu sınava kayıtlı" : "Varsayılan biçim (kaydedilmedi)"}
+          </span>
         </div>
-        <button className="mt-3 text-sm font-medium text-brand-600" onClick={() => { setDef(defaultDef()); try { localStorage.removeItem(STORAGE); } catch {} }}>
-          Varsayılan tanıma dön
-        </button>
+        <p className="mt-1 text-sm text-lead">
+          Okuyucunun ürettiği dosyada her alanın hangi sütundan başladığını girin (ilk karakter = 1). Biçim bu sınavda saklanır;
+          her bölümün cevapları ayrı sütundan başlayabilir.
+        </p>
+        {others.length > 0 && (
+          <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold">Başka sınavdan kopyala</span>
+            <select
+              className="input w-auto"
+              defaultValue=""
+              onChange={(e) => {
+                const o = others.find((x) => x.id === e.target.value);
+                if (o) updateDef({ ...o.format, sectionStarts: sections.map((s, i) => o.format.sectionStarts[i] ?? contiguous(o.format.sectionStarts[0] ?? 33, sections)[i]) });
+              }}
+            >
+              <option value="">Seçin…</option>
+              {others.map((o) => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <Num label="Ad soyad başlangıç" v={def.nameStart} on={(n) => updateDef({ nameStart: n })} cls="bg-sky-100" />
+          <Num label="Ad soyad uzunluk" v={def.nameLen} on={(n) => updateDef({ nameLen: n })} cls="bg-sky-100" />
+          <Num label="Öğrenci no başlangıç" v={def.noStart} on={(n) => updateDef({ noStart: n })} cls="bg-amber-100" />
+          <Num label="Öğrenci no uzunluk" v={def.noLen} on={(n) => updateDef({ noLen: n })} cls="bg-amber-100" />
+          {bookletB && <Num label="Kitapçık sütunu" v={def.bookletStart} on={(n) => updateDef({ bookletStart: n })} cls="bg-violet-200" />}
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {sections.map((s, i) => (
+            <Num key={i} label={`${s.name} (${s.count} soru) başlangıç`} v={def.sectionStarts[i]} on={(n) => setStart(i, n)} cls={SEC_CLS[i % SEC_CLS.length]} />
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <button className="btn-primary" disabled={!!fmtError || !dirty} onClick={() => saveFormat(def)}>Biçimi bu sınava kaydet</button>
+          <button className="font-medium text-brand-600" onClick={() => updateDef({ sectionStarts: contiguous(def.sectionStarts[0], sections) })}>Bölümleri arka arkaya diz</button>
+          {saved && <button className="text-lead hover:text-graphite" onClick={() => saveFormat(null)}>Varsayılana dön</button>}
+          {fmtError && <span className="text-red-600">{fmtError}</span>}
+          {fmtMsg && <span className={fmtMsg.includes("kaydedildi") || fmtMsg.includes("dönüldü") ? "text-emerald-700" : "text-red-600"}>{fmtMsg}</span>}
+        </div>
       </div>
 
       <div className="card p-5">
@@ -201,7 +229,7 @@ export default function TxtImport({ examId, total, booklets, choices, sampleNos,
               3. Önizleme · {parsed.length} satır, {matched} öğrenci eşleşti
               {parsed.length - matched > 0 && <span className="text-amber-700"> ({parsed.length - matched} eşleşmeyen atlanacak)</span>}
             </h2>
-            <button className="btn-primary" disabled={busy || matched === 0} onClick={save}>
+            <button className="btn-primary" disabled={busy || matched === 0 || !!fmtError} onClick={save}>
               {busy ? "Kaydediliyor…" : `${matched} sonucu kaydet`}
             </button>
           </div>
@@ -210,7 +238,7 @@ export default function TxtImport({ examId, total, booklets, choices, sampleNos,
             {lines.slice(0, 3).map((l, i) => (
               <div key={i} className="whitespace-pre">{highlight(l)}</div>
             ))}
-            <div className="mt-1 font-sans text-xs text-lead">İlk 3 satır · renkler optik tanımındaki alanları gösterir</div>
+            <div className="mt-1 font-sans text-xs text-lead">İlk 3 satır · renkler biçimdeki alanları gösterir (her bölüm ayrı renk)</div>
           </div>
           <div className="max-h-[420px] overflow-auto">
             <table className="w-full text-xs">

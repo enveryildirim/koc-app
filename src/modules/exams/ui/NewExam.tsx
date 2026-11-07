@@ -3,12 +3,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EXAM_TYPES } from "../domain";
 
-export default function NewExam() {
+type Opt = { id: string; label: string };
+
+/** Yeni deneme. `courses`: hocanın sınavı için ders; `formats`: okuyucu (FMT) biçimi kayıtlı sınavlar (kopyalamak için). */
+export default function NewExam({ courses = [], formats = [] }: { courses?: Opt[]; formats?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [type, setType] = useState("LGS");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [booklets, setBooklets] = useState(2);
+  const [courseId, setCourseId] = useState("");
+  const [readerFrom, setReaderFrom] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -18,7 +23,7 @@ export default function NewExam() {
     const res = await fetch("/api/kurum/denemeler", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, type, date, booklets }),
+      body: JSON.stringify({ name, type, date, booklets, courseId: courseId || null, readerFrom: readerFrom || null }),
     });
     const json = await res.json();
     setBusy(false);
@@ -61,6 +66,28 @@ export default function NewExam() {
             <option value={4}>A, B, C, D</option>
           </select>
       </label>
+      {courses.length > 0 && (
+        <div>
+          <label className="label">Ders <span className="font-normal text-lead">(hocanın kendi sınavıysa)</span></label>
+          <select className="input" value={courseId} onChange={(e) => setCourseId(e.target.value)}>
+            <option value="">— Kurum denemesi —</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {formats.length > 0 && (
+        <div>
+          <label className="label">Okuyucu (FMT) biçimi</label>
+          <select className="input" value={readerFrom} onChange={(e) => setReaderFrom(e.target.value)}>
+            <option value="">Varsayılan (sonra tanımlanır)</option>
+            {formats.map((f) => (
+              <option key={f.id} value={f.id}>“{f.name}” ile aynı</option>
+            ))}
+          </select>
+        </div>
+      )}
       {err && <p className="text-sm text-red-600">{err}</p>}
       <button className="btn-primary w-full" disabled={busy}>Oluştur ve cevap anahtarını gir</button>
     </form>

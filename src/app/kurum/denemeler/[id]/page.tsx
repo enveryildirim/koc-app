@@ -6,12 +6,15 @@ import ExamPlanCoverage from "@/modules/planning/ui/ExamPlanCoverage";
 import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { choicesFor, levelStats, discriminationLabel, EXAM_TYPES, fmtDate, fmtNet, ITEM_FLAGS, ITEM_RULES, itemAnalysis, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
-import { examAbsentees, examReport, findExam } from "@/modules/exams/server";
+import { examAbsentees, examReport, findExam, listExams } from "@/modules/exams/server";
+import { parseReaderFormat } from "@/modules/exams";
 import { examFormSpec, examKeys } from "@/modules/exams";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
 import KeyEditor from "@/modules/exams/ui/KeyEditor";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
 import TxtImport from "@/modules/exams/ui/TxtImport";
+import ExamCourse from "@/modules/exams/ui/ExamCourse";
+import { listCourses } from "@/modules/schedule/server";
 import DeleteResult from "@/modules/exams/ui/DeleteResult";
 import OmrScanner from "@/shared/omr/OmrScanner";
 import FormSvg from "@/shared/omr/FormSvg";
@@ -30,9 +33,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   if (!exam) notFound();
   const keyed = sectionsKeyed(exam.secs, exam.letters.length);
   const multi = exam.letters.length > 1;
-  const tab = sp.tab ?? (keyed ? "sonuclar" : "anahtar");
+  const worksheet = exam.purpose === "WORKSHEET";
+  const tab = worksheet ? "anahtar" : (sp.tab ?? (keyed ? "sonuclar" : "anahtar"));
   const base = `/kurum/denemeler/${id}`;
-  const tabs = [
+  const allTabs = [
     { key: "sonuclar", label: "Sıralı liste", href: `${base}?tab=sonuclar` },
     { key: "anahtar", label: "Cevap anahtarı", href: `${base}?tab=anahtar` },
     { key: "optik", label: "Optik form tara", href: `${base}?tab=optik` },
@@ -43,22 +47,30 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     { key: "siniflar", label: "Sınıf ortalamaları", href: `${base}?tab=siniflar` },
     { key: "girmeyenler", label: "Girmeyenler", href: `${base}?tab=girmeyenler` },
   ];
+  // Çalışma kağıdı puanlanmaz: yalnızca cevap anahtarı (isteğe bağlı) ve kitapçık
+  const tabs = worksheet ? allTabs.filter((t) => t.key === "anahtar") : allTabs;
+  const courses = await listCourses(ownerId);
   const fileBase = exam.name;
   const header = (
     <>
       <PageHeader
         title={exam.name}
-        sub={`${EXAM_TYPES[exam.type]?.label ?? exam.type} · ${fmtDate(exam.date)} · ${totalQuestions(exam.secs)} soru · ${exam.wrongPer ? `${exam.wrongPer} yanlış 1 doğruyu götürür` : "yanlış doğruyu götürmez"}`}
+        sub={
+          worksheet
+            ? `Çalışma kağıdı · ${fmtDate(exam.date)} · ${totalQuestions(exam.secs)} soru · puanlanmaz`
+            : `${EXAM_TYPES[exam.type]?.label ?? exam.type} · ${fmtDate(exam.date)} · ${totalQuestions(exam.secs)} soru · ${exam.wrongPer ? `${exam.wrongPer} yanlış 1 doğruyu götürür` : "yanlış doğruyu götürmez"}`
+        }
         back={{ href: "/kurum/denemeler", label: "Denemeler" }}
         actions={
           <>
-            {exam.secs.some((s) => s.items?.length) && <Link href={`${base}/kitapcik`} className="btn-secondary">Soru kitapçığı</Link>}
+            <ExamCourse examId={id} courseId={exam.courseId} courses={courses.filter((c) => c.kind !== "STUDY").map((c) => ({ id: c.id, label: `${c.classroomName} · ${c.name}` }))} />
+            {exam.secs.some((s) => s.items?.length) && <Link href={`${base}/kitapcik`} className={worksheet ? "btn-primary" : "btn-secondary"}>{worksheet ? "Çalışma kağıdını yazdır" : "Soru kitapçığı"}</Link>}
             <PrintButton />
           </>
         }
       />
       <Tabs tabs={tabs} active={tab} />
-      {!keyed && tab !== "anahtar" && (
+      {!keyed && !worksheet && tab !== "anahtar" && (
         <p className="no-print mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
           Cevap anahtarı eksik. Sonuçlar anahtar girildiğinde otomatik yeniden hesaplanır. <Link className="font-semibold underline" href={`${base}?tab=anahtar`}>Anahtarı gir</Link>
         </p>
@@ -97,7 +109,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           {header}
           <TxtImport
             examId={id}
-            total={totalQuestions(exam.secs)}
+            sections={exam.secs.map((s) => ({ name: s.name, count: s.count }))}
+            format={parseReaderFormat(exam.readerFormat, exam.secs)}
+            saved={!!exam.readerFormat}
+            others={(await listExams(ownerId))
+              .filter((e) => e.id !== id && e.readerFormat)
+              .map((e) => ({ id: e.id, name: e.name, format: parseReaderFormat(e.readerFormat, e.secs) }))}
             booklets={exam.letters}
             choices={choicesFor(exam.type)}
             sampleNos={students.filter((s) => !s.external).map((s) => s.studentNo)}

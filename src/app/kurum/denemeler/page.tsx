@@ -4,12 +4,14 @@ import { listExams } from "@/modules/exams/server";
 import { EXAM_TYPES, fmtDate, fmtNet, totalQuestions } from "@/modules/exams";
 import { Empty, PageHeader, th, td } from "@/shared/ui/kurum";
 import NewExam from "@/modules/exams/ui/NewExam";
+import { listCourses } from "@/modules/schedule/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const ownerId = await requireOwner();
-  const exams = await listExams(ownerId);
+  const [exams, courses] = await Promise.all([listExams(ownerId), listCourses(ownerId)]);
+  const courseLabel = new Map(courses.map((c) => [c.id, `${c.classroomName} · ${c.name}`]));
   return (
     <>
       <PageHeader
@@ -70,16 +72,21 @@ export default async function Page() {
                     <tr key={e.id} className="hover:bg-paper">
                       <td className={td}>
                         <Link href={`/kurum/denemeler/${e.id}`} className="font-medium hover:text-brand-600">{e.name}</Link>
+                        {e.courseId && courseLabel.get(e.courseId) && <span className="block text-[12.5px] text-lead">{courseLabel.get(e.courseId)}</span>}
                       </td>
                       <td className={td}>
-                        <span className="badge badge-plain bg-mist text-graphite">{EXAM_TYPES[e.type]?.label ?? e.type}</span>
+                        {e.purpose === "WORKSHEET" ? (
+                          <span className="badge badge-plain bg-sky-50 text-sky-800">Çalışma kağıdı</span>
+                        ) : (
+                          <span className="badge badge-plain bg-mist text-graphite">{EXAM_TYPES[e.type]?.label ?? e.type}</span>
+                        )}
                         <span className="ml-1 text-xs text-lead/70">{total} soru</span>
                       </td>
                       <td className={`${td} text-lead`}>{fmtDate(e.date)}</td>
                       <td className={`${td} text-right`}>{e.resultCount}</td>
                       <td className={`${td} text-right font-semibold tabular-nums`}>{e.avgNet === null ? "—" : fmtNet(e.avgNet)}</td>
                       <td className={td}>
-                        {keyed ? <span className="badge bg-emerald-50 text-emerald-700">Hazır</span> : <span className="badge bg-amber-50 text-amber-700">Eksik</span>}
+                        {e.purpose === "WORKSHEET" ? <span className="text-[12.5px] text-lead">puanlanmaz</span> : keyed ? <span className="badge bg-emerald-50 text-emerald-700">Hazır</span> : <span className="badge bg-amber-50 text-amber-700">Eksik</span>}
                       </td>
                     </tr>
                   );
@@ -89,7 +96,10 @@ export default async function Page() {
           </div>
           </>
         )}
-        <NewExam />
+        <NewExam
+          courses={courses.filter((c) => c.kind !== "STUDY").map((c) => ({ id: c.id, label: `${c.classroomName} · ${c.name}` }))}
+          formats={exams.filter((e) => e.readerFormat).map((e) => ({ id: e.id, name: e.name }))}
+        />
       </div>
     </>
   );

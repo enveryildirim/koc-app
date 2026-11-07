@@ -3,3 +3,4 @@ export * from "./domain";
 export * from "./omr";
 export * from "./topics";
 export * from "./items";
+export * from "./reader";

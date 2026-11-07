@@ -1,7 +1,16 @@
 import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { getClassroom, listStudents } from "@/modules/enrollment/server";
+import { teachesSubject } from "@/modules/schedule/server";
 import { HOMEWORK, emptyCounts, tally, type StatusCounts } from "../labels";
+
+/** `teacherId`: öğretmen oturumu; yalnızca girdiği sınıf + dersin ödevleri. */
+type Opts = { teacherId?: string };
+
+async function assertTeaches(ownerId: string, opts: Opts, classroomId: string, subject: string, creating = false) {
+  if (!opts.teacherId || (await teachesSubject(ownerId, opts.teacherId, classroomId, subject))) return;
+  throw creating ? invalid("Yalnızca girdiğiniz derslere ödev verebilirsiniz.") : notFound("Ödev bulunamadı.");
+}
 
 /** Ödev formu (oluşturma/güncelleme) girdisini doğrular. Teslim tarihi günün sonu (23:59) kabul edilir. */
 function parseHomework(body: Record<string, unknown>) {
@@ -42,7 +51,7 @@ export async function homeworkSubjects(ownerId: string) {
 export async function findHomework(ownerId: string, id: string) {
   const hw = await prisma.homework.findFirst({ where: { id, ownerId }, include: { classroom: true, statuses: true } });
   if (!hw) return null;
-  const inClass = await listStudents(ownerId, { classroomId: hw.classroomId });
+  const inClass = await listStudents(ownerId, { inClass: hw.classroomId });
   const ids = [...new Set([...inClass.map((s) => s.id), ...hw.statuses.map((s) => s.studentId)])];
   const students = await listStudents(ownerId, { ids }, "name");
   const byStudent = new Map(hw.statuses.map((s) => [s.studentId, s]));
@@ -54,11 +63,12 @@ export async function findHomework(ownerId: string, id: string) {
   return { ...hw, roster };
 }
 
-/** Yeni ödev: sınıfın tüm öğrencileri için PENDING durum kaydı oluşturur. */
-export async function createHomework(ownerId: string, body: Record<string, unknown>) {
+/** Yeni ödev: sınıfın tüm öğrencileri (ek üyeler dahil) için PENDING durum kaydı oluşturur. */
+export async function createHomework(ownerId: string, body: Record<string, unknown>, opts: Opts = {}) {
   const data = parseHomework(body);
   const classroom = await getClassroom(ownerId, String(body.classroomId ?? ""));
-  const students = await listStudents(ownerId, { classroomId: classroom.id });
+  await assertTeaches(ownerId, opts, classroom.id, data.subject, true);
+  const students = await listStudents(ownerId, { inClass: classroom.id });
   const hw = await prisma.homework.create({
     data: {
       ownerId,
@@ -88,8 +98,9 @@ export type StatusUpdate = { studentId: string; status?: string; note?: string }
  * Öğrenci durumlarını günceller (tek ya da toplu). Başka kurumun öğrencileri ve
  * bilinmeyen durumlar sessizce atlanır; not 500 karakterle sınırlanır.
  */
-export async function setHomeworkStatuses(ownerId: string, id: string, updates: unknown) {
+export async function setHomeworkStatuses(ownerId: string, id: string, updates: unknown, opts: Opts = {}) {
   const hw = await ownHomework(ownerId, id);
+  await assertTeaches(ownerId, opts, hw.classroomId, hw.subject);
   if (!Array.isArray(updates)) throw invalid("Geçersiz istek.");
   const list = updates as StatusUpdate[];
   const valid = new Set((await listStudents(ownerId, { ids: list.map((u) => u.studentId) })).map((s) => s.id));
@@ -132,4 +143,51 @@ export async function studentHomework(ownerId: string, studentId: string) {
     include: { homework: true },
     orderBy: { homework: { dueDate: "desc" } },
   });
+}
+
+/**
+ * Bir sınıfın bir dersindeki ödevler (teslimi `date`'ten 14 gün önce ile 21 gün sonrası arasında), durum sayılarıyla.
+ * Öğretmenin ders ekranı için.
+ */
+export async function homeworkForLesson(ownerId: string, classroomId: string, subject: string, date: string) {
+  const d = new Date(date + "T12:00:00");
+  const from = new Date(d.getTime() - 14 * 86400000);
+  const to = new Date(d.getTime() + 21 * 86400000);
+  const list = await prisma.homework.findMany({
+    where: { ownerId, classroomId, subject, dueDate: { gte: from, lte: to } },
+    include: { statuses: { select: { status: true } } },
+    orderBy: { dueDate: "desc" },
+  });
+  return list.map((h) => ({
+    id: h.id, title: h.title, dueDate: h.dueDate,
+    total: h.statuses.length, pending: h.statuses.filter((s) => s.status === "PENDING").length,
+    done: h.statuses.filter((s) => s.status === "DONE").length,
+  }));
+}
+
+/** Öğretmen ekranı için ödev: kendi dersi değilse null. */
+export async function findHomeworkFor(ownerId: string, id: string, opts: Opts = {}) {
+  const hw = await findHomework(ownerId, id);
+  if (!hw) return null;
+  if (opts.teacherId && !(await teachesSubject(ownerId, opts.teacherId, hw.classroomId, hw.subject))) return null;
+  return hw;
+}
+
+/** Sınıf × ders ödev özeti (teslimi geçmiş ödevler, son `days` gün): ödev sayısı ve durum sayıları. */
+export async function homeworkByClassSubject(ownerId: string, days = 60) {
+  const now = new Date();
+  const from = new Date(now.getTime() - days * 86400000);
+  const list = await prisma.homework.findMany({
+    where: { ownerId, dueDate: { gte: from, lt: now } },
+    include: { classroom: { select: { id: true, name: true } }, statuses: { select: { status: true } } },
+  });
+  const rows = new Map<string, { classroomId: string; classroom: string; subject: string; count: number; counts: StatusCounts }>();
+  for (const h of list) {
+    const k = `${h.classroomId}|${h.subject}`;
+    const r = rows.get(k) ?? { classroomId: h.classroomId, classroom: h.classroom.name, subject: h.subject, count: 0, counts: emptyCounts() };
+    r.count++;
+    for (const s of h.statuses) tally(r.counts, s.status);
+    rows.set(k, r);
+  }
+  return [...rows.values()].sort((a, b) => a.classroom.localeCompare(b.classroom, "tr", { numeric: true }) || a.subject.localeCompare(b.subject, "tr"));
 }

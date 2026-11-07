@@ -2,6 +2,8 @@ import { prisma } from "@/shared/db";
 import { normalizeLevel } from "@/shared/cognitive";
 import { invalid, notFound } from "@/shared/errors";
 import { bookletCount, bookletLetters, choicesFor, EXAM_TYPES, gradeExam, LETTERS, parseSections, resolveScoring, setBooklet, trimBooklets, type AltBooklet, type ExamSection } from "../domain";
+import { parseReaderFormat, readerFormatError, type ReaderFormat } from "../reader";
+import { findCourse } from "@/modules/schedule/server";
 
 /** İstekteki kitapçık sayısı (1–4); booklets yoksa eski bookletB alanı, o da yoksa fallback. */
 function bookletInput(body: Record<string, unknown>, fallback: number) {
@@ -54,6 +56,14 @@ export async function createExam(ownerId: string, body: Record<string, unknown>)
   const name = String(body.name ?? "").trim();
   if (!name) throw invalid("Sınav adı gerekli.");
   const sections = t.sections.map((s) => ({ name: s.name, count: s.count, keyA: "", keyB: "" }));
+  const courseId = await examCourse(ownerId, body.courseId);
+  // Okuyucu (FMT) biçimi başka bir sınavdan kopyalanabilir; bölüm başlangıçları yeni sınavın bölümlerine uyarlanır
+  let readerFormat = "";
+  if (body.readerFrom) {
+    const src = await prisma.exam.findFirst({ where: { id: String(body.readerFrom), ownerId }, select: { readerFormat: true, sections: true } });
+    if (!src) throw invalid("Biçimi kopyalanacak sınav bulunamadı.");
+    readerFormat = src.readerFormat;
+  }
   return prisma.exam.create({
     data: {
       ownerId,
@@ -63,8 +73,45 @@ export async function createExam(ownerId: string, body: Record<string, unknown>)
       sections: JSON.stringify(sections),
       ...bookletFields(bookletInput(body, 2)),
       wrongPer: t.wrongPer,
+      readerFormat,
+      courseId,
     },
   });
+}
+
+/** Hocanın sınavı için ders: boş = kurum denemesi. Ders bu kurumun değilse hata. */
+async function examCourse(ownerId: string, v: unknown) {
+  if (!v) return null;
+  const c = await findCourse(ownerId, String(v));
+  if (!c) throw invalid("Ders bulunamadı.");
+  return c.id;
+}
+
+/** Denemenin bağlı olduğu dersi değiştirir (`null` = kurum denemesi). */
+export async function setExamCourse(ownerId: string, id: string, courseId: unknown) {
+  const exam = await prisma.exam.findFirst({ where: { id, ownerId } });
+  if (!exam) throw notFound();
+  await prisma.exam.update({ where: { id: exam.id }, data: { courseId: await examCourse(ownerId, courseId) } });
+}
+
+/**
+ * Optik okuyucu (FMT) TXT biçimini kaydeder. `format: null` varsayılana döndürür.
+ * Bölüm başlangıçları sınavın bölümleriyle doğrulanır (çakışma, sınır).
+ */
+export async function setReaderFormat(ownerId: string, id: string, body: Record<string, unknown>) {
+  const exam = await prisma.exam.findFirst({ where: { id, ownerId } });
+  if (!exam) throw notFound();
+  if (body.format === null) {
+    await prisma.exam.update({ where: { id: exam.id }, data: { readerFormat: "" } });
+    return;
+  }
+  const secs = parseSections(exam.sections);
+  const f = parseReaderFormat(JSON.stringify(body.format ?? {}), secs);
+  const raw = body.format as Partial<ReaderFormat>;
+  if (Array.isArray(raw?.sectionStarts) && raw.sectionStarts.length !== secs.length) throw invalid("Her bölüm için başlangıç sütunu girin.");
+  const err = readerFormatError(f, secs);
+  if (err) throw invalid(err);
+  await prisma.exam.update({ where: { id: exam.id }, data: { readerFormat: JSON.stringify(f) } });
 }
 
 type SecIn = { name: string; count: number; keyA: string; keyB?: string; keyC?: string; keyD?: string; topics?: string[]; levels?: string[]; bOrder?: unknown; cOrder?: unknown; dOrder?: unknown; items?: unknown };

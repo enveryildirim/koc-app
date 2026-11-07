@@ -677,4 +677,42 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     }
   }
 
+
+  /* -------------------- Okuyucu (FMT) örneği ve yeni sınıfların ödevleri -------------------- */
+  // notes/ornek-fmt.txt ile birebir: 3 bölüm, A/B kitapçık (B'de her bölümün sırası ters), biçim kayıtlı.
+  // Sonuç yok; dosya "Okuyucu dosyası (TXT)" sekmesinden yüklenerek denenir (öğrenci no 2001–2020).
+  const fmtSecs = [
+    { name: "İlmihal", count: 15, keyA: "DDABCBBACABBDAC" },
+    { name: "Siyer-i Nebî", count: 10, keyA: "BCBBCBDAAB" },
+    { name: "Hadîs-i Şerîf", count: 10, keyA: "BADADBBBAD" },
+  ].map((x) => ({ ...x, keyB: [...x.keyA].reverse().join(""), bOrder: Array.from({ length: x.count }, (_, j) => x.count - 1 - j) }));
+  const islam9 = await prisma.course.findUnique({ where: { classroomId_name: { classroomId: extraClasses[0].id, name: "İslam Tarihi" } } });
+  await prisma.exam.create({
+    data: {
+      ownerId, name: "Ara kontrol sınavı (FMT örneği)", type: "SERBEST", date: daysAgo(1), sections: JSON.stringify(fmtSecs),
+      bookletB: true, booklets: 2, wrongPer: 0, courseId: islam9?.id ?? null,
+      readerFormat: JSON.stringify({ nameStart: 7, nameLen: 20, noStart: 1, noLen: 6, bookletStart: 31, sectionStarts: [32, 52, 72] }),
+    },
+  });
+  const hwNew: { cls: string; subject: string; title: string; dueAgo: number; markShare: number }[] = [
+    { cls: "9-A", subject: "Bilişim Teknolojileri", title: "Algoritma ve akış şeması çalışma kağıdı", dueAgo: 3, markShare: 0.6 },
+    { cls: "10-A", subject: "Programlama", title: "Döngüler: 10 alıştırma", dueAgo: 8, markShare: 1 },
+    { cls: "SEVİYE-2", subject: "Kitâbet", title: "Etkinlik 12–14", dueAgo: -4, markShare: 0 },
+  ];
+  for (const h of hwNew) {
+    const c = extraClasses.find((x) => x.name === h.cls)!;
+    const due = daysAgo(h.dueAgo);
+    due.setHours(23, 59, 0, 0);
+    const hw = await prisma.homework.create({
+      data: { ownerId, classroomId: c.id, subject: h.subject, title: h.title, description: "", assignedAt: daysAgo(h.dueAgo + 7), dueDate: due },
+    });
+    await prisma.homeworkStatus.createMany({
+      data: c.students.map((st) => {
+        const r = Math.random();
+        const status = Math.random() >= h.markShare ? "PENDING" : r < 0.72 ? "DONE" : r < 0.85 ? "PARTIAL" : "NOT_DONE";
+        return { homeworkId: hw.id, studentId: st.id, status };
+      }),
+    });
+  }
+
 }

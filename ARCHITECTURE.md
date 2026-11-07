@@ -18,8 +18,8 @@ src/
 |---|---|---|---|
 | `identity` | User, AccessLink | — | `/giris`, `/kayit`, `/o/[token]`, `/api/auth/*` |
 | `enrollment` | Classroom, Student (veli alanları hariç), ClassMember | identity | `/kurum/ogrenciler`, `/kurum/siniflar/[id]`, `/api/kurum/{siniflar,ogrenciler}` |
-| `exams` | Exam, ExamResult | identity, enrollment, question-bank | `/kurum/denemeler/*`, `/api/kurum/denemeler/*` |
-| `homework` | Homework, HomeworkStatus | identity, enrollment | `/kurum/odevler/*`, `/api/kurum/odevler/*` |
+| `exams` | Exam, ExamResult | identity, enrollment, question-bank, schedule | `/kurum/denemeler/*`, `/api/kurum/denemeler/*` |
+| `homework` | Homework, HomeworkStatus | identity, enrollment, schedule | `/kurum/odevler/*`, `/api/kurum/odevler/*` |
 | `schedule` | Teacher, Course, ScheduleSlot, LessonSession, Attendance | identity, enrollment | `/kurum/ders-programi`, `/kurum/yoklama/*`, `/api/kurum/{ogretmenler,dersler,program,yoklama}` |
 | `question-bank` | QuestionSource, QuestionItem | identity | `/kurum/soru-havuzu/*`, `/api/kurum/soru-havuzu/*` |
 | `curriculum` | CurriculumTopic | identity | `/kurum/mufredat`, `/api/kurum/mufredat/*` |
@@ -28,7 +28,7 @@ src/
 | `assessment` | Rubric, Assessment, AssessmentScore | identity, enrollment, schedule, planning | `/kurum/degerlendirme/*`, `/ogretmen/degerlendirme/*`, `/api/kurum/{degerlendirme,puan-cetvelleri}/*` |
 | `reporting` | Student.parent* (veli paylaşım alanları), Setting, ParentDispatch | hepsi (online-test ve question-bank hariç; assessment dahil) | `/kurum` (özet), `/kurum/takip`, `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 
-Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← {exams, homework, schedule} ← planning ← reporting`; `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
+Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← schedule ← {exams, homework} ← planning ← assessment ← reporting`; `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
 
 ## Bir modülün içi
 

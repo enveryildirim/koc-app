@@ -399,6 +399,16 @@ PoC 1. adımı (temel) yapıldı:
 - **Seed:** 8. sınıf dersleri de hazırlık (PREP).
 - **Doğrulama:** sayfalar kurum hesabı ve etüt mesulüyle 200, öğretmen `/ogretmen`'e yönlenir; etüt mesulü kapsamı kendi sınıfları (10-A, SEVİYE-2); devamsızlık eşiğine uyan öğrenci sayısı SQL ile aynı; veli karnesinde bölüm geçici paylaşım anahtarıyla görüldü (anahtar sonra kaldırıldı). `tsc`, `lint`, `build` temiz.
 
+## 4n. Sınav tarafı ve ödev (7 Kasım 2026, PoC 5. adım)
+
+- **Sınava özel okuyucu (FMT) biçimi:** `Exam.readerFormat` (JSON); saf yardımcılar `exams/reader.ts` (`parseReaderFormat`, `readerFormatError`, `readLine`, `writeLine`, `contiguous`). Her bölümün cevapları ayrı başlangıç sütunundan okunur; bloklar çakışamaz. TXT sekmesinde "Biçimi bu sınava kaydet", "Başka sınavdan kopyala", "Bölümleri arka arkaya diz", "Varsayılana dön"; önizlemede her bölüm ayrı renk. Yeni deneme formunda "Okuyucu (FMT) biçimi: X ile aynı" (`readerFrom`). Eski tarayıcı (`localStorage`) tanımı kaldırıldı. API `PUT /api/kurum/denemeler/[id]/okuyucu`.
+- **Hocanın sınavı:** `Exam.courseId` (isteğe bağlı). Yeni deneme ve havuzdan sınav formunda ders seçimi; deneme başlığında değiştirilebilir (`PUT …/ders`); listede ders adı.
+- **Çalışma kağıdı:** `Exam.purpose = WORKSHEET`. Havuzdan kurarken "Çalışma kağıdı (puanlanmaz)"; cevap zorunlu değil (anahtarda boşluk), varsayılan tek kitapçık. Sayfada yalnızca cevap anahtarı sekmesi; kitapçıkta optik form yok, tek kitapçıkta kitapçık kutusu yok. Kitapçığa "Cevap anahtarı sayfası" seçeneği (bütün sınavlarda).
+- **Ödev:** atama ve liste ek sınıf üyelerini de kapsar (`inClass`). Ödev formunda ders önerileri seçili sınıfın derslerinden. Öğretmen yalnızca girdiği sınıf + derse ödev verir ve işaretler (`homework` → `schedule` bağımlılığı). Telefon: ders ekranında "Ödev" bölümü (son 14 / önümüzdeki 21 gün, "işaretlenmedi" uyarısı), `/ogretmen/odev/yeni`, `/ogretmen/odev/[id]`. Yeni rapor `/kurum/odevler/ders-raporu` (sınıf × ders, 60 gün, yapma oranı düşükten, Excel).
+- **Seed:** "Ara kontrol sınavı (FMT örneği)" — `notes/ornek-fmt.txt` ile birebir bölümler, anahtar, B eşlemesi ve kayıtlı biçim (9-A İslam Tarihi'ne bağlı, sonuçsuz); yeni sınıflara 3 ödev (biri teslimi geçmiş, kısmen işaretlenmemiş).
+- **Doğrulama:** örnek dosya kayıtlı biçimle okunup kaydedildi: 19 sonuç, 009999 atlandı, kitapçığı boş satır ayrıca bildirildi; A ve B kitapçıklı iki öğrencinin doğru sayısı bağımsız hesapla aynı (28, 27). Çakışan/eksik biçim 400, öğretmen biçim değiştiremez 401; biçim ve ders yeni sınava kopyalandı; olmayan ders 400. Cevapsız soruyla sınav 400, çalışma kağıdı 200 (anahtar " BC"); çalışma kağıdında tek sekme, kitapçıkta anahtar sayfası. Öğretmen kendi dersine ödev 200, başka derse 400, başkasının ödevi 404; SEVİYE-2 ödevi 16 ek üyeye atandı. `tsc`, `lint`, `build` temiz.
+- **Test kazası:** çalışma kağıdı testinde havuzdaki bir sorunun cevabı silindi (Matematik · Üslü, ilk soru `cmw3novzk0008huhmhoflao44`). Soru havuzu seed ile sıfırlanmadığı için geri gelmedi; asıl değer bilinmiyor (sonraki soruların sırasına göre muhtemelen "A"). Kullanıcının kontrol edip girmesi gerekiyor.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

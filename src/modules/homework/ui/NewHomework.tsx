@@ -2,7 +2,7 @@
 import { useState } from "react";
 import HomeworkForm from "./HomeworkForm";
 
-export default function NewHomework(props: { classrooms: { id: string; name: string }[]; subjects: string[] }) {
+export default function NewHomework(props: { classrooms: { id: string; name: string }[]; subjects: string[]; subjectsByClass?: Record<string, string[]> }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="card mb-4 px-4 py-2.5">

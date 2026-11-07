@@ -3,6 +3,7 @@ import { classroomsOf } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { countStatuses, doneRate } from "@/modules/homework";
 import { listHomework } from "@/modules/homework/server";
+import { listCourses } from "@/modules/schedule/server";
 import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
 import FilterBar from "@/modules/homework/ui/FilterBar";
 import NewHomework from "@/modules/homework/ui/NewHomework";
@@ -15,7 +16,7 @@ const fmt = (d: Date) => d.toLocaleDateString("tr-TR", { day: "2-digit", month: 
 export default async function Page({ searchParams }: { searchParams: Promise<{ sinif?: string; ders?: string }> }) {
   const ownerId = await requireOwner();
   const { sinif, ders } = await searchParams;
-  const classrooms = await classroomsOf(ownerId);
+  const [classrooms, courses] = await Promise.all([classroomsOf(ownerId), listCourses(ownerId)]);
 
   const all = await listHomework(ownerId);
   const subjects = [...new Set(all.map((h) => h.subject))].sort((a, b) => a.localeCompare(b, "tr"));
@@ -43,7 +44,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
         <Kpi label="Bu hafta teslim" value={thisWeek} />
       </div>
 
-      <NewHomework classrooms={classrooms.map((c) => ({ id: c.id, name: c.name }))} subjects={subjects} />
+      <NewHomework
+        classrooms={classrooms.map((c) => ({ id: c.id, name: c.name }))}
+        subjects={subjects}
+        subjectsByClass={courses.reduce<Record<string, string[]>>((m, c) => ({ ...m, [c.classroomId]: [...(m[c.classroomId] ?? []), c.name] }), {})}
+      />
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Ödevler <span className="font-normal text-lead">({list.length})</span></h2>
