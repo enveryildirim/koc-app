@@ -1,9 +1,10 @@
 import { EXAM_TYPES, fmtDate, fmtNet } from "@/modules/exams";
 import { ATTENDANCE } from "@/modules/schedule";
 import { HOMEWORK } from "@/modules/homework";
+import { ASSESSMENT_TYPES, fmtPercent, percentTone } from "@/modules/assessment";
 import type { ParentReport } from "../../internal/parentReport";
 
-/** Veliye gösterilen dönem karnesi (deneme + ödev + devam). Hem herkese açık sayfada hem kurum önizlemesinde kullanılır. */
+/** Veliye gösterilen dönem karnesi (deneme + sözlü/yazılı + ödev + devam). Hem herkese açık sayfada hem kurum önizlemesinde kullanılır. */
 export default function VeliKarne({ r }: { r: ParentReport }) {
   const last = r.exams[r.exams.length - 1];
   const prev = r.exams.filter((e) => e.type === last?.type).slice(-2)[0];
@@ -135,6 +136,23 @@ export default function VeliKarne({ r }: { r: ParentReport }) {
           </div>
         )}
       </Section>
+
+      {r.assessments.length > 0 && (
+        <Section title="Sözlü ve yazılı">
+          <ul className="divide-y divide-rule/70 rounded-lg ring-1 ring-rule">
+            {r.assessments.map((a) => (
+              <li key={a.id} className="flex items-baseline gap-3 px-3 py-1.5 text-xs">
+                <span className="w-14 shrink-0 text-lead">{new Date(a.date + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}</span>
+                <span className="min-w-0 flex-1">
+                  <b>{a.course}</b> · {ASSESSMENT_TYPES[a.type]?.short ?? a.type}: {a.title}
+                  {a.note && <span className="text-lead"> · {a.note}</span>}
+                </span>
+                <span className={`shrink-0 font-bold ${a.absent ? "text-lead" : percentTone(a.percent)}`}>{a.absent ? "Gelmedi" : fmtPercent(a.percent)}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Section title="Ödevler">

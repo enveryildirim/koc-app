@@ -230,7 +230,7 @@ Her satır ilgili öğrenci ya da ders sayfasına götürür. Rakamlar ve grafik
 1. ✅ **Temel** (7 Kasım): ders kaydı, ek sınıf üyeliği, etüt mesulü, sınıf sayfası. Demo veri: 9–12 sınıflar, okul/mesleki/dini/hazırlık/etüt dersleri, SEVİYE-2 grubu (kurgusal adlarla). Ayrıntı: PROJECT_MEMORY.md 4j.
 2. ✅ **Roller ve telefon girişi** (7 Kasım): öğretmen ve etüt mesulü linki, "Bugün" ekranı, ders ekranı (yoklama + işlenen konu). Ayrıntı: PROJECT_MEMORY.md 4k.
 3. ✅ **Değerlendirme** (7 Kasım): puan cetveli, sözlü/yazılı/uygulama girişi, kâğıt form; öğrenci ve sınıf özetleri. Ayrıntı: PROJECT_MEMORY.md 4l.
-4. **Takibat:** "Dikkat isteyenler", ders/öğretmen/kurum analizleri, veli linkine yeni bölümler.
+4. ✅ **Takibat** (7 Kasım): "Dikkat isteyenler", sınıf/ders/öğretmen analizleri, veli karnesi ve haftalık mesaja sözlü/yazılı. Ayrıntı: PROJECT_MEMORY.md 4m.
 5. **Sınav tarafı:** hocanın sınavı, çalışma kağıdı, FMT biçimi, ödev → ders.
 6. **Müfredat:** haftalık plan içe aktarma.
 

@@ -386,6 +386,19 @@ PoC 1. adımı (temel) yapıldı:
 - **Seed:** 5 cetvel; SEVİYE-2 Kur'an (4 sözlü), Tecvid (2 sözlü, plan konusuna bağlı), 9-A Bilişim (2 proje), 9-A Matematik dışarıda ("Okul 1. yazılı", etüt mesulü), 10-A Fizik yazılı, 11-A Web projesi, 9-B İslam Tarihi sözlü. Sözlülerde sınıfın bir kısmı puanlanır; her sınıftan bir öğrencinin son notu düşer.
 - **Doğrulama:** cetvel hatalı puan/boş kriter 400, öğretmen cetvel ekleyemez 401; öğretmen kendi dersine plan konusuyla açtı, başkasının dersine 404, başka dersin konusu 400; puan sınır aşımı/eksik kriter/sınıf dışı öğrenci 400, gelmedi ve silme çalıştı, yüzde doğru (77/100 → %77); başkasının değerlendirmesine puan/silme/ekran 404; etüt mesulü dışarıdaki derse yazılı açtı. Sayfalar 200; `tsc`, `lint`, `build` temiz.
 
+## 4m. Takibat (7 Kasım 2026, PoC 4. adım)
+
+- **Sayfa:** `/kurum/takip` (menü Bugün → "Takip"; etüt mesulünün öğretmen ekranındaki "Takip" düğmesi). Veri `reporting/internal/followup.ts`, eşikler `FOLLOW_RULES`.
+- **Kapsam:** etüt mesulünde varsayılan kendi sınıfları ("Sınıfım" / "Tüm kurum"), her iki rolde sınıf süzgeci.
+- **Dikkat isteyenler:** öğrenciler gerekçeleriyle (Devam: son 14 günde derslerinin %15'i ve en az 3 devamsızlık, önceki 14 günle; Not: aynı derste son iki notta 15+ puan düşüş ya da son 30 gün ortalaması %50 altı; Ödev: 30 günde 2+ yapılmayan), girişi eksik dersler (7 gün, öğretmene göre), plana göre geride kalanlar, 30 gündür sözlü/yazılı olmayan dersler (etüt ve hazırlık hariç; hazırlık denemeyle ölçülür).
+- **Eşik ayarı:** ilk sürümde "3 devamsızlık" ve "10 puan düşüş" demo veride 148 öğrenciden 46'sını işaretliyordu (kalabalık programda gürültü); orana ve 15 puana çekilince 33.
+- **Sınıflar:** son 30 gün devam (%90 altı kırmızı), ödev (%70 altı), sözlü/yazılı ortalaması ve sayısı, geride plan sayısı, etüt mesulü.
+- **Dersler:** aynı adlı dersin sınıflar arası durumu (60 gün): değerlendirme sayısı, ortalama, en zayıf kriter, plan ilerlemesi; dersin bütün sınıflarındaki kriter ortalamaları başlıkta.
+- **Öğretmenler:** son 14 gün ders, yoklaması alınan (eksik vurgulu), işaretlenen konu (planlı derslerde), açılan değerlendirme, son giriş. Ada göre sıralı; sıralama değil, etkinlik takibi.
+- **Veli:** karnede "Sözlü ve yazılı" bölümü (dönemdeki notlar, gelmedi, not); haftalık veli mesajında her değerlendirme bir satır.
+- **Seed:** 8. sınıf dersleri de hazırlık (PREP).
+- **Doğrulama:** sayfalar kurum hesabı ve etüt mesulüyle 200, öğretmen `/ogretmen`'e yönlenir; etüt mesulü kapsamı kendi sınıfları (10-A, SEVİYE-2); devamsızlık eşiğine uyan öğrenci sayısı SQL ile aynı; veli karnesinde bölüm geçici paylaşım anahtarıyla görüldü (anahtar sonra kaldırıldı). `tsc`, `lint`, `build` temiz.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

@@ -62,7 +62,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           courses={courses}
           teachers={teachers.map((t) => ({ id: t.id, name: t.name, role: t.role }))}
           notes={Object.fromEntries(
-            courses.filter((c) => c.kind !== "STUDY").map((c) => {
+            courses.filter((c) => c.kind !== "STUDY" && c.kind !== "PREP").map((c) => {  // hazırlık dersleri denemeyle ölçülür
               const s = summary.get(c.id);
               if (!s) return [c.id, { text: "Son 30 günde sözlü / yazılı yok", warn: true }];
               return [c.id, {

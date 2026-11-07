@@ -18,7 +18,7 @@ export default async function OgretmenLayout({ children }: { children: React.Rea
             <div className="truncate text-[12.5px] text-lead">{me.role === "MENTOR" ? "Etüt mesulü" : "Öğretmen"} · {org}</div>
           </div>
           {me.role === "MENTOR" && (
-            <Link href="/kurum" className="btn-secondary px-2.5 py-1 text-[13px]">Yönetim</Link>
+            <Link href="/kurum/takip" className="btn-secondary px-2.5 py-1 text-[13px]">Takip</Link>
           )}
           <form action="/api/auth/logout" method="post">
             <button className="px-1 text-[13px] font-semibold text-lead hover:text-graphite">Çıkış</button>

@@ -9,6 +9,8 @@ import { fmtNet } from "@/modules/exams";
 
 export type WeeklyDigest = {
   exams: { name: string; totalNet: number; classAvg: number; score: number }[];
+  /** Sözlü / yazılı / uygulama notları (yüzde; gelmediyse null). Eski kayıtlarda olmayabilir. */
+  assessments?: { course: string; title: string; percent: number | null }[];
   homework: { done: number; partial: number; notDone: number };
   attendance: { total: number; absent: number; late: number; excused: number; absentSubjects: string[] };
   /** Rapor gününden sonraki 7 gün içinde velilere açık takvim kayıtları. */
@@ -52,6 +54,9 @@ export function weeklyLines(d: WeeklyDigest): string[] {
   for (const e of d.exams) {
     lines.push(`• ${e.name}: ${fmtNet(e.totalNet)} net (sınıf ortalaması ${fmtNet(e.classAvg)})${e.score > 0 ? `, tahmini puan ${fmtNet(e.score)}` : ""}`);
   }
+  for (const a of d.assessments ?? []) {
+    lines.push(`• ${a.course} (${a.title}): ${a.percent === null ? "gelmedi" : `%${Math.round(a.percent)}`}`);
+  }
   const h = d.homework;
   const graded = h.done + h.partial + h.notDone;
   if (graded === 1) {
@@ -76,7 +81,7 @@ export function weeklyLines(d: WeeklyDigest): string[] {
       lines.push(`• Devam: ${parts.join(", ")}.`);
     }
   }
-  if (!lines.length) lines.push("• Bu hafta deneme, ödev ve yoklama kaydı yok.");
+  if (!lines.length) lines.push("• Bu hafta deneme, sözlü/yazılı, ödev ve yoklama kaydı yok.");
   if (d.upcoming.length) {
     lines.push(`• Önümüzdeki günlerde: ${d.upcoming.map((u) => `${u.title} (${dm(u.start, "short")})`).join(", ")}`);
   }

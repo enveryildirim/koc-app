@@ -77,6 +77,13 @@ async function buildParentReport(student: StudentWithClass, from: string, to: st
     .filter((a) => a.status !== "PRESENT")
     .sort((a, b) => b.session.date.localeCompare(a.session.date) || b.session.startTime.localeCompare(a.session.startTime));
 
+  /* --------------------------- Sözlü / yazılı / uygulama --------------------------- */
+  const assessScores = await prisma.assessmentScore.findMany({
+    where: { studentId, assessment: { date: { gte: from, lte: to } } },
+    include: { assessment: { select: { date: true, title: true, type: true, course: { select: { name: true } } } } },
+    orderBy: { assessment: { date: "desc" } },
+  });
+
   /* ------------------------------- Yaklaşanlar ------------------------------ */
   // Denemelerin sınıfı yok: yalnızca öğrencinin daha önce girdiği türdeki denemeler gösterilir.
   const types = await prisma.examResult.findMany({ where: { studentId }, select: { exam: { select: { type: true } } }, distinct: ["examId"] });
@@ -95,6 +102,10 @@ async function buildParentReport(student: StudentWithClass, from: string, to: st
     },
     period: { from, to },
     exams,
+    assessments: assessScores.map((s) => ({
+      id: s.id, date: s.assessment.date, title: s.assessment.title, type: s.assessment.type,
+      course: s.assessment.course.name, percent: s.percent, absent: s.absent, note: s.note,
+    })),
     homework: {
       ...homeworkSummary(homeworks),
       list: homeworks.map((h) => ({ id: h.id, title: h.homework.title, subject: h.homework.subject, due: h.homework.dueDate, status: h.status, note: h.note })),

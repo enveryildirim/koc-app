@@ -46,6 +46,7 @@ export async function weeklyReports(ownerId: string, filter: StudentFilter, week
     const att = r.attendance;
     const digest: WeeklyDigest = {
       exams: r.exams.map((e) => ({ name: e.name, totalNet: e.totalNet, classAvg: e.classAvg, score: e.score })),
+      assessments: r.assessments.map((a) => ({ course: a.course, title: a.title, percent: a.absent ? null : a.percent })),
       homework: { done: r.homework.counts.DONE ?? 0, partial: r.homework.counts.PARTIAL ?? 0, notDone: r.homework.counts.NOT_DONE ?? 0 },
       attendance: {
         total: att.total,

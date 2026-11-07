@@ -293,14 +293,14 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   // Genel ders yapısı: okul, mesleki, dini, hazırlık ve etüt dersleri; etüt mesulleri; başka sınıftan katılanlar.
   // Bütün adlar kurgusaldır.
 
-  // Mevcut sınıfların dersleri programdan çıkarılır (12. sınıflar hazırlık)
+  // Mevcut sınıfların dersleri programdan çıkarılır (8. ve 12. sınıflar LGS / YKS hazırlık: denemeyle ölçülür)
   for (const c of classes) {
     const slots = await prisma.scheduleSlot.findMany({ where: { classroomId: c.id }, orderBy: { lessonType: "desc" } });
     const ids = new Map<string, string>();
     for (const sl of slots) {
       if (!ids.has(sl.subject)) {
         const course = await prisma.course.create({
-          data: { ownerId, classroomId: c.id, name: sl.subject, kind: c.level === "12" ? "PREP" : "SCHOOL", teacherId: sl.teacherId },
+          data: { ownerId, classroomId: c.id, name: sl.subject, kind: "PREP", teacherId: sl.teacherId },
         });
         ids.set(sl.subject, course.id);
       }
