@@ -9,7 +9,9 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const params = useSearchParams();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() =>
+    params.get("link") === "gecersiz" ? "Giriş linki geçersiz ya da yenilenmiş. Yöneticinizden yeni link isteyin." : "",
+  );
   const [busy, setBusy] = useState(false);
 
   async function submit(data: typeof form) {

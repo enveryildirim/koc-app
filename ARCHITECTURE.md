@@ -16,7 +16,7 @@ src/
 
 | Modül | Sahip olduğu tablolar | Bağımlı olduğu modüller | Ekranlar |
 |---|---|---|---|
-| `identity` | User | — | `/giris`, `/kayit`, `/api/auth/*` |
+| `identity` | User, AccessLink | — | `/giris`, `/kayit`, `/o/[token]`, `/api/auth/*` |
 | `enrollment` | Classroom, Student (veli alanları hariç), ClassMember | identity | `/kurum/ogrenciler`, `/kurum/siniflar/[id]`, `/api/kurum/{siniflar,ogrenciler}` |
 | `exams` | Exam, ExamResult | identity, enrollment, question-bank | `/kurum/denemeler/*`, `/api/kurum/denemeler/*` |
 | `homework` | Homework, HomeworkStatus | identity, enrollment | `/kurum/odevler/*`, `/api/kurum/odevler/*` |
@@ -77,6 +77,13 @@ modules/<m>/
 - **Programla bağ:** program satırı eklenince/değişince `courseIdFor` aynı adlı dersi bulur ya da oluşturur (tür addan tahmin edilir: `guessCourseKind`). Eski satırlar `syncCourses` ile bağlanır (sınıf sayfası açılırken). Ders yeniden adlandırılırsa program satırlarının adı da değişir; geçmiş yoklama oturumları değişmez.
 - **Ana sınıf ve ek üyelik (enrollment):** `Student.classroomId` ana sınıftır; mevcut özellikler (deneme, karne, skor) buna bakar. `ClassMember` ek sınıflardır. Bir sınıfın bütün öğrencileri `listStudents({ inClass })`; yoklama bunu kullanır.
 - **Etüt mesulü:** `Teacher.role = MENTOR`; sınıfa `Classroom.mentorId` ile bağlanır. Classroom enrollment'ındır ama Teacher schedule'ındır; bu yüzden öğretmenin etüt mesulü olduğu route'ta (`schedule > findTeacher`) doğrulanır, sonra `enrollment > setClassroomMentor` yazar.
+
+## Roller ve kişisel giriş linki
+
+- **Oturum türleri** (`identity > getSession`): kurum hesabı (e-posta + şifre) ya da kişisel linkle giren personel (`AccessLink`). JWT'de `sub` = kurum, personelde ayrıca `lid` = link. Link silinir/yenilenirse oturum geçersiz olur (her istekte link aranır).
+- **Yetki:** `requireOwner` / `ownerOrThrow` kurum hesabını ve **etüt mesulünü** (yönetici yetkisi) kabul eder; öğretmen panele girerse `/ogretmen`'e yönlenir, kurum API'leri 401 döner. `requireStaff` öğretmen ekranı içindir. `actorOrThrow` öğretmenin de kullandığı rotalar içindir (yoklama, işlenen konu); TEACHER için kaydın o öğretmene ait olduğunu ilgili modül denetler (`schedule > teachesSubject`: programda satırı ya da dersin sorumlusu).
+- **Eşitleme:** öğretmenin adı/rolü schedule'dadır; değişince `identity > syncAccessLink`, silinince `revokeAccessLink` çağrılır.
+- **Öğretmen ekranı:** `/ogretmen` ("Bugün": eksik girişler + günün dersleri, veri `reporting > teacherAgenda`) ve `/ogretmen/ders` (işlenen konu + telefona uygun yoklama `QuickAttendance`).
 
 ## Soru havuzu (`question-bank`)
 

@@ -1,5 +1,6 @@
 import "server-only";
-/** identity — oturum ve kurum (tenant) çözümü. */
+/** identity — oturum, kurum (tenant) çözümü ve kişisel giriş linkleri. */
 export * from "./internal/session";
 export * from "./internal/tenant";
 export * from "./internal/accounts";
+export * from "./internal/access";

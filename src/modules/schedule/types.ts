@@ -11,7 +11,15 @@ export type SlotRow = {
   endTime: string;
 };
 export type Opt = { id: string; name: string };
-export type TeacherRow = { id: string; name: string; branch: string; role: string; slotCount: number };
+export type TeacherRow = {
+  id: string;
+  name: string;
+  branch: string;
+  role: string;
+  slotCount: number;
+  /** Kişisel giriş linki (yoksa null); lastUsedAt ISO */
+  link?: { token: string; lastUsedAt: string | null } | null;
+};
 export type CourseRow = {
   id: string;
   classroomId: string;

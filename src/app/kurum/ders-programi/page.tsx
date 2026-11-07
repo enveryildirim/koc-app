@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { classroomsOf } from "@/modules/enrollment/server";
-import { requireOwner } from "@/modules/identity/server";
+import { accessLinksOf, requireOwner } from "@/modules/identity/server";
 import { listSlots, listTeachers } from "@/modules/schedule/server";
 import { Empty, PageHeader, Tabs } from "@/shared/ui/kurum";
 import ScheduleBoard from "@/modules/schedule/ui/ScheduleBoard";
@@ -35,11 +35,17 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   );
 
   if (tab === "ogretmenler") {
+    const links = await accessLinksOf(ownerId);
     return (
       <div>
         {header}
         <Tabs tabs={tabs} active={tab} />
-        <TeacherManager teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch, role: t.role, slotCount: t.slotCount }))} />
+        <TeacherManager
+          teachers={teachers.map((t) => {
+            const l = links.get(t.id);
+            return { id: t.id, name: t.name, branch: t.branch, role: t.role, slotCount: t.slotCount, link: l ? { token: l.token, lastUsedAt: l.lastUsedAt?.toISOString() ?? null } : null };
+          })}
+        />
       </div>
     );
   }

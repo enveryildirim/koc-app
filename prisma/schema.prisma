@@ -16,6 +16,23 @@ model User {
   tests        Test[]
 }
 
+/// Kişisel giriş linki (öğretmen / etüt mesulü). identity modülünündür; ad ve rol schedule'dan eşitlenir.
+/// Link yenilenir ya da kaldırılırsa bu linkle açılmış oturumlar da geçersiz olur.
+model AccessLink {
+  id         String    @id @default(cuid())
+  ownerId    String
+  /// Teacher.id (schedule). Öğretmen başına tek link
+  teacherId  String    @unique
+  name       String
+  /// TEACHER | MENTOR (Teacher.role ile aynı)
+  role       String
+  token      String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([ownerId])
+}
+
 model Test {
   id               String     @id @default(cuid())
   ownerId          String

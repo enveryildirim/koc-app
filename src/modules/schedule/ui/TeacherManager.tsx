@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TeacherRow } from "../types";
 import { TEACHER_ROLES, TEACHER_ROLE_KEYS } from "../labels";
+import AccessLinkPanel from "./AccessLinkPanel";
 
 function RoleSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -50,6 +51,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
               <th className="px-4 py-3">Branş</th>
               <th className="px-4 py-3">Rol</th>
               <th className="px-4 py-3">Haftalık ders</th>
+              <th className="px-4 py-3">Giriş linki</th>
               <th />
             </tr>
           </thead>
@@ -61,6 +63,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
                   <td className="px-4 py-2"><input className="input" value={edit.branch} onChange={(e) => setEdit({ ...edit, branch: e.target.value })} /></td>
                   <td className="px-4 py-2"><RoleSelect value={edit.role} onChange={(role) => setEdit({ ...edit, role })} /></td>
                   <td className="px-4 py-2 text-lead">{t.slotCount}</td>
+                  <td className="px-4 py-2" />
                   <td className="whitespace-nowrap px-4 py-2 text-right">
                     <button className="btn-primary py-1" disabled={busy} onClick={async () => (await send(`/api/kurum/ogretmenler/${t.id}`, "PUT", edit)) && setEdit(null)}>Kaydet</button>
                     <button className="btn py-1 text-lead" onClick={() => setEdit(null)}>Vazgeç</button>
@@ -74,6 +77,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
                   <td className="px-4 py-3">{t.branch}</td>
                   <td className="px-4 py-3">{t.role === "MENTOR" ? <span className="badge bg-orange-50 text-orange-700">Etüt mesulü</span> : <span className="text-lead">Öğretmen</span>}</td>
                   <td className="px-4 py-3 text-lead">{t.slotCount}</td>
+                  <td className="px-4 py-3"><AccessLinkPanel teacherId={t.id} name={t.name} link={t.link ?? null} /></td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <button className="text-sm text-lead hover:text-brand-600" onClick={() => setEdit({ id: t.id, name: t.name, branch: t.branch, role: t.role })}>Düzenle</button>
                     <button
@@ -93,7 +97,7 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
             )}
             {teachers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-lead">Henüz öğretmen yok.</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-lead">Henüz öğretmen yok.</td>
               </tr>
             )}
           </tbody>

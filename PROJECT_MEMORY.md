@@ -368,6 +368,16 @@ PoC 1. adımı (temel) yapıldı:
 - **Doğrulama (7 Kasım):** sayfalar 200, olmayan sınıf 404; ders ekleme/aynı ad 409/geçersiz tür 400/boş ad 400; yeniden adlandırma program satırlarını güncelledi, var olan ada 409; programda saati olan ders silinemedi (409); etüt mesulü olmayan atama 400; ek üye: ana sınıfı aynı 409, tekrar 409, çıkarma 200 → tekrar 404; ek üyesi olan sınıf silinemedi; programa yeni ad eklenince ders kendiliğinden oluştu (tür tahmini doğru); SEVİYE-2 yoklamasında 2 üye kaydedildi, sınıf dışı öğrenci yok sayıldı; yoklama sayfası 16/16 ek üyeyi gösterdi; başka kurum her işlemde 404/400; girişsiz 401. `tsc`, `lint`, `build` temiz.
 - **Bilinen:** eski seed'deki öğretmen programında birkaç saat çakışması var (bu adımdan önce de vardı; yeni eklenenlerde yok). Ödev ve yıllık plan henüz derse `courseId` ile değil, (sınıf, ders adı) ile bağlı.
 
+## 4k. Roller ve telefondan giriş (7 Kasım 2026, PoC 2. adım)
+
+- **Kişisel link:** Ders programı → Öğretmenler'de "Giriş linki" sütunu: oluştur, kopyala, WhatsApp, yenile, kaldır, son giriş. Link `/o/<anahtar>`; açılınca oturum başlar. Yenilenen/kaldırılan linkin oturumu kapanır. Geçersiz linkte giriş sayfası uyarı verir.
+- **Roller:** etüt mesulü yönetim panelini açar (kenar çubuğunda adı ve "Derslerim"); öğretmen yalnızca `/ogretmen`. Kurum hesabı `/ogretmen`'e girmez (panele yönlenir).
+- **"Bugün" ekranı:** son 14 günün yoklaması alınmamış (tatil olmayan) dersleri "Eksik girişler" olarak üstte; günün dersleri yoklama ve "konu işlendi" durumuyla; gün gezinme.
+- **Ders ekranı:** plandan işlenen konu (plan bağlantısı yok) ve telefona uygun yoklama: herkes "geldi" varsayılır, satıra dokunmak "gelmedi" yapar, Geç/İzinli küçük düğmeler; Kaydet altta sabit. Ek üyelerin ana sınıfı yazılır.
+- **Yetki denetimi:** öğretmen başkasının dersine yoklama, başka plana işaret, başkasının oturumunu silme ve ders ekranını açma denemelerinde 404 aldı; etüt mesulü hepsini yapabildi; rol değişikliği linke yansıdı.
+- **Seed:** etüt mesulleri ve yeni öğretmenlere link; Selin Akar, Mahmut Kara ve Ercan Sevim'in son 5 günde bazı yoklamaları bilerek boş (eksik giriş örneği); SEVİYE-2 Tecvid, 9-A Bilişim Teknolojileri, 10-A Programlama yıllık planları.
+- **Bilinen:** link şifresiz (bilinçli PoC kararı); anahtar veritabanında düz durur (veli linki gibi). Değerlendirme (sözlü/yazılı) ders ekranına 3. adımda eklenecek.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

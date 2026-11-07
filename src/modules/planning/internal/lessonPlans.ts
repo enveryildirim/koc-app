@@ -1,7 +1,7 @@
 import { prisma } from "@/shared/db";
 import { conflict, invalid, notFound } from "@/shared/errors";
 import { classroomsOf, getClassroom } from "@/modules/enrollment/server";
-import { listSlots } from "@/modules/schedule/server";
+import { listSlots, teachesSubject } from "@/modules/schedule/server";
 import { schoolYearOf, schoolYearRange, YMD } from "../calendar";
 import { itemState, layoutPlan, mondayOf, parsePlan, planProgress, type PlanSlot, type Range } from "../plan";
 
@@ -157,9 +157,11 @@ export async function copyPlan(ownerId: string, id: string, classroomIds: unknow
 }
 
 /** Konuyu işlendi / işlenmedi olarak işaretler. */
-export async function setTopicDone(ownerId: string, itemId: string, body: Record<string, unknown>) {
-  const item = await prisma.planItem.findFirst({ where: { id: itemId, plan: { ownerId } } });
+/** `opts.teacherId`: öğretmen oturumu; yalnızca girdiği sınıf + dersin planına işaret koyabilir. */
+export async function setTopicDone(ownerId: string, itemId: string, body: Record<string, unknown>, opts: { teacherId?: string } = {}) {
+  const item = await prisma.planItem.findFirst({ where: { id: itemId, plan: { ownerId } }, include: { plan: { select: { classroomId: true, subject: true } } } });
   if (!item) throw notFound("Konu bulunamadı.");
+  if (opts.teacherId && !(await teachesSubject(ownerId, opts.teacherId, item.plan.classroomId, item.plan.subject))) throw notFound("Konu bulunamadı.");
   const done = !!body.done;
   const date = String(body.date ?? "");
   if (done && !YMD.test(date)) throw invalid("Geçerli bir tarih girin.");

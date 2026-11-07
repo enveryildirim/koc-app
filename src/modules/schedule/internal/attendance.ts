@@ -3,6 +3,7 @@ import { invalid, notFound } from "@/shared/errors";
 import { dayOfWeek } from "@/shared/date";
 import { listStudents } from "@/modules/enrollment/server";
 import { parseSlot } from "./validate";
+import { teachesSubject } from "./teachers";
 
 const STATUSES = ["PRESENT", "ABSENT", "LATE", "EXCUSED"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -26,7 +27,15 @@ export type TakeAttendanceInput = {
  * ya da `extra` (programda olmayan ek ders → yeni oturum). Yalnızca oturumun sınıfındaki öğrenciler ve geçerli
  * durumlar kaydedilir (ek üyeler dahil); diğerleri sessizce yok sayılır.
  */
-export async function takeAttendance(ownerId: string, input: TakeAttendanceInput) {
+/** Öğretmen yalnızca kendi dersine (programdaki öğretmeni ya da dersin sorumlusu) yazabilir. */
+async function assertTeaches(ownerId: string, teacherId: string | undefined, l: { teacherId: string; classroomId: string; subject: string }) {
+  if (!teacherId || l.teacherId === teacherId) return;
+  if (await teachesSubject(ownerId, teacherId, l.classroomId, l.subject)) return;
+  throw notFound("Ders bulunamadı.");
+}
+
+/** `opts.teacherId`: öğretmen oturumu; yalnızca kendi derslerine yazabilir. */
+export async function takeAttendance(ownerId: string, input: TakeAttendanceInput, opts: { teacherId?: string } = {}) {
   const date = String(input.date ?? "");
   if (!DATE.test(date)) throw invalid("Geçersiz tarih.");
 
@@ -34,9 +43,11 @@ export async function takeAttendance(ownerId: string, input: TakeAttendanceInput
   if (input.sessionId) {
     session = await prisma.lessonSession.findFirst({ where: { id: String(input.sessionId), ownerId } });
     if (!session) throw notFound("Ders bulunamadı.");
+    await assertTeaches(ownerId, opts.teacherId, session);
   } else if (input.slotId) {
     const slot = await prisma.scheduleSlot.findFirst({ where: { id: String(input.slotId), ownerId } });
     if (!slot) throw notFound("Ders bulunamadı.");
+    await assertTeaches(ownerId, opts.teacherId, slot);
     session = await prisma.lessonSession.upsert({
       where: { slotId_date: { slotId: slot.id, date } },
       update: {},
@@ -55,6 +66,7 @@ export async function takeAttendance(ownerId: string, input: TakeAttendanceInput
   } else if (input.extra) {
     const { dayOfWeek: _d, ...d } = await parseSlot(ownerId, { ...input.extra, dayOfWeek: 1 });
     void _d;
+    if (opts.teacherId && d.teacherId !== opts.teacherId) throw invalid("Ek dersi yalnızca kendi adınıza girebilirsiniz.");
     session = await prisma.lessonSession.create({ data: { ownerId, slotId: null, date, ...d } });
   } else {
     throw invalid("Ders seçilmedi.");
@@ -83,9 +95,9 @@ export async function takeAttendance(ownerId: string, input: TakeAttendanceInput
 }
 
 /** Ders oturumunu ve yoklamasını siler. */
-export async function deleteSession(ownerId: string, id: string) {
+export async function deleteSession(ownerId: string, id: string, opts: { teacherId?: string } = {}) {
   const s = await prisma.lessonSession.findFirst({ where: { id, ownerId } });
-  if (!s) throw notFound();
+  if (!s || (opts.teacherId && s.teacherId !== opts.teacherId)) throw notFound();
   await prisma.lessonSession.delete({ where: { id } });
 }
 
@@ -124,6 +136,7 @@ export async function lessonsOn(ownerId: string, date: string) {
         classroom: sl.classroom.name,
         subject: sl.subject,
         teacher: sl.teacher.name,
+        teacherId: sl.teacherId,
         lessonType: sl.lessonType,
         startTime: sl.startTime,
         endTime: sl.endTime,
@@ -141,6 +154,7 @@ export async function lessonsOn(ownerId: string, date: string) {
         classroom: s.classroom.name,
         subject: s.subject,
         teacher: s.teacher.name,
+        teacherId: s.teacherId,
         lessonType: s.lessonType,
         startTime: s.startTime,
         endTime: s.endTime,
@@ -185,6 +199,7 @@ export async function attendanceSheet(ownerId: string, target: AttendanceTarget)
       classroom: lesson.classroom,
       subject: lesson.subject,
       teacher: lesson.teacher,
+      teacherId: lesson.teacherId,
       lessonType: lesson.lessonType,
       startTime: lesson.startTime,
       endTime: lesson.endTime,

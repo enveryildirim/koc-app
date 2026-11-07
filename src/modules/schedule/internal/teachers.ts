@@ -1,6 +1,7 @@
 import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { TEACHER_ROLE_KEYS } from "../labels";
+import { revokeAccessLink, syncAccessLink } from "@/modules/identity/server";
 
 /** Kurumun öğretmenleri (ada göre), her biri programdaki haftalık ders sayısıyla. */
 export async function listTeachers(ownerId: string) {
@@ -34,16 +35,31 @@ export async function createTeacher(ownerId: string, body: Record<string, unknow
 
 export async function updateTeacher(ownerId: string, id: string, body: Record<string, unknown>) {
   const t = await ownedTeacher(ownerId, id);
-  await prisma.teacher.update({ where: { id: t.id }, data: parseTeacher(body, t.role) });
+  const data = parseTeacher(body, t.role);
+  await prisma.teacher.update({ where: { id: t.id }, data });
+  await syncAccessLink(ownerId, { id: t.id, name: data.name, role: data.role });
 }
 
 /** Öğretmeni siler; programdaki dersleri ve geçmiş ders oturumları da silinir (cascade). */
 export async function deleteTeacher(ownerId: string, id: string) {
   const t = await ownedTeacher(ownerId, id);
   await prisma.teacher.delete({ where: { id: t.id } });
+  await revokeAccessLink(ownerId, t.id);
 }
 
 /** Öğretmen (sayfa için); yoksa veya başka kurumunsa null. */
 export async function findTeacher(ownerId: string, id: string) {
   return prisma.teacher.findFirst({ where: { id, ownerId } });
+}
+
+/**
+ * Öğretmen bu sınıfın bu dersine giriyor mu: programda satırı var ya da dersin sorumlusu.
+ * Öğretmen oturumunda yoklama ve işlenen konu yazmadan önce denetlenir.
+ */
+export async function teachesSubject(ownerId: string, teacherId: string, classroomId: string, subject: string) {
+  const [slot, course] = await Promise.all([
+    prisma.scheduleSlot.findFirst({ where: { ownerId, teacherId, classroomId, subject }, select: { id: true } }),
+    prisma.course.findFirst({ where: { ownerId, teacherId, classroomId, name: subject }, select: { id: true } }),
+  ]);
+  return !!(slot || course);
 }

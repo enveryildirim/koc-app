@@ -6,10 +6,14 @@ import Logo from "./Logo";
  * Kurum panelinin çerçevesi: solda gruplu kenar çubuğu (telefonda üst çubuk), sağda sayfa.
  * /kurum, /panel ve /sinav/[id] düzenleri kullanır; kullanıcıyı çağıran düzen verir.
  */
-export default function KurumShell({ user, children }: { user: { name: string; email: string }; children: React.ReactNode }) {
+type ShellUser = { name: string; email: string; staff?: { name: string } | null };
+
+export default function KurumShell({ user, children }: { user: ShellUser; children: React.ReactNode }) {
+  // Etüt mesulü kendi adıyla görünür ve kendi ders ekranına geçebilir
+  const who = user.staff ? `${user.staff.name} · etüt mesulü` : user.email;
   return (
     <div className="lg:grid lg:min-h-screen lg:grid-cols-[208px_1fr] print:block">
-      <KurumMobileBar org={user.name} email={user.email} />
+      <KurumMobileBar org={user.name} email={who} />
       <aside className="no-print hidden border-r border-rule bg-sidebar px-3 py-4 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:gap-5">
         <Link href="/kurum" className="block px-2">
           <Logo sub={user.name} />
@@ -18,7 +22,8 @@ export default function KurumShell({ user, children }: { user: { name: string; e
           <KurumNav />
         </div>
         <div className="border-t border-rule px-2 pt-3 text-[13px]">
-          <div className="truncate text-lead" title={user.email}>{user.email}</div>
+          <div className="truncate text-lead" title={who}>{who}</div>
+          {user.staff && <Link href="/ogretmen" className="mt-1 block font-semibold text-brand-600">Derslerim</Link>}
           <form action="/api/auth/logout" method="post">
             <button className="mt-1 font-semibold text-graphite hover:text-ink">Çıkış yap</button>
           </form>

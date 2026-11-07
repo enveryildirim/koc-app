@@ -39,6 +39,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   await prisma.scheduleSlot.deleteMany();
   await prisma.course.deleteMany();
   await prisma.classMember.deleteMany();
+  await prisma.accessLink.deleteMany();
   await prisma.teacher.deleteMany();
   await prisma.homeworkStatus.deleteMany();
   await prisma.homework.deleteMany();
@@ -443,6 +444,15 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   await prisma.scheduleSlot.createMany({ data: seviyeSlots });
   extraClasses.push({ ...seviye, students: joiners });
 
+  // Kişisel giriş linkleri: etüt mesulleri ve yeni öğretmenler (Ders programı → Öğretmenler'den kopyalanır)
+  for (const [name, id] of [...Object.entries(mentor), ...Object.entries(staff)]) {
+    await prisma.accessLink.create({
+      data: { ownerId, teacherId: id, name, role: mentor[name] ? "MENTOR" : "TEACHER", token: randomBytes(18).toString("base64url") },
+    });
+  }
+  // Eksik giriş örneği: bu öğretmenlerin son günlerdeki bazı derslerinin yoklaması alınmamış olsun
+  const lateEntry = new Set([staff["Selin Akar"], staff["Mahmut Kara"], mentor["Ercan Sevim"]]);
+
   /* ------------------------- Son 7 haftanın yoklamaları ------------------------- */
   const allSlots = await prisma.scheduleSlot.findMany();
   const studentsByClass = new Map([...classes, ...extraClasses].map((c) => [c.id, c.students]));
@@ -456,6 +466,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     const d = daysAgo(ago);
     const dow = ((d.getDay() + 6) % 7) + 1;
     for (const slot of allSlots.filter((s) => s.dayOfWeek === dow)) {
+      if (ago <= 5 && lateEntry.has(slot.teacherId) && Math.random() < 0.6) continue;
       const session = await prisma.lessonSession.create({
         data: {
           ownerId,
@@ -530,7 +541,29 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
   /* ------------------------------ Yıllık ders planları ------------------------------ */
   const holidays = events.filter((e) => e.kind === "HOLIDAY" && !("classroomId" in e)).map((e) => ({ start: e.startDate, end: e.endDate }));
   const thisWeek = mondayOf(day(0));
-  const PLANS: { cls: number; subject: string; behind: number; source: string }[] = [
+  const byName = (n: string) => extraClasses.find((c) => c.name === n)!.id;
+  const PLANS: { cls: number; classroomId?: string; subject: string; behind: number; source: string }[] = [
+    {
+      cls: -1,
+      classroomId: byName("SEVİYE-2"),
+      subject: "Tecvid",
+      behind: 1,
+      source: "Tecvidin tarifi, mevzuu ve gayesi\nKıraat imamı ve râvîsi\nMedd-i tabiî\nMedd-i muttasıl\nMedd-i munfasıl\nMedd-i lâzım\nMedd-i ârız\nGenel tekrar ve ara kontrol\nTenvin ve nûn-u sâkin: ihfâ\nİzhar\nİklâb\nİdğâm-ı mea'l-ğunne\nİdğâm-ı bilâ ğunne\nİdğâm-ı misleyn ve mütecâniseyn\nİdğâm-ı mütekâribeyn\nİdğâm-ı şemsiyye ve izhar-ı kameriyye\nKalkale\nHükmü'r-râ\nLafzatullah, zamir ve sekte\nGenel tekrar ve şifâhî imtihan | 2",
+    },
+    {
+      cls: -1,
+      classroomId: byName("9-A"),
+      subject: "Bilişim Teknolojileri",
+      behind: 0,
+      source: "Bilgisayar sistemleri ve donanım | 2\nİşletim sistemleri | 2\nDosya yönetimi\nBilgi güvenliği ve dijital vatandaşlık | 2\nKelime işlemci | 2\nHesap tablosu | 3\nSunu hazırlama | 2\nAlgoritma ve akış şeması | 3\nBlok tabanlı programlama | 3\nProje haftası | 2",
+    },
+    {
+      cls: -1,
+      classroomId: byName("10-A"),
+      subject: "Programlama",
+      behind: 2,
+      source: "Programlama ortamının kurulumu\nDeğişkenler ve veri türleri | 2\nOperatörler\nKoşul yapıları | 2\nDöngüler | 3\nDiziler | 2\nFonksiyonlar | 3\nNesne tabanlı programlamaya giriş | 3\nHata ayıklama\nDönem projesi | 3",
+    },
     {
       cls: 0,
       subject: "Matematik",
@@ -560,7 +593,7 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     const startDate = defaultPlanStart(year);
     const slots = layoutPlan(parsePlan(pl.source).lines, startDate, holidays);
     const plan = await prisma.lessonPlan.create({
-      data: { ownerId, classroomId: classes[pl.cls].id, subject: pl.subject, year, startDate, source: pl.source },
+      data: { ownerId, classroomId: pl.classroomId ?? classes[pl.cls].id, subject: pl.subject, year, startDate, source: pl.source },
     });
     const due = slots.filter((s) => s.endWeek < thisWeek);
     const doneUpTo = due.length - pl.behind;

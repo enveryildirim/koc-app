@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 type Topic = { id: string; topic: string; doneDate: string | null; state: "done" | "late" | "current" | "upcoming" };
 
 /** Yoklama ekranında: bu derste işlenen konuları yıllık plandan işaretleme. */
-export default function LessonTopics({ planId, items, date, sessionId }: { planId: string; items: Topic[]; date: string; sessionId: string | null }) {
+/** `planLink`: yıllık plan bağlantısı (öğretmen ekranında yok; plan sayfası yönetim panelindedir). */
+export default function LessonTopics({ planId, items, date, sessionId, planLink = true }: { planId: string; items: Topic[]; date: string; sessionId: string | null; planLink?: boolean }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
 
@@ -26,7 +27,7 @@ export default function LessonTopics({ planId, items, date, sessionId }: { planI
     <div className="card mb-6 p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold">Bu derste işlenen konu</h3>
-        <Link href={`/kurum/takvim/plan/${planId}`} className="text-sm text-brand-700 hover:underline">Yıllık plan</Link>
+        {planLink && <Link href={`/kurum/takvim/plan/${planId}`} className="text-sm text-brand-700 hover:underline">Yıllık plan</Link>}
       </div>
       {items.length === 0 ? (
         <p className="text-sm text-lead">Plandaki tüm konular işlendi.</p>

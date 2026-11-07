@@ -228,7 +228,7 @@ Her satır ilgili öğrenci ya da ders sayfasına götürür. Rakamlar ve grafik
 ## 8. PoC sırası
 
 1. ✅ **Temel** (7 Kasım): ders kaydı, ek sınıf üyeliği, etüt mesulü, sınıf sayfası. Demo veri: 9–12 sınıflar, okul/mesleki/dini/hazırlık/etüt dersleri, SEVİYE-2 grubu (kurgusal adlarla). Ayrıntı: PROJECT_MEMORY.md 4j.
-2. **Roller ve telefon girişi:** öğretmen ve etüt mesulü linki, "Bugün" ekranı, ders ekranı (yoklama + işlenen konu).
+2. ✅ **Roller ve telefon girişi** (7 Kasım): öğretmen ve etüt mesulü linki, "Bugün" ekranı, ders ekranı (yoklama + işlenen konu). Ayrıntı: PROJECT_MEMORY.md 4k.
 3. **Değerlendirme:** puan cetveli, sözlü/yazılı/uygulama girişi, kâğıt form. Öğrenci ve sınıf analizleri bununla birlikte.
 4. **Takibat:** "Dikkat isteyenler", ders/öğretmen/kurum analizleri, veli linkine yeni bölümler.
 5. **Sınav tarafı:** hocanın sınavı, çalışma kağıdı, FMT biçimi, ödev → ders.

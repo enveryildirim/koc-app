@@ -9,3 +9,4 @@ export * from "./internal/dashboard";
 export * from "./internal/attendanceReports";
 export * from "./internal/studentOverview";
 export * from "./internal/curriculumTracking";
+export * from "./internal/agenda";
