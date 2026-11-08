@@ -2,10 +2,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DAYS, LESSON_TYPES, teacherSub } from "@/modules/schedule";
+import { DAYS, DAYS_SHORT, LESSON_TYPES, teacherSub } from "@/modules/schedule";
 import { Opt, SlotRow, TYPE_STYLE } from "../types";
 
-type Draft = Omit<SlotRow, "id" | "classroomName" | "teacherName"> & { id?: string };
+/** `days`: yeni ders saatinde seçilen günler (aynı saat her birine eklenir); düzenlemede tek gün (`dayOfWeek`). */
+type Draft = Omit<SlotRow, "id" | "classroomName" | "teacherName"> & { id?: string; days?: number[] };
 /** Sınıfın dersi: programa yalnızca bunlardan biri eklenir (ders Yönetim → Dersler'de açılır). */
 type CourseOpt = { id: string; classroomId: string; name: string; kind: string; teacherId: string | null };
 
@@ -64,6 +65,7 @@ export default function ScheduleBoard({
       lessonType: "GRUP",
       ...fromCourse(firstCourse(classroomId), teacherId),
       dayOfWeek: day,
+      days: [day],
       startTime: "16:00",
       endTime: "16:40",
     });
@@ -77,7 +79,7 @@ export default function ScheduleBoard({
     const res = await fetch(draft.id ? `/api/kurum/program/${draft.id}` : "/api/kurum/program", {
       method: draft.id ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...draft, confirm }),
+      body: JSON.stringify(draft.id ? { ...draft, confirm } : { ...draft, dayOfWeeks: draft.days ?? [draft.dayOfWeek], confirm }),
     });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
@@ -198,7 +200,29 @@ export default function ScheduleBoard({
                   ))}
                 </select>
               </div>
-              <div>
+              {!draft.id && (
+                <fieldset className="col-span-2">
+                  <legend className="label">Günler</legend>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[1, 2, 3, 4, 5, 6, 7].map((d) => {
+                      const on = draft.days?.includes(d) ?? false;
+                      return (
+                        <label key={d} title={DAYS[d]} className={`cursor-pointer rounded-full px-3 py-1 text-sm ring-1 ${on ? "bg-graphite text-white ring-graphite" : "bg-surface ring-rule"}`}>
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={on}
+                            onChange={() => set({ days: on ? (draft.days ?? []).filter((x) => x !== d) : [...(draft.days ?? []), d].sort((a, b) => a - b) })}
+                          />
+                          {DAYS_SHORT[d]}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-[12.5px] text-lead">Aynı saat seçilen her güne eklenir; her gün ayrı düzenlenebilir.</p>
+                </fieldset>
+              )}
+              <div className={draft.id ? "" : "col-span-2"}>
                 <label className="label">Tür</label>
                 <select className="input" value={draft.lessonType} onChange={(e) => set({ lessonType: e.target.value })}>
                   {Object.entries(LESSON_TYPES).map(([k, v]) => (
@@ -206,14 +230,16 @@ export default function ScheduleBoard({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="label">Gün</label>
-                <select className="input" value={draft.dayOfWeek} onChange={(e) => set({ dayOfWeek: Number(e.target.value) })}>
-                  {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                    <option key={d} value={d}>{DAYS[d]}</option>
-                  ))}
-                </select>
-              </div>
+              {draft.id && (
+                <div>
+                  <label className="label">Gün</label>
+                  <select className="input" value={draft.dayOfWeek} onChange={(e) => set({ dayOfWeek: Number(e.target.value) })}>
+                    {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                      <option key={d} value={d}>{DAYS[d]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="label">Başlangıç</label>
                 <input type="time" className="input" value={draft.startTime} onChange={(e) => set({ startTime: e.target.value })} />
@@ -235,8 +261,8 @@ export default function ScheduleBoard({
                 <button className="btn-danger" disabled={busy} onClick={remove}>Sil</button>
               )}
               <button className="btn-secondary ml-auto" onClick={() => setDraft(null)}>Vazgeç</button>
-              <button className="btn-primary" disabled={busy || !teachers.length || !draft.courseId} onClick={() => save()}>
-                {busy ? "Kaydediliyor…" : "Kaydet"}
+              <button className="btn-primary" disabled={busy || !teachers.length || !draft.courseId || (!draft.id && !draft.days?.length)} onClick={() => save()}>
+                {busy ? "Kaydediliyor…" : !draft.id && (draft.days?.length ?? 0) > 1 ? `${draft.days!.length} güne kaydet` : "Kaydet"}
               </button>
             </div>
             {!teachers.length && <p className="mt-2 text-xs text-amber-600">Önce menüdeki “Personel” sayfasından öğretmen ekleyin.</p>}

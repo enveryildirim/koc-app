@@ -80,7 +80,7 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 ### Ders programı satırı (`ScheduleSlot`)
 | | |
 |---|---|
-| Oluşur | Yönetim → **Ders programı** → gün → "+ Saat ekle" (sınıf, **ders listeden**, öğretmen ve tür dersten gelir, gün, saat). Ders listede yoksa Dersler'e bağlantı |
+| Oluşur | Yönetim → **Ders programı** → gün → "+ Saat ekle" (sınıf, **ders listeden**, öğretmen ve tür dersten gelir, **günler çoklu seçilir**, saat). Aynı saat seçilen her güne ayrı satır olarak eklenir; bir günde çakışma varsa hiçbiri kaydedilmez. Ders listede yoksa Dersler'e bağlantı |
 | Düzenlenir / silinir | Aynı ekranda derse tıklayınca; silinince geçmiş yoklamalar korunur |
 | Kullanılır | Yoklama (günün dersleri), Öğretmenin "Bugün" ekranı, Eksik girişler, Takip |
 | Kim | Yönetici, etüt mesulü |

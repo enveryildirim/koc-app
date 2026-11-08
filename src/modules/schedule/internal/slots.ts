@@ -1,5 +1,5 @@
 import { prisma } from "@/shared/db";
-import { notFound } from "@/shared/errors";
+import { invalid, notFound } from "@/shared/errors";
 import { parseSlot } from "./validate";
 import { assertNoClash } from "./clashes";
 
@@ -21,13 +21,17 @@ async function ownedSlot(ownerId: string, id: string) {
 }
 
 /**
- * Programa ders ekler. Ders sınıfta var olmalı (`parseSlot`); programdan ders açılmaz.
- * Çakışma varsa kaydetmez (bkz. `assertNoClash`); yalnızca uyarı varsa `body.confirm === true` ile kaydedilir.
+ * Programa ders saati ekler. `dayOfWeeks: number[]` verilirse aynı saat seçilen her güne eklenir (yoksa `dayOfWeek`).
+ * Ders sınıfta var olmalı (`parseSlot`); programdan ders açılmaz. Herhangi bir günde çakışma varsa hiçbiri kaydedilmez
+ * (bkz. `assertNoClash`); yalnızca uyarı varsa `body.confirm === true` ile kaydedilir. Oluşan satırların kimlikleri döner.
  */
-export async function createSlot(ownerId: string, body: Record<string, unknown>) {
-  const data = await parseSlot(ownerId, body);
-  await assertNoClash(ownerId, data, { confirmed: body.confirm === true });
-  return prisma.scheduleSlot.create({ data: { ownerId, ...data } });
+export async function createSlots(ownerId: string, body: Record<string, unknown>) {
+  const days = Array.isArray(body.dayOfWeeks) ? [...new Set(body.dayOfWeeks.map(Number))].sort((a, b) => a - b) : [Number(body.dayOfWeek)];
+  if (!days.length) throw invalid("En az bir gün seçin.");
+  const list = await Promise.all(days.map((dayOfWeek) => parseSlot(ownerId, { ...body, dayOfWeek })));
+  await assertNoClash(ownerId, list, { confirmed: body.confirm === true });
+  const created = await prisma.$transaction(list.map((data) => prisma.scheduleSlot.create({ data: { ownerId, ...data } })));
+  return created.map((c) => c.id);
 }
 
 export async function updateSlot(ownerId: string, id: string, body: Record<string, unknown>) {

@@ -165,6 +165,8 @@ Ders **yalnızca** Yönetim → Dersler'de açılır. **+ Ders ekle** → yan pa
 - [ ] Programdan yeni ders **açılamaz**: listede *Robotik* yok → "Dersler sayfasında ekleyin" bağlantısı Dersler'de 9-A seçili ekleme panelini açar → ekleyin → programa dönün, artık listede.
 - [ ] Dersi olmayan bir sınıfta "+ Saat ekle" → "Bu sınıfın dersi yok." Kaydet pasif.
 - [ ] Türü "Etüt" olan bir ders seçince Tür kendiliğinden "Etüt" olur.
+- [ ] **Çok gün:** "+ Saat ekle" → tıklanan gün seçili gelir; "Günler"den 2 gün daha seçin → düğme "3 güne kaydet" → aynı saat üç güne eklenir. Her gün ayrı düzenlenir (düzenlemede tek gün).
+- [ ] Seçilen günlerden birinde çakışma olsun → "Çakışma: … Pazartesi …" ve **hiçbir gün** kaydedilmez.
 - [ ] Aynı dersi aynı saate ikinci kez ekleyin → "Çakışma: … programda zaten var." Kaydedilmez.
 - [ ] Aynı sınıfa aynı saatte başka bir grup dersi ekleyin → "Çakışma: 9-A sınıfında … var." Kaydedilmez.
 - [ ] Aynı öğretmeni aynı saatte başka sınıfa koyun → "Çakışma: Deniz Aksoy … dersinde." Kaydedilmez.

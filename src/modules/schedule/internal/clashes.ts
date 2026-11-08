@@ -85,14 +85,11 @@ function listMessage({ kind, a, b, common }: Pair) {
   }
 }
 
-/**
- * Kaydedilecek dersin çakışmalarını denetler. Kesin çakışmada 409; yalnızca uyarı varsa ve `confirmed` değilse
- * 409 + `{ confirm: true }` fırlatır (istemci onay alıp `confirm: true` ile yeniden gönderir).
- */
-export async function assertNoClash(ownerId: string, s: SlotInput, opts: { selfId?: string; confirmed?: boolean } = {}) {
+/** Kaydedilecek dersin çakışma mesajları: kesin (`hard`) ve onayla geçilebilen (`soft`). */
+async function clashMessages(ownerId: string, s: SlotInput, selfId?: string) {
   const [others, cls, teacher, rosters] = await Promise.all([
     prisma.scheduleSlot.findMany({
-      where: { ownerId, dayOfWeek: s.dayOfWeek, ...(opts.selfId ? { NOT: { id: opts.selfId } } : {}) },
+      where: { ownerId, dayOfWeek: s.dayOfWeek, ...(selfId ? { NOT: { id: selfId } } : {}) },
       include: { classroom: { select: { name: true } }, teacher: { select: { name: true } } },
     }),
     prisma.classroom.findFirst({ where: { id: s.classroomId, ownerId }, select: { name: true } }),
@@ -101,9 +98,20 @@ export async function assertNoClash(ownerId: string, s: SlotInput, opts: { selfI
   ]);
   const me: SlotLike = { ...s, classroomName: cls?.name ?? "", teacherName: teacher?.name ?? "" };
   const pairs = others.flatMap((o) => pairClashes(me, { ...o, classroomName: o.classroom.name, teacherName: o.teacher.name }, rosters));
-  const hard = pairs.filter((p) => p.hard);
-  if (hard.length) throw conflict(`Çakışma: ${[...new Set(hard.map(formMessage))].join(" ")}`);
-  if (pairs.length && !opts.confirmed) throw needsConfirm([...new Set(pairs.map(formMessage))].join(" "));
+  return { hard: pairs.filter((p) => p.hard).map(formMessage), soft: pairs.filter((p) => !p.hard).map(formMessage) };
+}
+
+/**
+ * Kaydedilecek ders(ler)in çakışmalarını denetler (birden çok gün tek seferde). Herhangi bir günde kesin çakışma varsa 409
+ * ve hiçbiri kaydedilmez; yalnızca uyarı varsa ve `confirmed` değilse 409 + `{ confirm: true }` fırlatır
+ * (istemci onay alıp `confirm: true` ile yeniden gönderir). Mesajlar günü içerir.
+ */
+export async function assertNoClash(ownerId: string, slots: SlotInput | SlotInput[], opts: { selfId?: string; confirmed?: boolean } = {}) {
+  const all = await Promise.all((Array.isArray(slots) ? slots : [slots]).map((s) => clashMessages(ownerId, s, opts.selfId)));
+  const hard = [...new Set(all.flatMap((m) => m.hard))];
+  const soft = [...new Set(all.flatMap((m) => m.soft))];
+  if (hard.length) throw conflict(`Çakışma: ${hard.join(" ")}`);
+  if (soft.length && !opts.confirmed) throw needsConfirm(soft.join(" "));
 }
 
 /** Programdaki bütün çakışmalar (önce kesinler, sonra gün ve saate göre). Ders programı sayfasının üstünde listelenir. */

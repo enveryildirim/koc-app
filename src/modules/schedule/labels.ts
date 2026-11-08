@@ -1,6 +1,7 @@
 /** Ders programı ve yoklama etiketleri (istemci + sunucu güvenli). */
 
 export const DAYS = ["", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+export const DAYS_SHORT = ["", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
 export const LESSON_TYPES: Record<string, string> = { GRUP: "Grup dersi", ETUT: "Etüt", OZEL: "Özel ders" };
 export const LESSON_TYPE_KEYS = Object.keys(LESSON_TYPES);
