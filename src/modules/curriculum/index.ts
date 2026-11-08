@@ -16,6 +16,21 @@ export const CURRICULUM_GRADES = ["5", "6", "7", "8", "9", "10", "11", "12", "LG
 
 export const gradeLabel = (g: string) => (/^\d+$/.test(g) ? `${g}. sınıf` : g);
 
+const EXAM_GRADES = ["LGS", "TYT", "AYT"];
+/** Sıralama: sayısal sınıflar, sonra sınav düzeyleri, sonra kuruma özgü düzeyler (Seviye-2…). */
+export const gradeSortKey = (g: string) => (/^\d+$/.test(g) ? g.padStart(2, "0") : EXAM_GRADES.includes(g) ? `y${EXAM_GRADES.indexOf(g)}` : `z${g}`);
+
+/**
+ * Müfredat düzey seçenekleri: kurumun sınıf düzeyleri (9, 10, Seviye-2…), bunlara uyan sınav düzeyleri
+ * (8 → LGS; 11 / 12 → TYT, AYT) ve var olan setlerin düzeyleri. Hiçbir sınıfa düzey girilmemişse standart liste.
+ */
+export function curriculumGradeOptions(classLevels: string[], existing: string[] = []) {
+  const levels = classLevels.map((l) => normGrade(l)).filter(Boolean);
+  const exam = [...(levels.includes("8") ? ["LGS"] : []), ...(levels.some((l) => l === "11" || l === "12") ? ["TYT", "AYT"] : [])];
+  const all = [...new Set([...levels, ...exam, ...existing])];
+  return (all.length ? all : CURRICULUM_GRADES).sort((a, b) => gradeSortKey(a).localeCompare(gradeSortKey(b), "tr"));
+}
+
 /**
  * Bir düzeyin takipte hangi sınıflara ve deneme türlerine karşılık geldiği.
  * levels: Classroom.level değerleri; examTypes: Exam.type değerleri; grades: soru havuzundaki düzey değerleri.

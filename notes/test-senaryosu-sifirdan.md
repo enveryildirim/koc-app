@@ -178,7 +178,11 @@ Ders **yalnızca** Yönetim → Dersler'de açılır. **+ Ders ekle** → yan pa
 - **Beklenen:** Ay / yıl / liste görünümlerinde görünürler. Tatil günü yoklama ekranında "tatil" olarak çıkar.
 
 **7.2 Müfredat**
-- [ ] Müfredat → **Yeni ders müfredatı** → *Tecvid* için 8–10 konu girin (veya Excel ile yükleyin).
+- [ ] Müfredat → **+ Müfredat ekle** → "Ders" listesinde yalnızca Dersler'de açtığınız dersler var; "Düzey" listesinde sınıflarınızın düzeyleri (9, 10, Seviye-2). *Tecvid* · *Seviye-2* için 8–10 konu girin → Kaydet.
+- [ ] Set başlığının altında "Kullanan sınıflar: SEVİYE-2".
+- [ ] Düzeyi 9 olan bir Tecvid seti açın → "9. sınıf düzeyinde bu dersi alan sınıf yok" sarı uyarısı.
+- [ ] Excel ile yükleyin; dosyada kurumda olmayan bir ders adı (ör. *Tecvıd*) ve düzey (ör. *7*) olsun → önizlemede iki uyarı; aktarım yine yapılır.
+- [ ] (İsteğe bağlı) "Örnek müfredatı yükle" → 8. sınıf / 12. sınıf / TYT setleri gelir; hepsinde sarı uyarı çıkar ("Kurumda bu adla ders yok" ya da "Bu düzeyde bu dersi alan sınıf yok"), çünkü örnekler bu kurumun sınıflarıyla eşleşmez.
 
 **7.3 Yıllık plan**
 - [ ] Takvim ve planlar → Yıllık ders planı → **+ Yeni plan** → SEVİYE-2 · Tecvid (ders listeden seçilir), konular müfredattan.

@@ -10,8 +10,11 @@ function parseDelimited(text: string): string[][] {
   return lines.map((l) => l.split(delim).map((c) => c.replace(/^"|"$/g, "").trim()));
 }
 
-/** Excel / CSV'den müfredat içe aktarma: dosyayı tarayıcıda okur, özet gösterir, seçilen kipte kaydeder. */
-export default function CurriculumImport({ hasData }: { hasData: boolean }) {
+/**
+ * Excel / CSV'den müfredat içe aktarma: dosyayı tarayıcıda okur, özet gösterir, seçilen kipte kaydeder.
+ * Kurumda karşılığı olmayan ders adı ya da düzey uyarılır (aktarılır ama sınıflarla eşleşmez).
+ */
+export default function CurriculumImport({ hasData, courseNames = [], grades = [] }: { hasData: boolean; courseNames?: string[]; grades?: string[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(!hasData);
   const [file, setFile] = useState("");
@@ -72,6 +75,10 @@ export default function CurriculumImport({ hasData }: { hasData: boolean }) {
   // Dosyadaki setlerin özeti
   const sets = new Map<string, number>();
   for (const r of parsed?.rows ?? []) sets.set(`${r.subject} · ${gradeLabel(r.grade)}`, (sets.get(`${r.subject} · ${gradeLabel(r.grade)}`) ?? 0) + 1);
+  // Kurumda karşılığı olmayanlar (yazım farkı olabilir)
+  const lower = (x: string) => x.toLocaleLowerCase("tr-TR");
+  const unknownSubjects = [...new Set((parsed?.rows ?? []).map((r) => r.subject))].filter((x) => !courseNames.some((c) => lower(c) === lower(x)));
+  const unknownGrades = [...new Set((parsed?.rows ?? []).map((r) => r.grade))].filter((g) => !grades.includes(g));
 
   if (!open)
     return (
@@ -111,6 +118,12 @@ export default function CurriculumImport({ hasData }: { hasData: boolean }) {
               <p>
                 <b>{parsed.rows.length}</b> konu okundu: {[...sets.entries()].map(([k, n]) => `${k} (${n})`).join(", ") || "—"}
               </p>
+              {(unknownSubjects.length > 0 || unknownGrades.length > 0) && (
+                <ul className="mt-1 text-xs text-amber-800">
+                  {unknownSubjects.length > 0 && <li>Kurumda bu adla ders yok: {unknownSubjects.join(", ")}. Aktarılır ama hiçbir sınıfın dersiyle eşleşmez; adı Dersler&apos;deki adla aynı yapın.</li>}
+                  {unknownGrades.length > 0 && <li>Kurumda bu düzeyde sınıf yok: {unknownGrades.map(gradeLabel).join(", ")}. Sınıflar&apos;da sınıfa düzey yazın ya da dosyadaki düzeyi düzeltin.</li>}
+                </ul>
+              )}
               {parsed.errors.length > 0 && (
                 <ul className="mt-1 text-xs text-amber-800">
                   {parsed.errors.slice(0, 5).map((e) => <li key={e}>{e}</li>)}

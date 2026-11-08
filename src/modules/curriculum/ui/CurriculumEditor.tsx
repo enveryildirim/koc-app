@@ -1,18 +1,34 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CURRICULUM_GRADES, gradeLabel } from "../index";
+import { gradeLabel } from "../index";
 
 type Row = { unit: string; topic: string; code: string; outcome: string; weeks: number };
 
 /**
- * Bir (ders, sınıf) setinin konularını tablo olarak düzenler: satır ekleme, silme, sıralama.
- * Yeni set için ders ve sınıf da girilir. Kaydet setin tamamını yazar.
+ * Bir (ders, düzey) setinin konularını tablo olarak düzenler: satır ekleme, silme, sıralama.
+ * Yeni sette ders kurumdaki derslerden, düzey kurumun sınıf düzeylerinden seçilir (müfredat ders açmaz).
+ * Kaydet setin tamamını yazar.
  */
-export default function CurriculumEditor({ subject, grade, rows: initial, subjects }: { subject?: string; grade?: string; rows: Row[]; subjects: string[] }) {
+export default function CurriculumEditor({
+  subject,
+  grade,
+  rows: initial,
+  courseNames = [],
+  grades = [],
+}: {
+  subject?: string;
+  grade?: string;
+  rows: Row[];
+  /** Kurumdaki ders adları (Yönetim → Dersler) */
+  courseNames?: string[];
+  /** Düzey seçenekleri (`curriculumGradeOptions`) */
+  grades?: string[];
+}) {
   const router = useRouter();
   const isNew = !subject;
-  const [meta, setMeta] = useState({ subject: subject ?? "", grade: grade ?? "8" });
+  const [meta, setMeta] = useState({ subject: subject ?? "", grade: grade ?? grades[0] ?? "" });
   const [rows, setRows] = useState<Row[]>(initial.length ? initial : [{ unit: "", topic: "", code: "", outcome: "", weeks: 1 }]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -29,7 +45,8 @@ export default function CurriculumEditor({ subject, grade, rows: initial, subjec
 
   async function save() {
     const list = rows.filter((r) => r.topic.trim() || r.unit.trim() || r.code.trim());
-    if (!meta.subject.trim()) return setMsg({ ok: false, text: "Ders adı girin." });
+    if (!meta.subject.trim()) return setMsg({ ok: false, text: "Ders seçin." });
+    if (!meta.grade) return setMsg({ ok: false, text: "Düzey seçin." });
     if (!list.length) return setMsg({ ok: false, text: "En az bir konu girin." });
     setBusy(true);
     setMsg(null);
@@ -56,18 +73,32 @@ export default function CurriculumEditor({ subject, grade, rows: initial, subjec
   return (
     <div>
       {isNew && (
-        <div className="card mb-3 flex flex-wrap items-end gap-3 px-4 py-3">
-          <label className="min-w-48 flex-1">
-            <span className="label">Ders</span>
-            <input className="input" list="cur-subjects" value={meta.subject} onChange={(e) => setMeta({ ...meta, subject: e.target.value })} placeholder="ör. Matematik" />
-            <datalist id="cur-subjects">{subjects.map((s) => <option key={s} value={s} />)}</datalist>
-          </label>
-          <label>
-            <span className="label">Sınıf</span>
-            <select className="input" value={meta.grade} onChange={(e) => setMeta({ ...meta, grade: e.target.value })}>
-              {CURRICULUM_GRADES.map((g) => <option key={g} value={g}>{gradeLabel(g)}</option>)}
-            </select>
-          </label>
+        <div className="card mb-3 px-4 py-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="min-w-48 flex-1">
+              <span className="label">Ders</span>
+              {courseNames.length ? (
+                <select className="input" value={meta.subject} onChange={(e) => setMeta({ ...meta, subject: e.target.value })}>
+                  <option value="">— Ders seçin —</option>
+                  {courseNames.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              ) : (
+                <span className="block pt-2 text-sm text-amber-700">
+                  Kurumda ders yok. <Link href="/kurum/dersler?yeni=1" className="font-medium text-brand-600 hover:underline">Dersler sayfasında ekleyin</Link>.
+                </span>
+              )}
+            </label>
+            <label>
+              <span className="label">Düzey</span>
+              <select className="input" value={meta.grade} onChange={(e) => setMeta({ ...meta, grade: e.target.value })}>
+                {grades.map((g) => <option key={g} value={g}>{gradeLabel(g)}</option>)}
+              </select>
+            </label>
+          </div>
+          <p className="mt-2 text-[12.5px] text-lead">
+            Müfredat ders açmaz: ders <Link href="/kurum/dersler" className="text-brand-600 hover:underline">Dersler</Link>&apos;de, düzey{" "}
+            <Link href="/kurum/siniflar" className="text-brand-600 hover:underline">Sınıflar</Link>&apos;da tanımlanır. Bu düzeydeki ve bu dersi alan bütün sınıflar müfredatı kullanır.
+          </p>
         </div>
       )}
 

@@ -463,6 +463,12 @@ Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `pris
 - **Arama:** ders sonucu `/kurum/dersler?sinif=…&ders=…` (düzenleme paneli).
 - **Doğrulama:** olmayan ad 400 ve ders açılmadı; `courseId` ile 200 (satır derse bağlı); başka sınıfın dersi 400; ek ders olmayan ad 400 / `courseId` 200; sayfalar 200; panel ve formlar ekran görüntüsüyle kontrol edildi. `tsc`, `eslint src` temiz.
 
+**Aşama 3 (müfredat):**
+- Müfredat ders açmaz: yeni sette ders `select` (kurumdaki ders adları, `listCourses`), düzey `select` (`curriculum > curriculumGradeOptions`: sınıf düzeyleri `normGrade`'li + 8 → LGS, 11/12 → TYT/AYT + var olan setlerin düzeyleri; düzey yoksa `CURRICULUM_GRADES`). Sıralama `gradeSortKey` (sayı < sınav < kuruma özgü), `curriculumSets` de bunu kullanır. Düğme "+ Müfredat ekle".
+- Set görünümünde "Kullanan sınıflar" = `gradeScope(grade).levels` içinde düzeyi olan ve `subjectMatches` ile adı tutan dersi olan sınıflar; yoksa sarı uyarı (ad mı düzey mi). Plan bağlantısı `sinif` ile ilk kullanan sınıfı seçer.
+- Excel önizlemesi kurumda olmayan ders adı / düzeyi uyarır (engellemez). Sunucu (`saveCurriculumSet`, `importCurriculum`) serbest kaldı: haftalık plan içe aktarmadaki gibi uyarı istemcide.
+- **Doğrulama:** Seviye-2 seçeneği geldi; "Tecvid · Seviye-2" seti "Kullanan sınıflar: S-2" gösterdi, plan ekranı şablonu S-2'ye önerdi; örnek 8. sınıf seti uyarı verdi. `tsc`, `eslint src` temiz.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

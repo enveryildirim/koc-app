@@ -126,10 +126,12 @@ Kod: modules/schedule/internal/courses.ts · ui/CourseManager.tsx
 - [x] **Ödev ve yıllık plan:** ders sınıfın derslerinden seçilir (eski kaydın dersi listede yoksa o da seçenek olarak kalır). Müfredattan "plan oluştur" o dersi olan sınıfı seçer.
 - [x] ~~Kullanılmayan dersler etiketi~~ → Dersler tablosundaki "Programda" sütunu "Programda yok" diyor; programda saati olan ders silinemiyor. Ayrı etiket gerekmedi.
 
-### Aşama 3: Müfredat
-- [ ] **Müfredat ders açmaz.** "Yeni ders müfredatı" → "Müfredat ekle". Ders adı kurumdaki ders adlarından seçilir (sınıflar arası tekil liste).
-- [ ] **Düzey listesi:** kurumun sınıf düzeylerinden gelir (9, 10, Seviye-2 …). LGS / TYT / AYT, kurumda o türde deneme ya da 8. / 12. sınıf varsa listede kalır.
-- [ ] **Bağlantı göstergesi:** müfredat sayfasında "Bu müfredatı kullanan sınıflar: 9-A, 9-B" (düzey + ders adı eşleşmesi).
+### Aşama 3: Müfredat ✓
+- [x] **Müfredat ders açmaz.** Düğme "+ Müfredat ekle", başlık "Yeni müfredat". Ders kurumdaki ders adlarından seçilir (sınıflar arası tekil liste); kurumda ders yoksa Dersler'e bağlantı. Formda "Müfredat ders açmaz: ders Dersler'de, düzey Sınıflar'da tanımlanır" notu.
+- [x] **Düzey listesi** (`curriculumGradeOptions`): kurumun sınıf düzeyleri (9, 10, Seviye-2 …) + 8 varsa LGS, 11 / 12 varsa TYT ve AYT + var olan setlerin düzeyleri. Hiçbir sınıfa düzey girilmemişse standart liste. Sıra: sayılar, sınav düzeyleri, kuruma özgü düzeyler.
+- [x] **Bağlantı göstergesi:** set başlığının altında "Kullanan sınıflar: S-2" (düzey + ders adı eşleşmesi). Eşleşme yoksa sarı uyarı: ad Dersler'de yoksa "Kurumda bu adla ders yok", düzeyde sınıf yoksa "Bu düzeyde bu dersi alan sınıf yok". "Yıllık plan oluştur" ilk kullanan sınıfı seçili açar.
+- [x] **Excel'den yükleme:** kurumda olmayan ders adı ya da düzey önizlemede uyarılır (aktarım engellenmez).
+- Not: soru havuzundaki düzey alanı ayrı; bu aşamada değişmedi.
 
 ### Aşama 4: Ortak ekleme kalıbı ve kurulum rehberi
 - [ ] **Excel'den yükleme yeni sınıf açacaksa** önizlemede "Yeni sınıf açılacak: 11-A" uyarısı (yazım hatası sessizce sınıf açmasın).

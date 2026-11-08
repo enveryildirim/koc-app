@@ -38,7 +38,7 @@ Sütunlar: **Oluşur** = kaydın doğduğu yer; **Düzenlenir**; **Kullanılır*
 | Kim | Yönetici, etüt mesulü |
 | Kod | `modules/enrollment/internal/classrooms.ts` · `ui/ClassManager.tsx` |
 
-Düzey serbest metindir (9, 10, Seviye-2…). ⚠ Müfredat bu düzeyleri değil, sabit bir listeyi kullanır (U1, aşama 3).
+Düzey serbest metindir (9, 10, Seviye-2…). Müfredat düzeyleri bu değerlerden gelir; aynı düzeydeki sınıflar müfredatı paylaşır.
 
 ### Öğrenci (`Student`, `ClassMember`)
 | | |
@@ -73,7 +73,6 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 | Düzenlenir / silinir | Dersler → satıra tıkla (yan panel, `?ders=<id>`): ad, tür, sorumlu, dışarıda. Ad değişince programdaki satırlar da değişir. Programda saati olan ders silinmez |
 | Görüntülenir | Sınıf sayfası (salt okunur; ders Dersler'deki paneli açar), ⌘K arama (paneli açar) |
 | Seçilir | Ders programı ve ek ders (kimlik ile; sunucu da var olan ders ister), Sözlü/yazılı (kimlik ile), Deneme → derse bağla (kimlik ile), Ödev ve Yıllık plan (sınıfın derslerinden seçilen ad ile), Takip → Dersler (ad ile birleşir) |
-| ⚠ Ders gibi görünür | **Müfredat** → "+ Yeni ders": ders açmaz ama öyle görünür (U1, aşama 3) |
 | Kim | Yönetici, etüt mesulü |
 | Kod | `modules/schedule/internal/courses.ts` · `ui/CourseAdmin.tsx` · `app/kurum/dersler/page.tsx`. `courseIdFor` / `syncCourses` yalnızca derse bağlanmamış eski program satırları için |
 
@@ -104,16 +103,17 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 | Kod | `modules/planning/internal/events.ts` |
 
 ### Müfredat konusu (`CurriculumTopic`)
-(ders adı, düzey) başına konu listesidir. Sınıfa değil düzeye bağlıdır.
+(ders adı, düzey) başına konu listesidir. Sınıfa değil düzeye bağlıdır; **ders açmaz**. Bir sınıf, düzeyi uyuyor ve bu adla dersi varsa müfredatı kullanır.
 
 | | |
 |---|---|
-| Oluşur | Yönetim → **Müfredat** → "+ Yeni ders" (⚠ ad yanıltıcı) · Excel'den yükle · örnek müfredat |
-| Kullanılır | Yıllık plan şablonu, Soru havuzu ve deneme konuları, Müfredat takip ekranı |
+| Oluşur | Yönetim → **Müfredat** → "+ Müfredat ekle" (ders Dersler'deki adlardan, düzey Sınıflar'daki düzeylerden seçilir) · Excel'den yükle (eşleşmeyen ad / düzey uyarılır) · örnek müfredat |
+| Görüntülenir | Set başlığında "Kullanan sınıflar"; eşleşme yoksa sarı uyarı |
+| Kullanılır | Yıllık plan şablonu (sınıfın düzeyine uyan setler), Soru havuzu ve deneme konuları, Müfredat takip ekranı |
 | Kim | Yönetici, etüt mesulü |
-| Kod | `modules/curriculum/` |
+| Kod | `modules/curriculum/` (`curriculumGradeOptions`, `gradeScope`) · `app/kurum/mufredat/page.tsx` |
 
-⚠ Ders adı serbest metin. ⚠ Düzey listesi sabit (5–12, LGS, TYT, AYT); kurumun "Seviye-2" gibi düzeyleri gelmiyor.
+Düzey seçenekleri: sınıf düzeyleri + 8 varsa LGS, 11 / 12 varsa TYT ve AYT + var olan setlerin düzeyleri.
 
 ### Yıllık plan (`LessonPlan`, `PlanItem`)
 | | |
@@ -198,7 +198,7 @@ Yönetim
   Öğretmenler             /kurum/ogretmenler     Tablo (telefonda liste) + sağda Öğretmen ekle formu, giriş linki   ⚠ U12
   Ders programı           /kurum/ders-programi   Çakışma listesi; sınıfa / öğretmene göre hafta; + Saat ekle (ders listeden)
   Takvim ve planlar       /kurum/takvim          Takvim, yıllık ders planı, haftalık plan içe aktarma
-  Müfredat                /kurum/mufredat        Ders × düzey konu listeleri, takip                  ⚠ U1
+  Müfredat                /kurum/mufredat        Ders × düzey konu listeleri, kullanan sınıflar, takip; + Müfredat ekle
   Puan cetvelleri         /kurum/puan-cetvelleri
 ```
 

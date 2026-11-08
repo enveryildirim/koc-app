@@ -1,6 +1,6 @@
 import { prisma } from "@/shared/db";
 import { invalid } from "@/shared/errors";
-import { gradeScope, normGrade, planSourceOf, SAMPLE_CURRICULUM, type CurriculumRow } from "../index";
+import { gradeScope, gradeSortKey, normGrade, planSourceOf, SAMPLE_CURRICULUM, type CurriculumRow } from "../index";
 
 const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -24,10 +24,9 @@ export async function curriculumSets(ownerId: string) {
     _count: { _all: true },
     _sum: { weeks: true },
   });
-  const gradeKey = (g: string) => (/^\d+$/.test(g) ? g.padStart(2, "0") : `z${g}`);
   return rows
     .map((r) => ({ subject: r.subject, grade: r.grade, topics: r._count._all, weeks: r._sum.weeks ?? 0 }))
-    .sort((a, b) => gradeKey(a.grade).localeCompare(gradeKey(b.grade)) || a.subject.localeCompare(b.subject, "tr"));
+    .sort((a, b) => gradeSortKey(a.grade).localeCompare(gradeSortKey(b.grade), "tr") || a.subject.localeCompare(b.subject, "tr"));
 }
 
 /** Bir setin konuları (sırasıyla). */

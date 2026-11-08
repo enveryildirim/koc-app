@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
-import { CURRICULUM_COLUMNS, gradeLabel } from "@/modules/curriculum";
+import { CURRICULUM_COLUMNS, curriculumGradeOptions, gradeLabel, gradeScope } from "@/modules/curriculum";
 import { allCurriculum, curriculumSets, curriculumTopics } from "@/modules/curriculum/server";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { listCourses } from "@/modules/schedule/server";
+import { subjectMatches } from "@/shared/subjects";
 import { curriculumTracking } from "@/modules/reporting/server";
 import CurriculumEditor from "@/modules/curriculum/ui/CurriculumEditor";
 import CurriculumImport from "@/modules/curriculum/ui/CurriculumImport";
@@ -14,24 +17,35 @@ type SP = Promise<{ ders?: string; sinif?: string; sekme?: string; yeni?: string
 
 const q = (p: Record<string, string>) => `/kurum/mufredat?${new URLSearchParams(p)}`;
 
+/** Müfredat setini kullanan sınıflar: düzeyi uyan ve bu dersi (adı eşleşen) alan sınıflar. */
+type ClassUse = { id: string; name: string; level: string; courses: string[] };
+const usersOf = (classes: ClassUse[], subject: string, grade: string) =>
+  classes.filter((c) => gradeScope(grade).levels.includes(c.level) && c.courses.some((n) => subjectMatches(n, subject)));
+
+/**
+ * Müfredat: (ders, düzey) başına konu listeleri. Ders açmaz: ders Yönetim → Dersler'de, düzey Sınıflar'da tanımlanır;
+ * yeni sette ikisi de oradan seçilir (KROKI.md > Müfredat konusu).
+ */
 export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
-  const [sets, all] = await Promise.all([curriculumSets(ownerId), allCurriculum(ownerId)]);
+  const [sets, all, classrooms, courses] = await Promise.all([curriculumSets(ownerId), allCurriculum(ownerId), classroomsOf(ownerId), listCourses(ownerId)]);
   const current = sets.find((s) => s.subject === sp.ders && s.grade === sp.sinif) ?? (sp.yeni ? null : sets[0]);
   const tab = sp.sekme === "duzenle" ? "duzenle" : "takip";
-  const subjects = [...new Set(sets.map((s) => s.subject))];
+  const courseNames = [...new Set(courses.map((c) => c.name))].sort((a, b) => a.localeCompare(b, "tr"));
+  const grades = curriculumGradeOptions(classrooms.map((c) => c.level), sets.map((s) => s.grade));
+  const classes: ClassUse[] = classrooms.map((c) => ({ id: c.id, name: c.name, level: c.level, courses: courses.filter((x) => x.classroomId === c.id).map((x) => x.name) }));
 
   const exportRows = all.map((r) => [r.subject, gradeLabel(r.grade), r.unit, r.topic, r.code, r.outcome, r.weeks]);
   const header = (
     <PageHeader
       title="Müfredat"
-      sub="Ders ve sınıf düzeyine göre ünite, konu ve kazanımlar. Yıllık plan, soru havuzu ve denemeler bu konu adlarını kullanır."
+      sub="Ders ve düzeye göre ünite, konu ve kazanımlar. Yıllık plan, soru havuzu ve denemeler bu konu adlarını kullanır."
       actions={
         <>
           <ExportButton fileName="müfredat şablonu" headers={CURRICULUM_COLUMNS.map((c) => c.label)} rows={[["Matematik", "8. sınıf", "1. Ünite: Sayılar ve İşlemler", "Çarpanlar ve Katlar", "M.8.1.1", "Pozitif tam sayıların çarpanlarını bulur.", 3]]} label="Şablon indir" sheet="Müfredat" />
           {all.length > 0 && <ExportButton fileName="müfredat" headers={CURRICULUM_COLUMNS.map((c) => c.label)} rows={exportRows} label="Excel'e aktar" sheet="Müfredat" />}
-          <Link href={q({ yeni: "1" })} className="btn-primary">+ Yeni ders</Link>
+          <Link href={q({ yeni: "1" })} className="btn-primary">+ Müfredat ekle</Link>
         </>
       }
     />
@@ -41,7 +55,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     return (
       <div>
         {header}
-        <CurriculumImport hasData={false} />
+        <CurriculumImport hasData={false} courseNames={courseNames} grades={grades} />
         <Empty>
           Henüz müfredat yok. Excel dosyası yükleyin, örnek müfredatı yükleyin ya da <Link href={q({ yeni: "1" })} className="font-semibold text-graphite underline">elle girin</Link>.
         </Empty>
@@ -57,7 +71,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     <div>
       {header}
       <div className="mb-3 flex justify-end">
-        <CurriculumImport hasData />
+        <CurriculumImport hasData courseNames={courseNames} grades={grades} />
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label="Müfredat setleri" className="flex flex-col gap-3">
@@ -80,17 +94,17 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
               })}
             </div>
           ))}
-          {sp.yeni && <div className="rounded-md bg-surface px-2 py-1 text-[14px] font-semibold ring-1 ring-rule">Yeni ders</div>}
+          {sp.yeni && <div className="rounded-md bg-surface px-2 py-1 text-[14px] font-semibold ring-1 ring-rule">Yeni müfredat</div>}
         </nav>
 
         <div className="min-w-0">
           {sp.yeni || !current ? (
             <>
-              <h2 className="mb-3 font-semibold">Yeni ders müfredatı</h2>
-              <CurriculumEditor key="yeni" rows={[]} subjects={subjects} />
+              <h2 className="mb-3 font-semibold">Yeni müfredat</h2>
+              <CurriculumEditor key="yeni" rows={[]} courseNames={courseNames} grades={grades} />
             </>
           ) : (
-            <SetView ownerId={ownerId} subject={current.subject} grade={current.grade} tab={tab} subjects={subjects} />
+            <SetView ownerId={ownerId} subject={current.subject} grade={current.grade} tab={tab} users={usersOf(classes, current.subject, current.grade)} isCourse={courseNames.some((n) => subjectMatches(n, current.subject))} />
           )}
         </div>
       </div>
@@ -98,7 +112,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   );
 }
 
-async function SetView({ ownerId, subject, grade, tab, subjects }: { ownerId: string; subject: string; grade: string; tab: string; subjects: string[] }) {
+async function SetView({ ownerId, subject, grade, tab, users, isCourse }: { ownerId: string; subject: string; grade: string; tab: string; users: ClassUse[]; isCourse: boolean }) {
   const base = { ders: subject, sinif: grade };
   const tabs = [
     { key: "takip", label: "Takip", href: q(base) },
@@ -109,9 +123,31 @@ async function SetView({ ownerId, subject, grade, tab, subjects }: { ownerId: st
       <h2 className="text-lg font-semibold">
         {subject} <span className="font-normal text-lead">· {gradeLabel(grade)}</span>
       </h2>
-      <Link href={`/kurum/takvim/plan/yeni?ders=${encodeURIComponent(subject)}`} className="text-[13px] text-lead hover:text-graphite">
+      <Link
+        href={`/kurum/takvim/plan/yeni?${new URLSearchParams({ ders: subject, ...(users[0] ? { sinif: users[0].id } : {}) })}`}
+        className="text-[13px] text-lead hover:text-graphite"
+      >
         Bu müfredattan yıllık plan oluştur ›
       </Link>
+      <p className="basis-full text-[13px]">
+        {users.length ? (
+          <span className="text-lead">
+            Kullanan sınıflar:{" "}
+            {users.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && ", "}
+                <Link href={`/kurum/siniflar/${c.id}`} className="font-medium text-graphite hover:underline">{c.name}</Link>
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="text-amber-700">
+            {isCourse
+              ? `${gradeLabel(grade)} düzeyinde bu dersi alan sınıf yok. Sınıfın düzeyini Sınıflar'da kontrol edin.`
+              : "Kurumda bu adla ders yok; müfredat hiçbir sınıfla eşleşmiyor. Ders adını Dersler'deki adla aynı yapın."}
+          </span>
+        )}
+      </p>
     </div>
   );
 
@@ -121,7 +157,7 @@ async function SetView({ ownerId, subject, grade, tab, subjects }: { ownerId: st
       <>
         {title}
         <Tabs tabs={tabs} active="duzenle" />
-        <CurriculumEditor key={`${subject}|${grade}`} subject={subject} grade={grade} subjects={subjects} rows={rows.map((r) => ({ unit: r.unit, topic: r.topic, code: r.code, outcome: r.outcome, weeks: r.weeks }))} />
+        <CurriculumEditor key={`${subject}|${grade}`} subject={subject} grade={grade} rows={rows.map((r) => ({ unit: r.unit, topic: r.topic, code: r.code, outcome: r.outcome, weeks: r.weeks }))} />
       </>
     );
   }
