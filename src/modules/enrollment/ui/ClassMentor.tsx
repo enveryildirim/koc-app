@@ -37,7 +37,7 @@ export default function ClassMentor({ classroomId, mentorId, mentors }: { classr
         ))}
       </select>
       {!mentors.length && (
-        <p className="mt-1 text-[13px] text-lead">Listede kimse yok. Ders programı → Öğretmenler bölümünde bir kişinin rolünü “Etüt mesulü” yapın.</p>
+        <p className="mt-1 text-[13px] text-lead">Listede kimse yok. Menüdeki Öğretmenler sayfasında bir kişinin rolünü “Etüt mesulü” yapın.</p>
       )}
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>

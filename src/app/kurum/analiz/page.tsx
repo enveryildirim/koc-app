@@ -15,33 +15,28 @@ import PrintButton from "@/shared/ui/PrintButton";
 import { OutlierToggle } from "@/shared/ui/Outliers";
 import { outliersOn } from "@/shared/stats";
 import LineChart, { SERIES_COLORS } from "@/modules/reporting/ui/LineChart";
+import { ANALYSIS_TABS } from "./tabs";
 
 export const dynamic = "force-dynamic";
 
 type SP = Promise<{ tab?: string; tur?: string; ders?: string; sinif?: string; seviye?: string; uc?: string }>;
 
-const TABS = [
-  { key: "gelisim", label: "Sınıf gelişimi" },
-  { key: "skor", label: "Başarı Skoru" },
-  { key: "ogretmen", label: "Öğretmen & ders performansı" },
-  { key: "plan", label: "Yıllık plan" },
-];
 
 export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
   // Eski "risk" bağlantıları Başarı Skoru sekmesine gider.
   const asked = sp.tab === "risk" ? "skor" : sp.tab;
-  const tab = TABS.some((t) => t.key === asked) ? asked! : "gelisim";
+  const tab = ANALYSIS_TABS.some((t) => t.key === asked && t.key !== "devam") ? asked! : "gelisim";
 
   return (
     <div>
       <PageHeader
         title="Analiz ve uyarılar"
-        sub="Denemeler arası gelişim, öğrencilerin Başarı Skoru ve öğretmen/ders performansı"
+        sub="Denemeler arası gelişim, öğrencilerin Başarı Skoru, öğretmen/ders performansı ve devam raporları"
         actions={<PrintButton />}
       />
-      <Tabs tabs={TABS.map((t) => ({ ...t, href: `/kurum/analiz?tab=${t.key}` }))} active={tab} />
+      <Tabs tabs={ANALYSIS_TABS} active={tab} />
       {tab === "gelisim" && <Progress ownerId={ownerId} tur={sp.tur} ders={sp.ders ?? ""} uc={outliersOn(sp.uc)} />}
       {tab === "skor" && <Score ownerId={ownerId} sinif={sp.sinif ?? ""} seviye={sp.seviye ?? ""} />}
       {tab === "ogretmen" && <Teachers ownerId={ownerId} />}

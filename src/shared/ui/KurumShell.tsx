@@ -8,16 +8,18 @@ import Logo from "./Logo";
  */
 type ShellUser = { name: string; email: string; staff?: { name: string } | null };
 
-export default function KurumShell({ user, children }: { user: ShellUser; children: React.ReactNode }) {
+/** `add` / `addCompact`: "+ Ekle" düğmesi (kenar çubuğu ve telefon üst çubuğu); düzen verir. */
+export default function KurumShell({ user, children, add, addCompact }: { user: ShellUser; children: React.ReactNode; add?: React.ReactNode; addCompact?: React.ReactNode }) {
   // Etüt mesulü kendi adıyla görünür ve kendi ders ekranına geçebilir
   const who = user.staff ? `${user.staff.name} · etüt mesulü` : user.email;
   return (
     <div className="lg:grid lg:min-h-screen lg:grid-cols-[208px_1fr] print:block">
-      <KurumMobileBar org={user.name} email={who} />
+      <KurumMobileBar org={user.name} email={who} add={addCompact} />
       <aside className="no-print hidden border-r border-rule bg-sidebar px-3 py-4 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:gap-5">
         <Link href="/kurum" className="block px-2">
           <Logo sub={user.name} />
         </Link>
+        {add && <div className="px-1">{add}</div>}
         <div className="flex-1 overflow-y-auto">
           <KurumNav />
         </div>

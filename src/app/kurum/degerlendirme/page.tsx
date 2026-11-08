@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { ymd } from "@/shared/date";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
@@ -7,7 +8,6 @@ import { PageHeader, Tabs } from "@/shared/ui/kurum";
 import AssessmentList from "@/modules/assessment/ui/AssessmentList";
 import { OutlierToggle, withOutliers } from "@/shared/ui/Outliers";
 import { outliersOn } from "@/shared/stats";
-import RubricManager from "@/modules/assessment/ui/RubricManager";
 import NewAssessmentForm from "@/modules/assessment/ui/NewAssessmentForm";
 
 export const dynamic = "force-dynamic";
@@ -23,19 +23,12 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const tabs = [
     { key: "liste", label: "Değerlendirmeler", href: "/kurum/degerlendirme" },
     { key: "yeni", label: "Yeni", href: "/kurum/degerlendirme?tab=yeni" },
-    { key: "cetveller", label: `Puan cetvelleri (${rubrics.length})`, href: "/kurum/degerlendirme?tab=cetveller" },
+    { key: "cetveller", label: `Puan cetvelleri (${rubrics.length})`, href: "/kurum/puan-cetvelleri" },
   ];
   const header = <PageHeader title="Sözlü ve yazılı" sub="Puan cetveliyle yapılan sözlü, yazılı ve uygulama değerlendirmeleri. Öğretmenler telefondan girer." />;
 
-  if (tab === "cetveller") {
-    return (
-      <>
-        {header}
-        <Tabs tabs={tabs} active={tab} />
-        <RubricManager rubrics={rubrics} />
-      </>
-    );
-  }
+  // Eski adres: puan cetvelleri artık kendi menü maddesinde (sekme oraya götürür)
+  if (tab === "cetveller") redirect("/kurum/puan-cetvelleri");
   if (tab === "yeni") {
     const courses = await listCourses(ownerId);
     return (

@@ -47,7 +47,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   return (
     <div>
       <PageHeader
-        back={{ href: "/kurum/ders-programi?gorunum=ogretmenler", label: "Öğretmenler" }}
+        back={{ href: "/kurum/ogretmenler", label: "Öğretmenler" }}
         title={teacher.name}
         sub={`${teacher.branch} · ${fmt(thisWeek, { day: "numeric", month: "long" })} haftası`}
         actions={

@@ -7,6 +7,8 @@ import { ymd } from "@/shared/date";
 import { Empty, Kpi, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
 import PrintButton from "@/shared/ui/PrintButton";
 import ExportButton from "@/shared/ui/ExportButton";
+import Link from "next/link";
+import { ANALYSIS_TABS } from "../analiz/tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +40,14 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
   return (
     <div>
-      <PageHeader title="Devam raporları" sub={rangeLabel} actions={<PrintButton />} />
-      <Tabs tabs={Object.entries(REPORTS).map(([k, label]) => ({ key: k, label, href: qs(k) }))} active={rapor} />
+      <PageHeader title="Analiz ve uyarılar" sub={`Devam raporları · ${rangeLabel}`} actions={<PrintButton />} />
+      <Tabs tabs={ANALYSIS_TABS} active="devam" />
+      <div className="no-print mb-3 flex flex-wrap gap-1">
+        {Object.entries(REPORTS).map(([k, label]) => (
+          <Link key={k} href={qs(k)} className={k === rapor ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}>{label}</Link>
+        ))}
+      </div>
+      <h1 className="hidden text-xl font-bold print:block">{REPORTS[rapor]}</h1>
       <form method="get" className="no-print card mb-6 flex flex-wrap items-end gap-3 p-4">
         <input type="hidden" name="rapor" value={rapor} />
         <div>

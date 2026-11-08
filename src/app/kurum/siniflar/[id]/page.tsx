@@ -46,7 +46,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <PageHeader
         title={cls.name}
         sub={sub}
-        back={{ href: "/kurum/ogrenciler?tab=siniflar", label: "Sınıflar" }}
+        back={{ href: "/kurum/siniflar", label: "Sınıflar" }}
         actions={<Link href={`/kurum/ders-programi?sinif=${cls.id}`} className="btn-secondary">Ders programı</Link>}
       />
       <div className="card max-w-md p-3.5">

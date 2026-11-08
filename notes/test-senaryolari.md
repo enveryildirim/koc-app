@@ -8,7 +8,7 @@ Dal: `dahili-ders-takip`. Her senaryoda **adımlar** ve **beklenen sonuç** var.
 2. Uygulamayı başlatın: `npm run dev` ve http://localhost:3000 adresini açın.
 3. Giriş: **demo@sinavkur.com / demo1234**. Bu, kurum hesabıdır (yönetici).
 
-**Öğretmen ve etüt mesulü linkleri:** Menü → Ders programı → üstteki **Öğretmenler** sekmesi → "Giriş linki" sütunu → **Kopyala**. Linkler her `db:seed`'de yenilenir.
+**Öğretmen ve etüt mesulü linkleri:** Menü → Kurum → **Öğretmenler** → "Giriş linki" sütunu → **Kopyala**. Linkler her `db:seed`'de yenilenir.
 
 > **Önemli:** Bir tarayıcıda tek oturum açık kalır. Öğretmen linkini aynı tarayıcıda açarsanız yönetici oturumu kapanır. Linkleri **gizli pencerede** ya da başka bir tarayıcıda açın.
 
@@ -32,7 +32,7 @@ Dal: `dahili-ders-takip`. Her senaryoda **adımlar** ve **beklenen sonuç** var.
 ## A. Temel: sınıf, ders, üyelik (yönetici)
 
 **A1. Sınıf sayfası**
-- **Adımlar:** Menü → Öğrenci listesi → üstteki **Sınıflar** sekmesi → **SEVİYE-2** kartı.
+- **Adımlar:** Menü → Kurum → **Sınıflar** → **SEVİYE-2** kartı.
 - **Beklenen:**
   - "0 öğrenci · 16 ek üye · 4 ders".
   - Etüt mesulü: Hakan Toprak.
@@ -63,7 +63,7 @@ Dal: `dahili-ders-takip`. Her senaryoda **adımlar** ve **beklenen sonuç** var.
 **A5. Etüt mesulü atama**
 - **Adımlar:**
   1. 9-A → Etüt mesulü listesinden Kemal Yurt'u seçin, sonra Ercan Sevim'e geri alın.
-  2. Ders programı → Öğretmenler → bir öğretmenin rolünü "Etüt mesulü" yapın.
+  2. Menü → Öğretmenler → bir öğretmenin rolünü "Etüt mesulü" yapın.
 - **Beklenen:**
   - Listede yalnızca etüt mesulleri vardır.
   - Rolü değişen öğretmen sınıf sayfasındaki listeye gelir.
@@ -116,7 +116,7 @@ Dal: `dahili-ders-takip`. Her senaryoda **adımlar** ve **beklenen sonuç** var.
 
 **C1. Puan cetveli (yönetici)**
 - **Adımlar:**
-  1. Sözlü ve yazılı → Puan cetvelleri → bir cetveli açın → kriter ekleyin → Kaydet.
+  1. Menü → Kurum → Puan cetvelleri → bir cetveli açın → kriter ekleyin → Kaydet.
   2. Bir kriterin puanını 0 yapıp kaydetmeyi deneyin.
 - **Beklenen:**
   - Değişiklik kaydedilir.
@@ -237,11 +237,11 @@ Dal: `dahili-ders-takip`. Her senaryoda **adımlar** ve **beklenen sonuç** var.
 - **Beklenen:** Değişiklikler anında kaydedilir. Teslimi geçmiş ödevde "N işaretlenmedi" uyarısı görünür.
 
 **G3. Ek üyeler**
-- **Adımlar:** Yönetici → Ödev takibi → SEVİYE-2 Kitâbet ödevini açın.
+- **Adımlar:** Yönetici → Ödevler → SEVİYE-2 Kitâbet ödevini açın.
 - **Beklenen:** 16 öğrencinin hepsi (ek üyeler) listededir.
 
 **G4. Sınıf ve ders raporu**
-- **Adımlar:** Ödev takibi → "Sınıf ve ders bazında".
+- **Adımlar:** Ödevler → "Sınıf ve ders bazında".
 - **Beklenen:** Yapma oranı en düşük olan üstte; Excel'e aktarılabilir.
 
 ---
@@ -249,7 +249,7 @@ Dal: `dahili-ders-takip`. Her senaryoda **adımlar** ve **beklenen sonuç** var.
 ## H. Haftalık plan içe aktarma
 
 **H1. Yükleme ve önizleme**
-- **Adımlar:** Yıllık takvim → üstteki **Yıllık ders planı** sekmesi → "Haftalık planı içe aktar" → `notes/ornek-haftalik-plan.csv`.
+- **Adımlar:** Takvim ve planlar → üstteki **Yıllık ders planı** sekmesi → "Haftalık planı içe aktar" → `notes/ornek-haftalik-plan.csv`.
 - **Beklenen:**
   - "13 hafta (11 ders haftası, 2 izin) · 5 ders".
   - İzin haftaları: Yaz talebe izni, 1. ara tatil izni.
@@ -320,7 +320,7 @@ Demo veride iki bilerek konmuş örnek var (rakamlar her `db:seed`'de biraz değ
 - **Beklenen:** Sıra ve yüzdelik dilim değişmez; öğrenci son sıralarda "uç ↓" etiketiyle durur. "Ortalama net" altında "1 ayrıldı · hepsiyle …".
 
 **L3. Sınıf gelişimi**
-- **Adımlar:** Analiz ve uyarılar → Sınıf gelişimi → TYT → düğmeyi aç / kapat.
+- **Adımlar:** Analiz → Sınıf gelişimi → TYT → düğmeyi aç / kapat.
 - **Beklenen:** 12-A'nın TYT Deneme 2 değeri düğme açıkken belirgin şekilde yükselir; ▲/▼ yönü değişebilir. Hücredeki "1 ayrıldı" bağlantısı denemenin sınıf ortalamalarına gider.
 
 **L4. Takip → Dikkat isteyenler**
@@ -350,9 +350,25 @@ Demo veride iki bilerek konmuş örnek var (rakamlar her `db:seed`'de biraz değ
 
 ---
 
+## M. Menü ve "+ Ekle"
+
+**M1. Yeni menü**
+- **Beklenen:** Gruplar: Özet · Giriş (Yoklama, Sözlü ve yazılı, Ödevler, Denemeler ve optik) · Takibat (Takip, Analiz, Veli karnesi, Haftalık veli raporu) · Kurum (Öğrenciler, Sınıflar, Öğretmenler, Ders programı, Takvim ve planlar, Müfredat, Puan cetvelleri) · Araçlar. Masaüstünde kaydırmadan sığar.
+- Analiz → **Devam raporları** sekmesi eski "Devam raporları" sayfasıdır; menüde "Analiz" seçili görünür.
+- Eski adresler yönlendirir: `/kurum/ogrenciler?tab=siniflar` → Sınıflar, `/kurum/ders-programi?gorunum=ogretmenler` → Öğretmenler, `/kurum/degerlendirme?tab=cetveller` → Puan cetvelleri.
+
+**M2. Hızlı sınıf / öğretmen / ders**
+- **Adımlar:** Herhangi bir sayfada **+ Ekle** (telefonda üst çubukta **+**) → Sınıf: *9-C* → Kaydet → "Sınıfı aç". Sonra + Ekle → Öğretmen → ad, branş → Kaydet → "Telefondan giriş linkini oluştur ve kopyala". Sonra + Ekle → Ders → 9-C, *Tecvid* → Kaydet.
+- **Beklenen:** Sayfadan çıkmadan eklenir; ders türü addan tahmin edilir (Tecvid → Dini); aynı sınıfta aynı adla ikinci ders "Bu sınıfta bu adla bir ders zaten var."; "Bir tane daha" formu boşaltır.
+
+**M3. Formlara kısayol**
+- **Beklenen:** + Ekle → Öğrenci / Öğrenci (Excel'den) / Sözlü-yazılı ilgili sekmeyi açar; Ödev, ödev formu açık olarak gelir; Deneme, sayfadaki "Yeni deneme" formuna kaydırır.
+
+---
+
 ## K. Eski özellikler bozulmadı mı?
 
 - **K1:** LGS / TYT denemeleri: sıralı liste, karne, konu analizi, madde analizi açılıyor.
-- **K2:** Başarı Skoru (Analiz ve uyarılar → Başarı Skoru) ve kokpit (Özet) açılıyor.
+- **K2:** Başarı Skoru (Analiz → Başarı Skoru) ve kokpit (Özet) açılıyor.
 - **K3:** Yönetici yoklama ekranı (`/kurum/yoklama`) eskisi gibi çalışıyor.
 - **K4:** Online testler (`/panel`) açılıyor, bir test kodla çözülebiliyor.

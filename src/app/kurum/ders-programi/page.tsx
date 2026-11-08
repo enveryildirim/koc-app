@@ -1,10 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { classroomsOf } from "@/modules/enrollment/server";
-import { accessLinksOf, requireOwner } from "@/modules/identity/server";
+import { requireOwner } from "@/modules/identity/server";
 import { listSlots, listTeachers } from "@/modules/schedule/server";
 import { Empty, PageHeader, Tabs } from "@/shared/ui/kurum";
 import ScheduleBoard from "@/modules/schedule/ui/ScheduleBoard";
-import TeacherManager from "@/modules/schedule/ui/TeacherManager";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,9 @@ type SP = Promise<{ gorunum?: string; sinif?: string; ogretmen?: string }>;
 export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
-  const tab = sp.gorunum === "ogretmen" ? "ogretmen" : sp.gorunum === "ogretmenler" ? "ogretmenler" : "sinif";
+  // Eski adres: öğretmenler artık kendi menü maddesinde
+  if (sp.gorunum === "ogretmenler") redirect("/kurum/ogretmenler");
+  const tab = sp.gorunum === "ogretmen" ? "ogretmen" : "sinif";
 
   const [classrooms, teachers] = await Promise.all([
     classroomsOf(ownerId),
@@ -23,7 +25,6 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const tabs = [
     { key: "sinif", label: "Sınıfa göre", href: "/kurum/ders-programi" },
     { key: "ogretmen", label: "Öğretmene göre", href: "/kurum/ders-programi?gorunum=ogretmen" },
-    { key: "ogretmenler", label: `Öğretmenler (${teachers.length})`, href: "/kurum/ders-programi?gorunum=ogretmenler" },
   ];
 
   const header = (
@@ -34,27 +35,11 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     />
   );
 
-  if (tab === "ogretmenler") {
-    const links = await accessLinksOf(ownerId);
-    return (
-      <div>
-        {header}
-        <Tabs tabs={tabs} active={tab} />
-        <TeacherManager
-          teachers={teachers.map((t) => {
-            const l = links.get(t.id);
-            return { id: t.id, name: t.name, branch: t.branch, role: t.role, slotCount: t.slotCount, link: l ? { token: l.token, lastUsedAt: l.lastUsedAt?.toISOString() ?? null } : null };
-          })}
-        />
-      </div>
-    );
-  }
-
   if (!classrooms.length) {
     return (
       <div>
         {header}
-        <Empty>Ders programı oluşturmak için önce “Öğrenciler” bölümünden sınıf ekleyin.</Empty>
+        <Empty>Ders programı oluşturmak için önce <Link href="/kurum/siniflar" className="font-semibold text-brand-600">Sınıflar</Link> sayfasından sınıf ekleyin.</Empty>
       </div>
     );
   }
@@ -88,7 +73,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         </span>
       </div>
       {tab === "ogretmen" && !teachers.length ? (
-        <Empty>Henüz öğretmen yok. “Öğretmenler” sekmesinden ekleyin.</Empty>
+        <Empty>Henüz öğretmen yok. <Link href="/kurum/ogretmenler" className="font-semibold text-brand-600">Öğretmenler</Link> sayfasından ekleyin.</Empty>
       ) : (
         <ScheduleBoard
           view={tab === "sinif" ? "sinif" : "ogretmen"}

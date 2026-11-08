@@ -4,29 +4,48 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnswerRow } from "./Logo";
 
-/** Menü işe göre gruplanır; aktif madde doldurulmuş bir cevap baloncuğuyla gösterilir. */
+/**
+ * Menü işe göre gruplanır: günlük bilgi girişi ve takibat üstte, yılda birkaç kez yapılan tanımlar ("Kurum") altta.
+ * Aktif madde doldurulmuş bir cevap baloncuğuyla gösterilir.
+ */
 const GROUPS: { title: string; links: [string, string][] }[] = [
-  { title: "Bugün", links: [["/kurum", "Özet"], ["/kurum/takip", "Takip"], ["/kurum/yoklama", "Yoklama"]] },
-  { title: "Öğrenciler", links: [["/kurum/ogrenciler", "Öğrenci listesi"], ["/kurum/odevler", "Ödev takibi"], ["/kurum/veli-karnesi", "Veli karnesi"], ["/kurum/veli-bulteni", "Haftalık veli raporu"]] },
-  { title: "Sınavlar", links: [["/kurum/denemeler", "Denemeler ve optik"], ["/kurum/degerlendirme", "Sözlü ve yazılı"], ["/kurum/soru-havuzu", "Soru havuzu"], ["/panel", "Online testler"]] },
-  { title: "Planlama", links: [["/kurum/takvim", "Yıllık takvim"], ["/kurum/mufredat", "Müfredat"], ["/kurum/ders-programi", "Ders programı"]] },
-  { title: "Raporlar", links: [["/kurum/analiz", "Analiz ve uyarılar"], ["/kurum/raporlar", "Devam raporları"]] },
+  { title: "Bugün", links: [["/kurum", "Özet"]] },
+  { title: "Giriş", links: [["/kurum/yoklama", "Yoklama"], ["/kurum/degerlendirme", "Sözlü ve yazılı"], ["/kurum/odevler", "Ödevler"], ["/kurum/denemeler", "Denemeler ve optik"]] },
+  { title: "Takibat", links: [["/kurum/takip", "Takip"], ["/kurum/analiz", "Analiz"], ["/kurum/veli-karnesi", "Veli karnesi"], ["/kurum/veli-bulteni", "Haftalık veli raporu"]] },
+  {
+    title: "Kurum",
+    links: [
+      ["/kurum/ogrenciler", "Öğrenciler"], ["/kurum/siniflar", "Sınıflar"], ["/kurum/ogretmenler", "Öğretmenler"], ["/kurum/ders-programi", "Ders programı"],
+      ["/kurum/takvim", "Takvim ve planlar"], ["/kurum/mufredat", "Müfredat"], ["/kurum/puan-cetvelleri", "Puan cetvelleri"],
+    ],
+  },
+  { title: "Araçlar", links: [["/kurum/soru-havuzu", "Soru havuzu"], ["/panel", "Online testler"]] },
 ];
+
+/** Menüde ayrı maddesi olmayan sayfalar: hangi maddenin altında sayılır. */
+const ALIASES: Record<string, string[]> = {
+  "/panel": ["/sinav/"], // online test düzenleme
+  "/kurum/analiz": ["/kurum/raporlar"], // devam raporları Analiz'in sekmesi
+  "/kurum/ogretmenler": ["/kurum/ders-programi/ogretmen/"], // öğretmen ayrıntısı
+};
 
 function useIsActive() {
   const path = usePathname();
-  // Online test düzenleme sayfaları (/sinav/…) "Online testler" maddesinin altındadır.
-  const isActive = (href: string) => (href === "/kurum" ? path === href : path.startsWith(href) || (href === "/panel" && path.startsWith("/sinav/")));
+  const isActive = (href: string) => {
+    if (href === "/kurum") return path === href;
+    if (href === "/kurum/ders-programi" && path.startsWith("/kurum/ders-programi/ogretmen/")) return false;
+    return path.startsWith(href) || (ALIASES[href] ?? []).some((p) => path.startsWith(p));
+  };
   return { path, isActive };
 }
 
 export default function KurumNav() {
   const { isActive } = useIsActive();
   return (
-    <nav aria-label="Kurum menüsü" className="no-print flex flex-col gap-3.5">
+    <nav aria-label="Kurum menüsü" className="no-print flex flex-col gap-2.5">
       {GROUPS.map((g) => (
         <div key={g.title} className="flex flex-col gap-0.5">
-          <div className="px-2 pb-0.5 text-xs text-lead">{g.title}</div>
+          {g.title !== "Bugün" && <div className="px-2 pb-0.5 text-xs text-lead">{g.title}</div>}
           {g.links.map(([href, label]) => {
             const active = isActive(href);
             return (
@@ -34,7 +53,7 @@ export default function KurumNav() {
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`group flex shrink-0 items-center gap-2.5 rounded-md px-2 py-1 text-[14px] ${
+                className={`group flex shrink-0 items-center gap-2.5 rounded-md px-2 py-[3px] text-[14px] ${
                   active ? "bg-surface font-semibold text-graphite ring-1 ring-rule" : "text-graphite/80 hover:bg-surface/60 hover:text-graphite"
                 }`}
               >
@@ -58,7 +77,7 @@ export default function KurumNav() {
  * Telefonda kenar çubuğu yerine: kurum adı ve bulunulan sayfa tek satırda, menü düğmesiyle açılan gruplu liste.
  * Sayfa değişince menü kendiliğinden kapanır.
  */
-export function KurumMobileBar({ org, email }: { org: string; email: string }) {
+export function KurumMobileBar({ org, email, add }: { org: string; email: string; add?: React.ReactNode }) {
   const { path, isActive } = useIsActive();
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [path]);
@@ -82,12 +101,13 @@ export function KurumMobileBar({ org, email }: { org: string; email: string }) {
           <span className="font-display text-[1.05rem] leading-none font-semibold [font-stretch:80%]">SınavKur</span>
         </Link>
         {current && <span className="min-w-0 truncate border-l border-rule pl-3 text-[13.5px] text-lead">{current}</span>}
+        {add && <span className="ml-auto">{add}</span>}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls="kurum-mobil-menu"
-          className="-mr-2 ml-auto inline-flex size-10 items-center justify-center rounded-md text-graphite hover:bg-surface"
+          className={`-mr-2 ${add ? "" : "ml-auto"} inline-flex size-10 items-center justify-center rounded-md text-graphite hover:bg-surface`}
         >
           <span className="sr-only">{open ? "Menüyü kapat" : "Menüyü aç"}</span>
           <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">

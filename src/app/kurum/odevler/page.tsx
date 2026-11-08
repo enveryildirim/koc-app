@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 
 const fmt = (d: Date) => d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" });
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ sinif?: string; ders?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ sinif?: string; ders?: string; yeni?: string }> }) {
   const ownerId = await requireOwner();
-  const { sinif, ders } = await searchParams;
+  const { sinif, ders, yeni } = await searchParams;
   const [classrooms, courses] = await Promise.all([classroomsOf(ownerId), listCourses(ownerId)]);
 
   const all = await listHomework(ownerId);
@@ -46,6 +46,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
 
       <NewHomework
         classrooms={classrooms.map((c) => ({ id: c.id, name: c.name }))}
+        defaultOpen={yeni === "1"}
         subjects={subjects}
         subjectsByClass={courses.reduce<Record<string, string[]>>((m, c) => ({ ...m, [c.classroomId]: [...(m[c.classroomId] ?? []), c.name] }), {})}
       />

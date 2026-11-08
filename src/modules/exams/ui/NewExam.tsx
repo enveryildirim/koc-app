@@ -33,7 +33,7 @@ export default function NewExam({ courses = [], formats = [] }: { courses?: Opt[
 
   const t = EXAM_TYPES[type];
   return (
-    <form onSubmit={submit} className="card h-fit space-y-3 p-5">
+    <form id="yeni-deneme" onSubmit={submit} className="card h-fit scroll-mt-16 space-y-3 p-5">
       <h2 className="font-semibold">Yeni deneme</h2>
       <div>
         <label className="label">Sınav adı</label>

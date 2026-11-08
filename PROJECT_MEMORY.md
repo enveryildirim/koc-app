@@ -433,6 +433,14 @@ PoC 1. adımı (temel) yapıldı:
 - **Kapsam dışı kalanlar:** konu analizi, öğrenci karnesi, veli karnesi, sıra / yüzdelik, yoklama.
 - **Not:** `npm run build`, çalışan `next dev`'in `.next` klasörünü bozar; derlemeden sonra dev sunucusu `.next` silinip yeniden başlatılmalı.
 
+## 4q. Menü ve "+ Ekle" (8 Kasım 2026)
+
+- **Menü** (`shared/ui/KurumNav.tsx`): Özet · Giriş (Yoklama, Sözlü ve yazılı, Ödevler, Denemeler ve optik) · Takibat (Takip, Analiz, Veli karnesi, Haftalık veli raporu) · Kurum (Öğrenciler, Sınıflar, Öğretmenler, Ders programı, Takvim ve planlar, Müfredat, Puan cetvelleri) · Araçlar (Soru havuzu, Online testler). Kullanıcının iki ana hususu (bilgi girişi, takibat) üstte; yılda birkaç kez yapılan tanımlar "Kurum"da. `ALIASES`: /sinav → Online testler, /kurum/raporlar → Analiz, öğretmen ayrıntısı → Öğretmenler.
+- **Yeni sayfalar:** `/kurum/siniflar`, `/kurum/ogretmenler`, `/kurum/puan-cetvelleri` (eskiden sekmeydi). Eski adresler `redirect` ile yönlenir. Devam raporları (`/kurum/raporlar`) Analiz'in sekmesi (`app/kurum/analiz/tabs.ts`), rapor türü küçük düğmelerle.
+- **+ Ekle** (`app/kurum/_ui/QuickAdd.tsx`, `KurumShell`'e `add` / `addCompact` ile verilir; üç düzen: kurum, panel, sınav): sınıf, öğretmen (ardından giriş linki oluştur + kopyala), ders (tür addan tahmin; `GET /api/kurum/secenekler` sınıf ve öğretmen listesi) pencerede; öğrenci, Excel, sözlü/yazılı, ödev (`?yeni=1` formu açık getirir), deneme (`#yeni-deneme`) bağlantı. Pencere `createPortal` ile body'de: telefon üst çubuğundaki `backdrop-blur` sabit konumlu öğeyi çubuğa hapsediyordu.
+- **Test notu:** başsız Chrome'da panoya yazma yok; kod `prompt` ile linki gösterir ve CDP betiği orada takılır (gerçek tarayıcıda sorun değil; telefonda http://IP ile girişte de prompt çıkar, mevcut "Kopyala" düğmesiyle aynı).
+- **Sonra:** öğrenci arama (⌘K / üstte arama kutusu).
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

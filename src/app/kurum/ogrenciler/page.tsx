@@ -1,11 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { classroomsOf, listStudents, type StudentFilter } from "@/modules/enrollment/server";
 import { resultCountsByStudent } from "@/modules/exams/server";
 import { requireOwner } from "@/modules/identity/server";
 import { PageHeader, Tabs, th, td, Empty } from "@/shared/ui/kurum";
 import StudentForm from "@/modules/enrollment/ui/StudentForm";
 import ImportStudents from "@/modules/enrollment/ui/ImportStudents";
-import ClassManager from "@/modules/enrollment/ui/ClassManager";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,6 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     { key: "liste", label: "Öğrenci listesi", href: "/kurum/ogrenciler" },
     { key: "yeni", label: "Tek tek ekle", href: "/kurum/ogrenciler?tab=yeni" },
     { key: "ice-aktar", label: "Excel'den yükle", href: "/kurum/ogrenciler?tab=ice-aktar" },
-    { key: "siniflar", label: "Sınıflar", href: "/kurum/ogrenciler?tab=siniflar" },
   ];
 
   const header = <PageHeader title="Öğrenciler" sub="Öğrencileri ekleyin, sınıflara atayın veya Excel ile toplu yükleyin." />;
@@ -44,15 +43,8 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       </>
     );
   }
-  if (tab === "siniflar") {
-    return (
-      <>
-        {header}
-        <Tabs tabs={tabs} active={tab} />
-        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, level: c.level, students: c.studentCount, members: c.memberCount, mentor: c.mentor?.name ?? null }))} />
-      </>
-    );
-  }
+  // Eski adres: sınıflar artık kendi menü maddesinde
+  if (tab === "siniflar") redirect("/kurum/siniflar");
 
   const filter: StudentFilter =
     sinif === "_dis" ? { external: true } : sinif === "_yok" ? { classroomId: null, external: false } : sinif ? { classroomId: sinif } : {};
