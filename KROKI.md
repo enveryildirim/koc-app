@@ -110,21 +110,25 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 |---|---|
 | Oluşur | Yönetim → **Müfredat** → "+ Müfredat ekle" (ders Dersler'deki adlardan, düzey Sınıflar'daki düzeylerden seçilir) · Excel'den yükle (eşleşmeyen ad / düzey uyarılır) · örnek müfredat |
 | Görüntülenir | Set başlığında "Kullanan sınıflar"; eşleşme yoksa sarı uyarı |
-| Kullanılır | Yıllık plan şablonu (sınıfın düzeyine uyan setler), Soru havuzu ve deneme konuları, Müfredat takip ekranı |
+| Kullanılır | Yıllık plan şablonu (sınıfın düzeyine uyan setler) ve plan satırlarının bağı (`PlanItem.curriculumTopicId`), Soru havuzu ve deneme konuları (ad ile), Müfredat → Takip |
 | Kim | Yönetici, etüt mesulü |
-| Kod | `modules/curriculum/` (`curriculumGradeOptions`, `gradeScope`) · `app/kurum/mufredat/page.tsx` |
+| Kod | `modules/curriculum/` (`curriculumGradeOptions`, `gradeScope`, `curriculumForClass`) · `app/kurum/mufredat/page.tsx` |
+
+Set kaydedilirken / Excel'den yeniden yüklenirken konuların kimliği korunur (aynı ünite + konu adı); adı değişen konu yeni kayıt olur ve plan satırındaki bağı boşalır. Kayıttan sonra o dersin planlarının bağları tazelenir (`planning > relinkPlans`).
 
 Düzey seçenekleri: sınıf düzeyleri + 8 varsa LGS, 11 / 12 varsa TYT ve AYT + var olan setlerin düzeyleri.
 
 ### Yıllık plan (`LessonPlan`, `PlanItem`)
 | | |
 |---|---|
-| Oluşur | Takvim ve planlar → Yıllık ders planı → "+ Yeni plan" · "Haftalık planı içe aktar" (CSV) · başka sınıftan kopyala |
-| İşlendi işareti | Öğretmen ders ekranı → "Bu derste işlenen konu" · yönetici plan sayfası |
+| Oluşur | Takvim ve planlar → Yıllık ders planı → "+ Yeni plan" ("Müfredattan doldur") · "Haftalık planı içe aktar" (CSV) · başka sınıftan kopyala · Müfredat → Takip → "Plan oluştur" |
+| Görüntülenir | **Konu takibi** = plan sayfası (`/kurum/takvim/plan/[id]`): durum, işlendiği ders, değerlendirme, deneme; Müfredat → Takip'teki sınıf satırından da açılır |
+| İşlendi işareti | Öğretmen ders ekranı / yoklama → "Bu derste işlenen konu" · konu takibi sayfası |
 | Kim | Plan: yönetici, etüt mesulü. İşaret: öğretmen de |
-| Kod | `modules/planning/internal/lessonPlans.ts` · `weeklyImport.ts` |
+| Kod | `modules/planning/internal/lessonPlans.ts` · `weeklyImport.ts` · `plan.ts` (`parsePlan`, `layoutPlan`) · `reporting/internal/topicTracking.ts` + `reporting/ui/TopicTracking.tsx` |
 
 Derse ad ile bağlı; formda ad sınıfın derslerinden seçilir. Haftalık plan içe aktarmada (CSV) ad tutmazsa uyarı verilir, kayıt yine yapılır.
+Plan metninde `# Ünite` satırı ünite başlığıdır. "Üniteler paralel işlenir" (`LessonPlan.parallel`) seçiliyse her ünite ilk haftadan kendi sırasıyla ilerler (Kur'ân · Tecvid · Ezber tek derste). Her satır kaydedilirken sınıfın müfredat setine bağlanır (ünite + konu adı, şapka / büyük-küçük harf farkı gözetilmez); bağsız satır konu takibinde "müfredatta yok" görünür. Plan düzenlenince satırlar yerinde güncellenir; işlendi bilgisi, yoklama bağı ve konuya bağlı değerlendirmeler korunur.
 
 ### Puan cetveli (`Rubric`)
 | | |

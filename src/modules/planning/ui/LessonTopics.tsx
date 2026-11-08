@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type Topic = { id: string; topic: string; doneDate: string | null; state: "done" | "late" | "current" | "upcoming" };
+type Topic = { id: string; topic: string; unit?: string; doneDate: string | null; state: "done" | "late" | "current" | "upcoming" };
 
 /** Yoklama ekranında: bu derste işlenen konuları yıllık plandan işaretleme. */
 /** `planLink`: yıllık plan bağlantısı (öğretmen ekranında yok; plan sayfası yönetim panelindedir). */
@@ -27,7 +27,7 @@ export default function LessonTopics({ planId, items, date, sessionId, planLink 
     <div className="card mb-6 p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold">Bu derste işlenen konu</h3>
-        {planLink && <Link href={`/kurum/takvim/plan/${planId}`} className="text-sm text-brand-700 hover:underline">Yıllık plan</Link>}
+        {planLink && <Link href={`/kurum/takvim/plan/${planId}`} className="text-sm text-brand-700 hover:underline">Konu takibi</Link>}
       </div>
       {items.length === 0 ? (
         <p className="text-sm text-lead">Plandaki tüm konular işlendi.</p>
@@ -41,6 +41,7 @@ export default function LessonTopics({ planId, items, date, sessionId, planLink 
               }`}
             >
               <input type="checkbox" checked={!!t.doneDate} disabled={pending === t.id} onChange={() => toggle(t)} className="accent-emerald-600" />
+              {t.unit && <span className="text-xs text-lead">{t.unit} ·</span>}
               {t.topic}
               {!t.doneDate && t.state === "late" && <span className="text-xs text-red-600">gecikti</span>}
               {!t.doneDate && t.state === "current" && <span className="text-xs text-brand-600">bu hafta</span>}

@@ -196,9 +196,23 @@ Ders **yalnızca** Yönetim → Dersler'de açılır. **+ Ders ekle** → yan pa
 - [ ] Excel ile yükleyin; dosyada kurumda olmayan bir ders adı (ör. *Tecvıd*) ve düzey (ör. *7*) olsun → önizlemede iki uyarı; aktarım yine yapılır.
 - [ ] (İsteğe bağlı) "Örnek müfredatı yükle" → 8. sınıf / 12. sınıf / TYT setleri gelir; hepsinde sarı uyarı çıkar ("Kurumda bu adla ders yok" ya da "Bu düzeyde bu dersi alan sınıf yok"), çünkü örnekler bu kurumun sınıflarıyla eşleşmez.
 
-**7.3 Yıllık plan**
+**7.3 Yıllık plan ve konu takibi**
 - [ ] Takvim ve planlar → Yıllık ders planı → **+ Yeni plan** → SEVİYE-2 · Tecvid (ders listeden seçilir), konular müfredattan.
 - **Beklenen:** Konular haftalara dağıtılır, tatil haftası atlanır.
+- [ ] Müfredatı olmayan bir sınıf + ders seçin (ör. 9-A · Matematik).
+- **Beklenen:** Sarı not "Bu ders ve sınıf düzeyi için müfredat yok… Müfredat ekle".
+- [ ] Üniteli bir müfredattan doldurun (ör. `notes/Seviye-2 müfredat …xlsx` ile yüklenen Kuranı Kerim: Kur'ân · Tecvid · Ezber).
+- **Beklenen:** Metinde `# Ünite` satırları gelir; toplam yılı aştığı için "Üniteler aynı haftalarda paralel işlenir" kendiliğinden işaretlenir; önizlemede her hafta üç ünitenin konusu yan yana, ~45 ders haftası.
+- [ ] Planı oluşturun → plan sayfası **Konu takibi** olarak açılır.
+- **Beklenen:** "Müfredata bağlı 105/105"; süzgeçler (Tümü / Gecikenler / İşlenmeyenler / İşlenenler) ve ünite seçimi; geçmiş haftalar "Gecikti", bu hafta vurgulu.
+- [ ] Birkaç konuyu işaretleyin → **Düzenle** → bir konunun adını değiştirip kaydedin.
+- **Beklenen:** İşaretler kaybolmaz; adı değişen konu "müfredatta yok" rozeti alır.
+- [ ] Bir konuya bağlı sözlü değerlendirme açın (öğretmen ekranı → Sözlü/yazılı → konu seçerek).
+- **Beklenen:** Konu takibinde "Değerlendirme" sütununda başlığı ve ortalaması; Müfredat → Takip'te "1 kez".
+- [ ] Müfredat → Kuranı Kerim · Seviye-2 → **Takip**.
+- **Beklenen:** Üstte sınıf tablosu (S-2: işlenen, "N konu gecikti", **Konu takibi ›**); planı olmayan sınıfta "Plan oluştur ›". Konu satırlarında "N sınıfta gecikti". Seviye-2 gibi deneme türü olmayan düzeyde "Deneme başarısı" sütunu yok.
+- [ ] Müfredatı Excel'den aynı dosyayla yeniden yükleyin (Değiştir).
+- **Beklenen:** Plan bağları korunur (konu takibinde "müfredatta yok" sayısı artmaz).
 - [ ] **Haftalık planı içe aktar** → `notes/ornek-haftalik-plan.csv`.
 - **Beklenen:** Sınıf / ders adları bu kurumda farklıysa "Bu adla ders yok" uyarısı çıkar; uyarıya rağmen anlaşılır biçimde ilerlenebilir.
 

@@ -28,7 +28,7 @@ src/
 | `assessment` | Rubric, Assessment, AssessmentScore | identity, enrollment, schedule, planning | `/kurum/degerlendirme/*`, `/ogretmen/degerlendirme/*`, `/api/kurum/{degerlendirme,puan-cetvelleri}/*` |
 | `reporting` | Student.parent* (veli paylaşım alanları), Setting, ParentDispatch | hepsi (online-test ve question-bank hariç; assessment dahil) | `/kurum` (özet), `/kurum/takip`, `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 
-Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← schedule ← {exams, homework} ← planning ← assessment ← reporting`; `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
+Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← schedule ← {exams, homework} ← planning ← assessment ← reporting` (planning ayrıca curriculum'u okur); `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
 
 ## Bir modülün içi
 
@@ -104,5 +104,5 @@ modules/<m>/
 ## Müfredat (`curriculum`)
 
 - Ders + düzey için ünite / konu / kazanım listesi; Excel ile içe ve dışa aktarılır (`parseCurriculumTable`, `CURRICULUM_COLUMNS`). `sample.ts` örnek (sahte) veridir.
-- Diğer modüller müfredata bağımlı değildir: sayfalar müfredat konularını öneri olarak verir (yıllık plan "müfredattan doldur", soru havuzu ve cevap anahtarı konu seçimi). Bağlantı konu **adı** üzerindendir (`planning > topicMatches`).
-- Takip ekranı (`reporting > curriculumTracking`) her konu için plan ilerlemesini, havuzdaki soru sayısını ve deneme başarısını okur; düzey → sınıf / deneme türü eşlemesi `curriculum > gradeScope`.
+- Yıllık plan satırları müfredat konusuna **kimlikle** bağlıdır (`PlanItem.curriculumTopicId`): `planning` plan kaydederken sınıfın düzeyine uyan seti okur (`curriculum > curriculumForClass`) ve ünite + konu adıyla (`topicKey`) bağlar. `writeSets` konu kimliklerini korur; müfredat kaydı sonrası `planning > relinkPlans`. Soru havuzu ve deneme konuları hâlâ **ad** ile eşleşir (`planning > topicMatches`, sayılar ayırt edicidir).
+- Takip: `reporting > curriculumTracking` (düzey özeti: sınıf planları, işlenen / geciken, değerlendirme, havuz, deneme) ve `reporting > planTopicTracking` (bir sınıfın bir dersi: konu takibi sayfası). Düzey → sınıf / deneme türü eşlemesi `curriculum > gradeScope`.

@@ -10,12 +10,15 @@ const norm = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** Sözcüklerin ilk 5 harfi (Türkçe ekleri kabaca atmak için): "olasılığı" → "olası". */
+/**
+ * Sözcüklerin ilk 5 harfi (Türkçe ekleri kabaca atmak için): "olasılığı" → "olası".
+ * Sayılar kısa da olsa ayırt edicidir ("sayfa 51–52" ≠ "sayfa 53–54", "deneme-1" ≠ "deneme-2").
+ */
 const stems = (s: string) =>
   norm(s)
     .split(" ")
-    .filter((w) => w.length >= 3 && !STOP.has(w))
-    .map((w) => w.slice(0, 5));
+    .filter((w) => /^\d+$/.test(w) || (w.length >= 3 && !STOP.has(w)))
+    .map((w) => (/^\d+$/.test(w) ? String(Number(w)) : w.slice(0, 5)));
 
 /**
  * İki konu adı aynı konuyu mu anlatıyor? Kısa olanın bütün kökleri uzun olanda geçiyorsa evet.

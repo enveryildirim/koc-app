@@ -164,6 +164,10 @@ async function SetView({ ownerId, subject, grade, tab, users, isCourse }: { owne
 
   const t = await curriculumTracking(ownerId, subject, grade);
   const n = t.rows.length;
+  const hasExams = gradeScope(grade).examTypes.length > 0;
+  const lateTopics = t.rows.filter((r) => r.plan.late).length;
+  const assessed = t.rows.filter((r) => r.assess.count).length;
+  const noPlan = users.filter((c) => !t.classPlans.some((p) => p.classroomId === c.id));
   const doneTopics = t.rows.filter((r) => r.plan.planned && r.plan.done === r.plan.planned).length;
   const plannedTopics = t.rows.filter((r) => r.plan.planned).length;
   const noBank = t.rows.filter((r) => !r.bank).length;
@@ -187,10 +191,60 @@ async function SetView({ ownerId, subject, grade, tab, users, isCourse }: { owne
       <Tabs tabs={tabs} active="takip" />
       <div className="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
         <Kpi label="Planda işlenen" value={`${doneTopics}/${n}`} hint={t.classes ? `${t.classes} sınıfın planı · ${plannedTopics} konu planlı` : "Bu düzeyde yıllık plan yok"} />
-        <Kpi label="Havuzda sorusu yok" value={noBank} hint={`${n} konudan`} />
-        <Kpi label="Denemede ölçülen" value={`${measured.length}/${n}`} hint={t.examCount ? `${t.examCount} deneme` : "Bu düzeyde deneme yok"} />
-        <Kpi label="Zayıf konu" value={weak} hint="Denemede başarı %50'nin altında" />
+        <Kpi label="Geciken konu" value={lateTopics} hint="planlanan haftası geçti, işlenmedi (en az bir sınıfta)" />
+        <Kpi label="Değerlendirilen konu" value={`${assessed}/${n}`} hint="sözlü / yazılı / uygulama" />
+        {hasExams ? (
+          <Kpi label="Denemede ölçülen" value={`${measured.length}/${n}`} hint={t.examCount ? `${t.examCount} deneme · ${weak} zayıf konu` : "Bu düzeyde deneme yok"} />
+        ) : (
+          <Kpi label="Havuzda sorusu yok" value={noBank} hint={`${n} konudan`} />
+        )}
       </div>
+
+      {(t.classPlans.length > 0 || noPlan.length > 0) && (
+        <div className="card mb-3 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-rule">
+              <tr>
+                <th className={th}>Sınıf</th>
+                <th className={`${th} w-48`}>İşlenen</th>
+                <th className={th}>Durum</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-rule/70">
+              {t.classPlans.map((c) => (
+                <tr key={c.planId}>
+                  <td className={`${td} font-medium`}>{c.classroom}</td>
+                  <td className={td}>
+                    <div className="flex items-center gap-2">
+                      {bar(c.linked ? (c.done / c.linked) * 100 : 0, "bg-emerald-500")}
+                      <span className="num shrink-0 text-xs text-lead">{c.done}/{c.linked}</span>
+                    </div>
+                  </td>
+                  <td className={td}>
+                    {c.late ? <span className="badge bg-red-50 text-red-700">{c.late} konu gecikti</span> : <span className="badge bg-emerald-50 text-emerald-700">Plana uygun</span>}
+                    {c.linked < c.total && <span className="ml-2 text-xs text-amber-700">{c.total - c.linked} plan konusu müfredatta yok</span>}
+                  </td>
+                  <td className={`${td} text-right`}>
+                    <Link href={`/kurum/takvim/plan/${c.planId}`} className="text-brand-700 hover:underline">Konu takibi ›</Link>
+                  </td>
+                </tr>
+              ))}
+              {noPlan.map((c) => (
+                <tr key={c.id}>
+                  <td className={`${td} font-medium`}>{c.name}</td>
+                  <td className={`${td} text-lead/70`} colSpan={2}>Yıllık plan yok; işlenen konular takip edilemez.</td>
+                  <td className={`${td} text-right`}>
+                    <Link href={`/kurum/takvim/plan/yeni?${new URLSearchParams({ sinif: c.id, ders: c.courses.find((x) => subjectMatches(x, subject)) ?? subject })}`} className="text-brand-700 hover:underline">
+                      Plan oluştur ›
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
@@ -200,15 +254,16 @@ async function SetView({ ownerId, subject, grade, tab, users, isCourse }: { owne
               <th className={th}>Konu</th>
               <th className={`${th} text-right`}>Hafta</th>
               <th className={`${th} w-36`}>Yıllık plan</th>
+              <th className={`${th} w-28`}>Değerlendirme</th>
               <th className={`${th} text-right`}>Havuz</th>
-              <th className={`${th} w-44`}>Deneme başarısı</th>
+              {hasExams && <th className={`${th} w-44`}>Deneme başarısı</th>}
             </tr>
           </thead>
           {units.map((u) => (
             <tbody key={u} className="divide-y divide-rule/70 border-b border-rule">
               {u && (
                 <tr>
-                  <td colSpan={6} className="bg-paper px-3 py-1 text-[12.5px] font-semibold text-lead">{u}</td>
+                  <td colSpan={hasExams ? 7 : 6} className="bg-paper px-3 py-1 text-[12.5px] font-semibold text-lead">{u}</td>
                 </tr>
               )}
               {t.rows
@@ -223,12 +278,24 @@ async function SetView({ ownerId, subject, grade, tab, users, isCourse }: { owne
                     <td className={`${td} num text-right`}>{r.weeks}</td>
                     <td className={td}>
                       {r.plan.planned ? (
-                        <div className="flex items-center gap-2">
-                          {bar((r.plan.done / r.plan.planned) * 100, "bg-emerald-500")}
-                          <span className="num shrink-0 text-xs text-lead">{r.plan.done}/{r.plan.planned}</span>
-                        </div>
+                        <>
+                          <div className="flex items-center gap-2">
+                            {bar((r.plan.done / r.plan.planned) * 100, "bg-emerald-500")}
+                            <span className="num shrink-0 text-xs text-lead">{r.plan.done}/{r.plan.planned}</span>
+                          </div>
+                          {r.plan.late > 0 && <div className="text-xs text-red-700">{r.plan.late} sınıfta gecikti</div>}
+                        </>
                       ) : (
                         <span className="text-xs text-lead/70">planda yok</span>
+                      )}
+                    </td>
+                    <td className={`${td} text-xs`}>
+                      {r.assess.count ? (
+                        <span>
+                          {r.assess.count} kez{r.assess.avg !== null && <span className={`ml-1 font-semibold ${r.assess.avg < 50 ? "text-red-700" : ""}`}>%{r.assess.avg}</span>}
+                        </span>
+                      ) : (
+                        <span className="text-lead/70">—</span>
                       )}
                     </td>
                     <td className={`${td} num text-right`}>
@@ -240,16 +307,18 @@ async function SetView({ ownerId, subject, grade, tab, users, isCourse }: { owne
                         <span className="text-amber-700">0</span>
                       )}
                     </td>
-                    <td className={td}>
-                      {r.exam.rate === null ? (
-                        <span className="text-xs text-lead/70">ölçülmedi</span>
-                      ) : (
-                        <div className="flex items-center gap-2" title={`${r.exam.questions} soru, ${r.exam.total} cevap`}>
-                          {bar(r.exam.rate, r.exam.rate < 50 ? "bg-red-400" : r.exam.rate < 70 ? "bg-amber-400" : "bg-emerald-500")}
-                          <span className={`num w-9 shrink-0 text-right text-xs font-semibold ${r.exam.rate < 50 ? "text-red-700" : ""}`}>%{r.exam.rate}</span>
-                        </div>
-                      )}
-                    </td>
+                    {hasExams && (
+                      <td className={td}>
+                        {r.exam.rate === null ? (
+                          <span className="text-xs text-lead/70">ölçülmedi</span>
+                        ) : (
+                          <div className="flex items-center gap-2" title={`${r.exam.questions} soru, ${r.exam.total} cevap`}>
+                            {bar(r.exam.rate, r.exam.rate < 50 ? "bg-red-400" : r.exam.rate < 70 ? "bg-amber-400" : "bg-emerald-500")}
+                            <span className={`num w-9 shrink-0 text-right text-xs font-semibold ${r.exam.rate < 50 ? "text-red-700" : ""}`}>%{r.exam.rate}</span>
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
             </tbody>

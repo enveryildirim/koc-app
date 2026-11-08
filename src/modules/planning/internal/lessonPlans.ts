@@ -2,8 +2,10 @@ import { prisma } from "@/shared/db";
 import { conflict, invalid, notFound } from "@/shared/errors";
 import { classroomsOf, getClassroom } from "@/modules/enrollment/server";
 import { listCourses, listSlots, teachesSubject } from "@/modules/schedule/server";
+import { topicKey } from "@/modules/curriculum";
+import { curriculumForClass } from "@/modules/curriculum/server";
 import { schoolYearOf, schoolYearRange, YMD } from "../calendar";
-import { itemState, layoutPlan, mondayOf, parsePlan, planProgress, type PlanSlot, type Range } from "../plan";
+import { byWeek, itemState, layoutPlan, mondayOf, parsePlan, planProgress, type PlanSlot, type Range } from "../plan";
 
 /** Planın dağıtımında atlanacak tatiller: kurum geneli + o sınıfa ait tatil etkinlikleri. */
 export async function holidayRanges(ownerId: string, classroomId: string, year: number): Promise<Range[]> {
@@ -28,11 +30,36 @@ function checkStart(startDate: string, year: number) {
   if (!YMD.test(startDate) || startDate < from || startDate > to) throw invalid("Başlangıç tarihi seçilen eğitim yılı içinde olmalı.");
 }
 
-const itemRows = (planId: string, slots: PlanSlot[], keep?: Map<string, { doneDate: string | null; sessionId: string | null }[]>) =>
-  slots.map((s) => {
-    const prev = keep?.get(s.topic)?.shift();
-    return { planId, order: s.order, topic: s.topic, week: s.week, endWeek: s.endWeek, doneDate: prev?.doneDate ?? null, sessionId: prev?.sessionId ?? null };
+type Slot = PlanSlot & { curriculumTopicId: string | null };
+
+/**
+ * Plan satırlarını sınıfın müfredat setine bağlar: önce aynı ünite + konu adı, sonra yalnızca konu adı
+ * (büyük-küçük harf / şapka farkı gözetilmez). Müfredattaki her konu en fazla bir satıra bağlanır.
+ */
+async function linkSlots(ownerId: string, classroomId: string, subject: string, slots: PlanSlot[]): Promise<Slot[]> {
+  const level = (await prisma.classroom.findFirst({ where: { id: classroomId, ownerId }, select: { level: true } }))?.level ?? "";
+  const topics = await curriculumForClass(ownerId, subject, level);
+  const used = new Set<string>();
+  const pick = (test: (t: (typeof topics)[number]) => boolean) => {
+    const t = topics.find((x) => !used.has(x.id) && test(x));
+    if (t) used.add(t.id);
+    return t?.id ?? null;
+  };
+  return slots.map((s) => {
+    const k = topicKey(s.topic);
+    const u = topicKey(s.unit);
+    return { ...s, curriculumTopicId: pick((t) => topicKey(t.topic) === k && topicKey(t.unit) === u) ?? pick((t) => topicKey(t.topic) === k) };
   });
+}
+
+const newRows = (planId: string, slots: Slot[]) =>
+  slots.map((s) => ({ planId, order: s.order, topic: s.topic, unit: s.unit, week: s.week, endWeek: s.endWeek, curriculumTopicId: s.curriculumTopicId }));
+
+/** Metin + başlangıç → bağlı satırlar. */
+async function buildSlots(ownerId: string, classroomId: string, subject: string, year: number, source: string, startDate: string, parallel: boolean) {
+  const slots = layoutPlan(parseSource(source), startDate, await holidayRanges(ownerId, classroomId, year), parallel);
+  return linkSlots(ownerId, classroomId, subject, slots);
+}
 
 /**
  * Eğitim yılının plan özeti: ders programındaki her (sınıf, ders) çifti ve programda olmasa da
@@ -94,33 +121,62 @@ export async function createPlan(ownerId: string, body: Record<string, unknown>)
     throw invalid("Sınıf bulunamadı.");
   }
   checkStart(startDate, year);
-  const lines = parseSource(source);
+  const parallel = body.parallel === true;
+  const slots = await buildSlots(ownerId, classroomId, subject, year, source, startDate, parallel);
   if (await prisma.lessonPlan.findUnique({ where: { ownerId_classroomId_subject_year: { ownerId, classroomId, subject, year } } })) {
     throw conflict("Bu sınıfın bu ders için bu yıla ait planı zaten var.");
   }
-  const slots = layoutPlan(lines, startDate, await holidayRanges(ownerId, classroomId, year));
-  const plan = await prisma.lessonPlan.create({ data: { ownerId, classroomId, subject, year, startDate, source } });
-  await prisma.planItem.createMany({ data: itemRows(plan.id, slots) });
+  const plan = await prisma.lessonPlan.create({ data: { ownerId, classroomId, subject, year, startDate, source, parallel } });
+  await prisma.planItem.createMany({ data: newRows(plan.id, slots) });
   return plan;
 }
 
-/** Metni veya başlangıcı değiştirir; konular yeniden dağıtılır, aynı adlı konuların "işlendi" bilgisi korunur. */
+/**
+ * Metni, başlangıcı ya da paralel seçeneğini değiştirir; konular yeniden dağıtılır. Var olan satırlar yerinde
+ * güncellenir (aynı müfredat konusu, yoksa aynı ünite + konu adı, yoksa aynı konu adı), böylece "işlendi" bilgisi,
+ * yoklama bağı ve konuya bağlı değerlendirmeler korunur. Karşılığı kalmayan satırlar silinir.
+ */
 export async function updatePlan(ownerId: string, id: string, body: Record<string, unknown>) {
   const plan = await ownedPlan(ownerId, id);
   const startDate = String(body.startDate ?? plan.startDate);
   const source = String(body.source ?? plan.source);
+  const parallel = typeof body.parallel === "boolean" ? body.parallel : plan.parallel;
   checkStart(startDate, plan.year);
-  const lines = parseSource(source);
-  const slots = layoutPlan(lines, startDate, await holidayRanges(ownerId, plan.classroomId, plan.year));
-  const keep = new Map<string, { doneDate: string | null; sessionId: string | null }[]>();
-  for (const it of [...plan.items].sort((a, b) => a.order - b.order)) {
-    if (it.doneDate) keep.set(it.topic, [...(keep.get(it.topic) ?? []), { doneDate: it.doneDate, sessionId: it.sessionId }]);
-  }
+  const slots = await buildSlots(ownerId, plan.classroomId, plan.subject, plan.year, source, startDate, parallel);
+
+  const left = [...plan.items].sort((a, b) => a.order - b.order);
+  const take = (test: (i: (typeof left)[number]) => boolean) => {
+    const at = left.findIndex(test);
+    return at < 0 ? null : left.splice(at, 1)[0];
+  };
+  const matched = slots.map((s) => s.curriculumTopicId ? take((i) => i.curriculumTopicId === s.curriculumTopicId) : null);
+  slots.forEach((s, n) => {
+    matched[n] ??= take((i) => topicKey(i.topic) === topicKey(s.topic) && topicKey(i.unit) === topicKey(s.unit)) ?? take((i) => topicKey(i.topic) === topicKey(s.topic));
+  });
+  const fresh = slots.filter((_, n) => !matched[n]);
   await prisma.$transaction([
-    prisma.planItem.deleteMany({ where: { planId: plan.id } }),
-    prisma.planItem.createMany({ data: itemRows(plan.id, slots, keep) }),
-    prisma.lessonPlan.update({ where: { id: plan.id }, data: { startDate, source } }),
+    ...slots.flatMap((s, n) =>
+      matched[n]
+        ? [prisma.planItem.update({ where: { id: matched[n]!.id }, data: { order: s.order, topic: s.topic, unit: s.unit, week: s.week, endWeek: s.endWeek, curriculumTopicId: s.curriculumTopicId } })]
+        : [],
+    ),
+    prisma.planItem.deleteMany({ where: { id: { in: left.map((i) => i.id) } } }),
+    prisma.planItem.createMany({ data: newRows(plan.id, fresh) }),
+    prisma.lessonPlan.update({ where: { id: plan.id }, data: { startDate, source, parallel } }),
   ]);
+}
+
+/** Müfredat kaydedilince (konu eklendi / adı değişti) o dersin planlarındaki bağları tazeler; dağıtıma dokunmaz. */
+export async function relinkPlans(ownerId: string, subject: string) {
+  const plans = await prisma.lessonPlan.findMany({ where: { ownerId }, include: { items: true } });
+  for (const p of plans.filter((x) => x.subject === subject || topicKey(x.subject) === topicKey(subject))) {
+    const items = [...p.items].sort((a, b) => a.order - b.order);
+    const linked = await linkSlots(ownerId, p.classroomId, p.subject, items);
+    const updates = items.flatMap((it, n) =>
+      linked[n].curriculumTopicId !== it.curriculumTopicId ? [prisma.planItem.update({ where: { id: it.id }, data: { curriculumTopicId: linked[n].curriculumTopicId } })] : [],
+    );
+    if (updates.length) await prisma.$transaction(updates);
+  }
 }
 
 export async function deletePlan(ownerId: string, id: string) {
@@ -133,7 +189,6 @@ export async function copyPlan(ownerId: string, id: string, classroomIds: unknow
   const plan = await ownedPlan(ownerId, id);
   if (!Array.isArray(classroomIds) || !classroomIds.length) throw invalid("En az bir sınıf seçin.");
   const classes = new Map((await classroomsOf(ownerId)).map((c) => [c.id, c.name]));
-  const lines = parseSource(plan.source);
   const created: string[] = [];
   const skipped: string[] = [];
   for (const cid of new Set(classroomIds.map(String))) {
@@ -146,11 +201,11 @@ export async function copyPlan(ownerId: string, id: string, classroomIds: unknow
       skipped.push(name);
       continue;
     }
-    const slots = layoutPlan(lines, plan.startDate, await holidayRanges(ownerId, cid, plan.year));
+    const slots = await buildSlots(ownerId, cid, plan.subject, plan.year, plan.source, plan.startDate, plan.parallel);
     const copy = await prisma.lessonPlan.create({
-      data: { ownerId, classroomId: cid, subject: plan.subject, year: plan.year, startDate: plan.startDate, source: plan.source },
+      data: { ownerId, classroomId: cid, subject: plan.subject, year: plan.year, startDate: plan.startDate, source: plan.source, parallel: plan.parallel },
     });
-    await prisma.planItem.createMany({ data: itemRows(copy.id, slots) });
+    await prisma.planItem.createMany({ data: newRows(copy.id, slots) });
     created.push(name);
   }
   return { created, skipped };
@@ -181,11 +236,13 @@ export async function topicsForLesson(ownerId: string, classroomId: string, subj
     include: { items: { orderBy: { order: "asc" } } },
   });
   if (!plan) return null;
-  const today = plan.items.filter((i) => i.doneDate === date);
-  const next = plan.items.filter((i) => !i.doneDate).slice(0, limit);
+  // Paralel ünitelerde aynı haftanın konuları yan yana gelsin diye hafta sırasıyla
+  const items = byWeek(plan.items);
+  const today = items.filter((i) => i.doneDate === date);
+  const next = items.filter((i) => !i.doneDate).slice(0, limit);
   return {
     planId: plan.id,
-    items: [...today, ...next].map((i) => ({ id: i.id, topic: i.topic, week: i.week, endWeek: i.endWeek, doneDate: i.doneDate, state: itemState(i, date) })),
+    items: [...today, ...next].map((i) => ({ id: i.id, topic: i.topic, unit: i.unit, week: i.week, endWeek: i.endWeek, doneDate: i.doneDate, state: itemState(i, date) })),
   };
 }
 
@@ -223,7 +280,7 @@ export async function plansForPairs<T extends { classroomId: string; subject: st
     const plan = plans.find((p) => p.classroomId === pair.classroomId && p.subject === pair.subject);
     if (!plan) return { ...pair, plan: null };
     const thisWeekTopics = plan.items.filter((i) => i.week <= thisWeek && thisWeek <= i.endWeek);
-    const next = plan.items.find((i) => !i.doneDate);
+    const next = byWeek(plan.items).find((i) => !i.doneDate);
     return {
       ...pair,
       plan: {

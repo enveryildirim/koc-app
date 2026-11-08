@@ -1,6 +1,7 @@
 import { prisma } from "@/shared/db";
 import { invalid } from "@/shared/errors";
-import { gradeScope, gradeSortKey, normGrade, planSourceOf, SAMPLE_CURRICULUM, type CurriculumRow } from "../index";
+import { subjectMatches } from "@/shared/subjects";
+import { gradeScope, gradeSortKey, normGrade, planSourceOf, SAMPLE_CURRICULUM, topicKey, type CurriculumRow } from "../index";
 
 const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -54,18 +55,40 @@ export async function curriculumTopicNames(ownerId: string) {
   return out;
 }
 
-/** Setlerin satırlarını yazar: her (ders, sınıf) seti silinip verilen sırayla yeniden oluşturulur. */
+/**
+ * Setlerin satırlarını yazar: her (ders, sınıf) seti verilen sırayla yeniden yazılır. Var olan konuların kimliği
+ * korunur (aynı ünite + konu adı, sırayla), çünkü yıllık plan satırları konuya kimlikle bağlıdır. Yeni konular
+ * eklenir, listede olmayanlar silinir (bağlı plan satırları konu metniyle kalır, bağı boşalır).
+ */
 async function writeSets(ownerId: string, rows: CurriculumRow[]) {
   const sets = new Map<string, CurriculumRow[]>();
   for (const r of rows) {
     const k = `${r.subject}\u0000${r.grade}`;
     (sets.get(k) ?? sets.set(k, []).get(k)!).push(r);
   }
-  await prisma.$transaction([
-    ...[...sets.values()].map((list) => prisma.curriculumTopic.deleteMany({ where: { ownerId, subject: list[0].subject, grade: list[0].grade } })),
-    ...[...sets.values()].map((list) => prisma.curriculumTopic.createMany({ data: list.map((r, i) => ({ ...r, ownerId, order: i })) })),
-  ]);
-  return sets.size;
+  const ops = [];
+  for (const list of sets.values()) {
+    const { subject, grade } = list[0];
+    const existing = await prisma.curriculumTopic.findMany({ where: { ownerId, subject, grade }, orderBy: { order: "asc" }, select: { id: true, unit: true, topic: true } });
+    const pool = new Map<string, string[]>();
+    const key = (unit: string, topic: string) => `${topicKey(unit)}\u0000${topicKey(topic)}`;
+    for (const e of existing) (pool.get(key(e.unit, e.topic)) ?? pool.set(key(e.unit, e.topic), []).get(key(e.unit, e.topic))!).push(e.id);
+    const kept = new Set<string>();
+    const fresh: (CurriculumRow & { ownerId: string; order: number })[] = [];
+    list.forEach((r, i) => {
+      const id = pool.get(key(r.unit, r.topic))?.shift();
+      const data = { ...r, ownerId, order: i };
+      if (id) {
+        kept.add(id);
+        ops.push(prisma.curriculumTopic.update({ where: { id }, data }));
+      } else fresh.push(data);
+    });
+    const gone = existing.filter((e) => !kept.has(e.id)).map((e) => e.id);
+    if (gone.length) ops.push(prisma.curriculumTopic.deleteMany({ where: { id: { in: gone } } }));
+    if (fresh.length) ops.push(prisma.curriculumTopic.createMany({ data: fresh }));
+  }
+  await prisma.$transaction(ops);
+  return { sets: sets.size, subjects: [...new Set(rows.map((r) => r.subject))] };
 }
 
 /** Düzenleme ekranından bir setin tamamını kaydeder (sıra = gönderilen sıra). Boş liste seti siler. */
@@ -78,10 +101,10 @@ export async function saveCurriculumSet(ownerId: string, subject: unknown, grade
   const clean = (rows as Partial<CurriculumRow>[]).map((r, i) => cleanRow({ ...r, subject: s, grade: g }, i));
   if (!clean.length) {
     await prisma.curriculumTopic.deleteMany({ where: { ownerId, subject: s, grade: g } });
-    return { saved: 0 };
+    return { saved: 0, subjects: [s] };
   }
   await writeSets(ownerId, clean);
-  return { saved: clean.length };
+  return { saved: clean.length, subjects: [s] };
 }
 
 /**
@@ -102,16 +125,16 @@ export async function importCurriculum(ownerId: string, rows: unknown, mode: unk
     });
     final = [...existing, ...clean];
   }
-  const sets = await writeSets(ownerId, final);
-  return { rows: clean.length, sets };
+  const { sets, subjects } = await writeSets(ownerId, final);
+  return { rows: clean.length, sets, subjects };
 }
 
 /** Örnek müfredatı yükler; kurumda zaten bulunan (ders, sınıf) setlerine dokunmaz. */
 export async function loadSampleCurriculum(ownerId: string) {
   const have = new Set((await curriculumSets(ownerId)).map((s) => `${s.subject}\u0000${s.grade}`));
   const rows = SAMPLE_CURRICULUM.filter((r) => !have.has(`${r.subject}\u0000${r.grade}`));
-  if (!rows.length) return { rows: 0, sets: 0 };
-  return { rows: rows.length, sets: await writeSets(ownerId, rows) };
+  if (!rows.length) return { rows: 0, sets: 0, subjects: [] as string[] };
+  return { rows: rows.length, ...(await writeSets(ownerId, rows)) };
 }
 
 export async function deleteCurriculumSet(ownerId: string, subject: unknown, grade: unknown) {
@@ -119,7 +142,7 @@ export async function deleteCurriculumSet(ownerId: string, subject: unknown, gra
   return { deleted: r.count };
 }
 
-export type PlanTemplate = { subject: string; grade: string; topics: number; source: string };
+export type PlanTemplate = { subject: string; grade: string; topics: number; source: string; units: number; weeks: number };
 
 /**
  * Yıllık plan ekranı için: her sınıfa, düzeyine uyan müfredat setlerinden hazır plan metni.
@@ -132,8 +155,31 @@ export async function planTemplatesByClass(ownerId: string, classrooms: { id: st
     const k = `${r.subject}\u0000${r.grade}`;
     (sets.get(k) ?? sets.set(k, []).get(k)!).push(r);
   }
-  const templates: PlanTemplate[] = [...sets.values()].map((l) => ({ subject: l[0].subject, grade: l[0].grade, topics: l.length, source: planSourceOf(l) }));
+  const templates: PlanTemplate[] = [...sets.values()].map((l) => ({
+    subject: l[0].subject,
+    grade: l[0].grade,
+    topics: l.length,
+    source: planSourceOf(l),
+    units: new Set(l.map((r) => r.unit).filter(Boolean)).size,
+    weeks: l.reduce((a, r) => a + r.weeks, 0),
+  }));
   return Object.fromEntries(
     classrooms.map((c) => [c.id, c.level ? templates.filter((t) => gradeScope(t.grade).levels.includes(c.level)) : templates]),
   ) as Record<string, PlanTemplate[]>;
+}
+
+/**
+ * Bir sınıfın bir dersine karşılık gelen müfredat seti (yıllık plan konularını bağlamak için): ders adı eşleşen
+ * ve düzeyi sınıfın düzeyini kapsayan set; sınıf düzeyiyle birebir aynı olan önceliklidir. Yoksa boş liste.
+ */
+export async function curriculumForClass(ownerId: string, subject: string, level: string) {
+  if (!level) return [];
+  const sets = (await curriculumSets(ownerId)).filter((s) => subjectMatches(s.subject, subject) && gradeScope(s.grade).levels.includes(level));
+  const set = sets.find((s) => s.grade === level && s.subject === subject) ?? sets.find((s) => s.grade === level) ?? sets[0];
+  if (!set) return [];
+  return prisma.curriculumTopic.findMany({
+    where: { ownerId, subject: set.subject, grade: set.grade },
+    orderBy: { order: "asc" },
+    select: { id: true, unit: true, topic: true, weeks: true },
+  });
 }

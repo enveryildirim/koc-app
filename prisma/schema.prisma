@@ -371,6 +371,8 @@ model LessonPlan {
   startDate   String
   /// Yöneticinin girdiği metin (satır başına konu; "| n" hafta, "+" aynı hafta)
   source      String
+  /// Üniteler ("# Ünite" satırları) aynı haftalardan başlayıp paralel işlenir (ör. Kur'ân-ı Kerîm · Tecvid · Ezber)
+  parallel    Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   items       PlanItem[]
@@ -384,6 +386,11 @@ model PlanItem {
   plan      LessonPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   order     Int
   topic     String
+  /// Plan metnindeki "# Ünite" başlığı; yoksa boş
+  unit      String     @default("")
+  /// Karşılık gelen müfredat konusu (aynı ders + sınıf düzeyi). Boş = müfredatta yok (elle yazılmış konu)
+  curriculumTopicId String?
+  curriculumTopic   CurriculumTopic? @relation(fields: [curriculumTopicId], references: [id], onDelete: SetNull)
   /// Başlangıç ve bitiş haftasının Pazartesi'si (YYYY-MM-DD)
   week      String
   endWeek   String
@@ -393,6 +400,7 @@ model PlanItem {
   sessionId String?
 
   @@index([planId, order])
+  @@index([curriculumTopicId])
 }
 
 /// Soru havuzu kaynağı: yüklenen PDF ya da resim(ler). Dosyalar storage/<ownerId>/ altında durur.
@@ -456,6 +464,8 @@ model CurriculumTopic {
   /// Önerilen ders haftası
   weeks   Int    @default(1)
   order   Int
+  /// Bu konuya bağlı yıllık plan satırları (planning bağı kimlikle kurar; set kaydedilirken kimlikler korunur)
+  planItems PlanItem[]
 
   @@index([ownerId, subject, grade])
 }

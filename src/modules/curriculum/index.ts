@@ -47,16 +47,34 @@ export function gradeScope(grade: string) {
   return map[grade] ?? { levels: [grade], examTypes: [], grades: [grade] };
 }
 
-/** Müfredat satırlarından yıllık plan metni ("Konu | hafta" satırları). Aynı konu tekrar ederse haftalar toplanır. */
-export function planSourceOf(rows: Pick<CurriculumRow, "topic" | "weeks">[]) {
-  const merged: { topic: string; weeks: number }[] = [];
+/**
+ * Müfredat satırlarından yıllık plan metni ("Konu | hafta" satırları). Ünite değiştikçe "# Ünite" başlığı yazılır
+ * (setin hiç ünitesi yoksa başlık yok). Aynı ünitede art arda aynı konu gelirse haftalar toplanır.
+ */
+export function planSourceOf(rows: Pick<CurriculumRow, "topic" | "weeks" | "unit">[]) {
+  const merged: { topic: string; weeks: number; unit: string }[] = [];
   for (const r of rows) {
     const last = merged[merged.length - 1];
-    if (last && last.topic.toLocaleLowerCase("tr-TR") === r.topic.toLocaleLowerCase("tr-TR")) last.weeks += r.weeks;
-    else merged.push({ topic: r.topic, weeks: r.weeks });
+    if (last && last.unit === r.unit && last.topic.toLocaleLowerCase("tr-TR") === r.topic.toLocaleLowerCase("tr-TR")) last.weeks += r.weeks;
+    else merged.push({ topic: r.topic, weeks: r.weeks, unit: r.unit });
   }
-  return merged.map((m) => (m.weeks > 1 ? `${m.topic} | ${Math.min(20, m.weeks)}` : m.topic)).join("\n");
+  const withUnits = merged.some((m) => m.unit);
+  const out: string[] = [];
+  merged.forEach((m, i) => {
+    if (withUnits && (i === 0 || merged[i - 1].unit !== m.unit)) out.push(`# ${m.unit}`);
+    out.push(m.weeks > 1 ? `${m.topic} | ${Math.min(20, m.weeks)}` : m.topic);
+  });
+  return out.join("\n");
 }
+
+/** Konu eşleştirme anahtarı: büyük-küçük harf, şapka ve boşluk farkı gözetilmez. */
+export const topicKey = (s: string) =>
+  s
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
 
 /* ------------------------------- Excel ------------------------------- */
 
