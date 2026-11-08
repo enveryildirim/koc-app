@@ -439,7 +439,7 @@ PoC 1. adımı (temel) yapıldı:
 - **Yeni sayfalar:** `/kurum/siniflar`, `/kurum/ogretmenler`, `/kurum/puan-cetvelleri` (eskiden sekmeydi). Eski adresler `redirect` ile yönlenir. Devam raporları (`/kurum/raporlar`) Analiz'in sekmesi (`app/kurum/analiz/tabs.ts`), rapor türü küçük düğmelerle.
 - **+ Ekle** (`app/kurum/_ui/QuickAdd.tsx`, `KurumShell`'e `add` / `addCompact` ile verilir; üç düzen: kurum, panel, sınav): sınıf, öğretmen (ardından giriş linki oluştur + kopyala), ders (tür addan tahmin; `GET /api/kurum/secenekler` sınıf ve öğretmen listesi) pencerede; öğrenci, Excel, sözlü/yazılı, ödev (`?yeni=1` formu açık getirir), deneme (`#yeni-deneme`) bağlantı. Pencere `createPortal` ile body'de: telefon üst çubuğundaki `backdrop-blur` sabit konumlu öğeyi çubuğa hapsediyordu.
 - **Test notu:** başsız Chrome'da panoya yazma yok; kod `prompt` ile linki gösterir ve CDP betiği orada takılır (gerçek tarayıcıda sorun değil; telefonda http://IP ile girişte de prompt çıkar, mevcut "Kopyala" düğmesiyle aynı).
-- **Sonra:** öğrenci arama (⌘K / üstte arama kutusu).
+- **Arama** (`app/kurum/_ui/Search.tsx`; ⌘K / Ctrl+K, kenar çubuğunda "Ara…", telefonda büyüteç): öğrenci, sınıf, ders, öğretmen ve menü sayfaları. `GET /api/kurum/ara` dizini pencere ilk açıldığında bir kez çeker (152 öğrenci ≈ 15 KB; 1000 öğrenci ≈ 100 KB); arama istemcide: `fold` Türkçe harfleri eşler (SQLite `contains` Türkçe büyük/küçük harfi ayırmaz), her kelime ayrı aranır. Kısayolu yalnızca masaüstü örneği dinler. `ShellTools.tsx`: `SidebarTools` / `BarTools` (üç düzen kullanır).
 
 ## 5. Özellik durumu
 

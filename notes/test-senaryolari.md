@@ -364,6 +364,13 @@ Demo veride iki bilerek konmuş örnek var (rakamlar her `db:seed`'de biraz değ
 **M3. Formlara kısayol**
 - **Beklenen:** + Ekle → Öğrenci / Öğrenci (Excel'den) / Sözlü-yazılı ilgili sekmeyi açar; Ödev, ödev formu açık olarak gelir; Deneme, sayfadaki "Yeni deneme" formuna kaydırır.
 
+**M4. Arama**
+- **Adımlar:** Herhangi bir sayfada **⌘K** (Windows'ta Ctrl+K) ya da menüdeki "Ara…" (telefonda büyüteç). Şunları deneyin: *ozturk*, *ela 9-b*, *2046*, *tecvid*, *mahmut*, *yoklama*. ↑ ↓ ve Enter.
+- **Beklenen:**
+  - Türkçe harf yazmadan bulur (ozturk → Öztürk); kelimeler birlikte aranır (ela 9-b → yalnızca 9-B'deki Ela).
+  - Öğrenci numarasıyla bulur; Enter öğrenci profilini açar.
+  - Dersler sınıf sayfasına, öğretmenler öğretmen sayfasına, "yoklama" Yoklama sayfasına götürür.
+
 ---
 
 ## K. Eski özellikler bozulmadı mı?

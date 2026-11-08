@@ -15,7 +15,7 @@ export default function KurumShell({ user, children, add, addCompact }: { user: 
   return (
     <div className="lg:grid lg:min-h-screen lg:grid-cols-[208px_1fr] print:block">
       <KurumMobileBar org={user.name} email={who} add={addCompact} />
-      <aside className="no-print hidden border-r border-rule bg-sidebar px-3 py-4 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:gap-5">
+      <aside className="no-print hidden border-r border-rule bg-sidebar px-3 py-4 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:gap-4">
         <Link href="/kurum" className="block px-2">
           <Logo sub={user.name} />
         </Link>

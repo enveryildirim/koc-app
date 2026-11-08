@@ -8,7 +8,7 @@ import { AnswerRow } from "./Logo";
  * Menü işe göre gruplanır: günlük bilgi girişi ve takibat üstte, yılda birkaç kez yapılan tanımlar ("Kurum") altta.
  * Aktif madde doldurulmuş bir cevap baloncuğuyla gösterilir.
  */
-const GROUPS: { title: string; links: [string, string][] }[] = [
+export const GROUPS: { title: string; links: [string, string][] }[] = [
   { title: "Bugün", links: [["/kurum", "Özet"]] },
   { title: "Giriş", links: [["/kurum/yoklama", "Yoklama"], ["/kurum/degerlendirme", "Sözlü ve yazılı"], ["/kurum/odevler", "Ödevler"], ["/kurum/denemeler", "Denemeler ve optik"]] },
   { title: "Takibat", links: [["/kurum/takip", "Takip"], ["/kurum/analiz", "Analiz"], ["/kurum/veli-karnesi", "Veli karnesi"], ["/kurum/veli-bulteni", "Haftalık veli raporu"]] },
