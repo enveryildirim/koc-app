@@ -55,7 +55,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     return (
       <div>
         {header}
-        <CurriculumImport hasData={false} courseNames={courseNames} grades={grades} />
+        <CurriculumImport hasData={false} courseNames={courseNames} grades={grades} existing={sets} />
         <Empty>
           Henüz müfredat yok. Excel dosyası yükleyin, örnek müfredatı yükleyin ya da <Link href={q({ yeni: "1" })} className="font-semibold text-graphite underline">elle girin</Link>.
         </Empty>
@@ -71,7 +71,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     <div>
       {header}
       <div className="mb-3 flex justify-end">
-        <CurriculumImport hasData courseNames={courseNames} grades={grades} />
+        <CurriculumImport hasData courseNames={courseNames} grades={grades} existing={sets} />
       </div>
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label="Müfredat setleri" className="flex flex-col gap-3">

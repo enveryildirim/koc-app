@@ -14,7 +14,18 @@ function parseDelimited(text: string): string[][] {
  * Excel / CSV'den müfredat içe aktarma: dosyayı tarayıcıda okur, özet gösterir, seçilen kipte kaydeder.
  * Kurumda karşılığı olmayan ders adı ya da düzey uyarılır (aktarılır ama sınıflarla eşleşmez).
  */
-export default function CurriculumImport({ hasData, courseNames = [], grades = [] }: { hasData: boolean; courseNames?: string[]; grades?: string[] }) {
+export default function CurriculumImport({
+  hasData,
+  courseNames = [],
+  grades = [],
+  existing = [],
+}: {
+  hasData: boolean;
+  courseNames?: string[];
+  grades?: string[];
+  /** Kurumda var olan setler: { subject, grade, topics } */
+  existing?: { subject: string; grade: string; topics: number }[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(!hasData);
   const [file, setFile] = useState("");
@@ -72,9 +83,17 @@ export default function CurriculumImport({ hasData, courseNames = [], grades = [
     if (r) setMsg({ ok: true, text: r.rows ? `Örnek müfredat yüklendi: ${r.sets} set, ${r.rows} konu.` : "Örnek setlerin hepsi zaten var." });
   }
 
-  // Dosyadaki setlerin özeti
-  const sets = new Map<string, number>();
-  for (const r of parsed?.rows ?? []) sets.set(`${r.subject} · ${gradeLabel(r.grade)}`, (sets.get(`${r.subject} · ${gradeLabel(r.grade)}`) ?? 0) + 1);
+  // Dosyadaki setlerin özeti ve bunlardan kurumda zaten var olanlar
+  const sets = new Map<string, { subject: string; grade: string; n: number }>();
+  for (const r of parsed?.rows ?? []) {
+    const k = `${r.subject}\u0000${r.grade}`;
+    sets.set(k, { subject: r.subject, grade: r.grade, n: (sets.get(k)?.n ?? 0) + 1 });
+  }
+  const setName = (s: { subject: string; grade: string }) => `${s.subject} · ${gradeLabel(s.grade)}`;
+  const clashing = [...sets.values()].flatMap((s) => {
+    const e = existing.find((x) => x.subject === s.subject && x.grade === s.grade);
+    return e ? [{ ...s, have: e.topics }] : [];
+  });
   // Kurumda karşılığı olmayanlar (yazım farkı olabilir)
   const lower = (x: string) => x.toLocaleLowerCase("tr-TR");
   const unknownSubjects = [...new Set((parsed?.rows ?? []).map((r) => r.subject))].filter((x) => !courseNames.some((c) => lower(c) === lower(x)));
@@ -116,7 +135,7 @@ export default function CurriculumImport({ hasData, courseNames = [], grades = [
           ) : (
             <>
               <p>
-                <b>{parsed.rows.length}</b> konu okundu: {[...sets.entries()].map(([k, n]) => `${k} (${n})`).join(", ") || "—"}
+                <b>{parsed.rows.length}</b> konu okundu: {[...sets.values()].map((s) => `${setName(s)} (${s.n})`).join(", ") || "—"}
               </p>
               {(unknownSubjects.length > 0 || unknownGrades.length > 0) && (
                 <ul className="mt-1 text-xs text-amber-800">
@@ -130,15 +149,34 @@ export default function CurriculumImport({ hasData, courseNames = [], grades = [
                   {parsed.errors.length > 5 && <li>… ve {parsed.errors.length - 5} satır daha (aktarılmayacak)</li>}
                 </ul>
               )}
+              {clashing.length > 0 && (
+                <fieldset className="mt-3 rounded-md bg-surface p-3 ring-1 ring-rule">
+                  <legend className="px-1 text-[13px] font-semibold">
+                    Bu {clashing.length > 1 ? "müfredatlar" : "müfredat"} zaten var: {clashing.map((c) => `${setName(c)} (${c.have} konu)`).join(", ")}. Ne yapılsın?
+                  </legend>
+                  <label className="mt-1 flex items-start gap-2">
+                    <input type="radio" className="mt-1" checked={mode === "replace"} onChange={() => setMode("replace")} />
+                    <span>
+                      <b>Dosyadakiyle değiştir</b> <span className="text-xs text-lead">(önerilen)</span>
+                      <span className="block text-xs text-lead">
+                        Konu listesi dosyadaki listeyle değiştirilir. Adı aynı kalan konular korunur; yıllık plandaki &quot;işlendi&quot; işaretleri kaybolmaz.
+                        Dosyada olmayan konular silinir.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="mt-2 flex items-start gap-2">
+                    <input type="radio" className="mt-1" checked={mode === "append"} onChange={() => setMode("append")} />
+                    <span>
+                      <b>Sonuna ekle</b>
+                      <span className="block text-xs text-lead">Var olan konular kalır, dosyadakiler listenin sonuna eklenir. Aynı konu iki kez yazılabilir.</span>
+                    </span>
+                  </label>
+                </fieldset>
+              )}
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-1.5">
-                  <input type="radio" checked={mode === "replace"} onChange={() => setMode("replace")} />
-                  Dosyadaki setlerin yerine yaz
-                </label>
-                <label className="flex items-center gap-1.5">
-                  <input type="radio" checked={mode === "append"} onChange={() => setMode("append")} />
-                  Var olan setlerin sonuna ekle
-                </label>
+                <span className="text-xs text-lead">
+                  {clashing.length < sets.size && `${clashing.length ? "Diğerleri" : "Hepsi"} yeni müfredat olarak eklenir. `}Dosyada olmayan müfredatlara dokunulmaz.
+                </span>
                 <button className="btn-primary ml-auto" disabled={busy || !parsed.rows.length} onClick={importRows}>
                   {busy ? "Aktarılıyor…" : "İçe aktar"}
                 </button>
