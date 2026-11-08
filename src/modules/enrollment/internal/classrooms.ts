@@ -108,3 +108,18 @@ export async function classRosters(ownerId: string) {
   for (const m of members) add(m.classroomId, m.student);
   return map;
 }
+
+/**
+ * Etüt mesulünün sorumlu olduğu sınıfları topluca belirler: verilen sınıflar ona atanır (başka mesulden alınır),
+ * listede olmayan ve şu an ona ait sınıfların mesulü kaldırılır. Boş liste bütün sınıflarını bırakır
+ * (rolü öğretmene dönen kişi için). Kişinin etüt mesulü olduğunu çağıran doğrular (Teacher schedule'ındır).
+ */
+export async function setMentorClasses(ownerId: string, mentorId: string, classroomIds: string[]) {
+  const ids = [...new Set(classroomIds.map(String))];
+  const owned = await prisma.classroom.count({ where: { ownerId, id: { in: ids } } });
+  if (owned !== ids.length) throw invalid("Sınıf bulunamadı.");
+  await prisma.$transaction([
+    prisma.classroom.updateMany({ where: { ownerId, mentorId, id: { notIn: ids } }, data: { mentorId: null } }),
+    prisma.classroom.updateMany({ where: { ownerId, id: { in: ids } }, data: { mentorId } }),
+  ]);
+}

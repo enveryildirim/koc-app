@@ -27,12 +27,12 @@ Her maddenin başındaki kutuyu işaretleyin: `[x]` geçti, `[!]` sorun var. Sor
 - [ ] Çıkış yapıp yeniden giriş yapın; yanlış şifreyle de deneyin.
 
 **1.2 Boş durumlar** (veri yokken hiçbir sayfa hata vermemeli, ne yapılacağını söylemeli)
-- [ ] Özet (kokpit): üstte **Kurulum · 0/6 adım** ve "Sıradaki: Sınıf ekle" düğmesi. Adımlar: Sınıflar → Öğretmenler → Öğrenciler → Dersler → Ders programı → Takvim. Her adım tamamlandıkça yeşil ✓ ve sayı gelir; hepsi tamamlanınca rehber kaybolur (her bölümden sonra Özet'e dönüp bakın).
+- [ ] Özet (kokpit): üstte **Kurulum · 0/6 adım** ve "Sıradaki: Sınıf ekle" düğmesi. Adımlar: Sınıflar → Personel → Öğrenciler → Dersler → Ders programı → Takvim. Her adım tamamlandıkça yeşil ✓ ve sayı gelir; hepsi tamamlanınca rehber kaybolur (her bölümden sonra Özet'e dönüp bakın).
 - [ ] Menü: 1280×800 civarı bir pencerede Yönetim'in son maddesi (Puan cetvelleri) kaydırmadan görünüyor; altta "e-posta · Çıkış" tek satır.
 - [ ] Yoklama · Sözlü ve yazılı · Ödevler · Denemeler ve optik
 - [ ] Takip · Analiz (tüm sekmeler) · Veli karnesi · Haftalık veli raporu
 - [ ] Soru havuzu · Online testler
-- [ ] Yönetim: Öğrenciler · Sınıflar · Dersler · Öğretmenler · Ders programı · Takvim ve planlar · Müfredat · Puan cetvelleri
+- [ ] Yönetim: Öğrenciler · Personel · Sınıflar · Dersler · Ders programı · Takvim ve planlar · Müfredat · Puan cetvelleri
 - [ ] ⌘K arama: bir şey yazın → "sonuç yok" benzeri mesaj, hata yok.
 - **Beklenen:** Hiçbir sayfada 500 hatası / boş beyaz ekran yok; boş listelerde yönlendirici bir mesaj var.
 
@@ -52,26 +52,29 @@ Her maddenin başındaki kutuyu işaretleyin: `[x]` geçti, `[!]` sorun var. Sor
 
 ---
 
-## 3. Öğretmenler ve etüt mesulü
+## 3. Personel (öğretmenler, etüt mesulü, yönetici)
 
-Yönetim → Öğretmenler → sağ üstte **+ Öğretmen ekle** → yan panel ("Kaydet ve yenisini ekle" ya da Enter ile arka arkaya):
+Yönetim → **Personel**. Sekmeler: Öğretmenler · Etüt mesulleri · Yönetici.
 
-| Ad Soyad | Branş | Rol |
-|---|---|---|
-| Deniz Aksoy | Matematik | Öğretmen |
-| Burak Tan | Bilişim | Öğretmen |
-| Murat Ilgın | Din Kültürü / Tecvid | Öğretmen |
-| Kerem Yalçın | — | Etüt mesulü |
+**Öğretmenler** sekmesi → **+ Öğretmen ekle** → yan panel (ad, branş; "Kaydet ve yenisini ekle" ya da Enter):
 
-- [ ] Dördünü ekleyin. Rolü **Etüt mesulü** seçince branş alanı kaybolur.
-- [ ] Öğretmeni branşsız eklemeyi deneyin → "Öğretmenin branşı gerekli."
-- [ ] Bir öğretmeni Düzenle → rolünü Etüt mesulü yapın → branş alanı kaybolur → Kaydet → geri Öğretmen yapın → branş ister.
-- [ ] Telefonda (ya da dar pencerede) sayfayı açın.
-- [ ] Sınıflar → 9-A ve 10-A → Etüt mesulü: *Kerem Yalçın*.
-- **Beklenen:**
-  - Tabloda etüt mesulünün branşı "—".
-  - Telefonda her kişi iki satır; "Link oluştur", Düzenle ve Sil satırın içinde, yana kaydırmak gerekmiyor.
-  - Etüt mesulü listesinde yalnızca Kerem Yalçın var; Sınıflar tablosunda etüt mesulü görünür.
+| Ad Soyad | Branş |
+|---|---|
+| Deniz Aksoy | Matematik |
+| Burak Tan | Bilişim |
+| Murat Ilgın | Din Kültürü / Tecvid |
+
+**Etüt mesulleri** sekmesi → **+ Etüt mesulü ekle** → ad: *Kerem Yalçın*, sorumlu olduğu sınıflar: *9-A, 10-A, SEVİYE-2* (branş alanı yok).
+
+- [ ] Hepsini ekleyin. Sekme sayıları: Öğretmenler (3), Etüt mesulleri (1).
+- [ ] Öğretmeni branşsız eklemeyi deneyin → Kaydet pasif / "Öğretmenin branşı gerekli."
+- [ ] Etüt mesulleri sekmesinde Kerem Yalçın'ın satırında "9-A, 10-A, SEVİYE-2". Sınıflar tablosunda etüt mesulü görünür.
+- [ ] İkinci bir etüt mesulü ekleyip 10-A'yı seçin (çipte "10-A · Kerem Yalçın" yazar) → kaydedince 10-A yeni kişiye geçer, Kerem'de "9-A, SEVİYE-2" kalır.
+- [ ] Bir öğretmeni **Düzenle** → rolünü Etüt mesulü yapın → "Etüt mesulleri sekmesine geçer" notu, branş yerine sınıf seçimi → Kaydet → kişi öbür sekmede. Geri Öğretmen yapın → branş ister; sınıfları boşa çıkar.
+- [ ] Bir sınıfın etüt mesulü yokken Etüt mesulleri sekmesinde sarı "Etüt mesulü atanmamış sınıflar: …".
+- [ ] **Yönetici** sekmesi: kurum hesabının adı ve e-postası.
+- [ ] Eski adres `/kurum/ogretmenler` → Personel'e yönlenir.
+- [ ] Telefonda (ya da dar pencerede): her kişi iki satır; "Link oluştur" ve "Düzenle" satırın içinde, yana kaydırmak gerekmiyor.
 
 ---
 
@@ -208,7 +211,7 @@ Ders **yalnızca** Yönetim → Dersler'de açılır. **+ Ders ekle** → yan pa
 ## 9. Öğretmen telefonda
 
 **9.1 Giriş linki**
-- [ ] Öğretmenler → Murat Ilgın, Burak Tan ve Kerem Yalçın için giriş linki oluşturun → **Kopyala**.
+- [ ] Personel → Murat Ilgın, Burak Tan (Öğretmenler sekmesi) ve Kerem Yalçın (Etüt mesulleri sekmesi) için giriş linki oluşturun → **Kopyala**.
 - [ ] Gizli pencerede Burak Tan'ın linkini açın.
 - **Beklenen:** Doğrudan "Bugün" ekranı; üstte "Burak Tan · Öğretmen".
 

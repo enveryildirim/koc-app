@@ -239,7 +239,7 @@ export default function ScheduleBoard({
                 {busy ? "Kaydediliyor…" : "Kaydet"}
               </button>
             </div>
-            {!teachers.length && <p className="mt-2 text-xs text-amber-600">Önce menüdeki “Öğretmenler” sayfasından öğretmen ekleyin.</p>}
+            {!teachers.length && <p className="mt-2 text-xs text-amber-600">Önce menüdeki “Personel” sayfasından öğretmen ekleyin.</p>}
           </div>
         </div>
       )}

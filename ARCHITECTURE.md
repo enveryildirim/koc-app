@@ -79,7 +79,7 @@ modules/<m>/
 - **Programla bağ:** derse bağlanmamış eski program satırları `syncCourses` → `courseIdFor` ile bağlanır (gerekirse ders açılır; tür addan: `guessCourseKind`). Ders yeniden adlandırılırsa program satırlarının adı da değişir; geçmiş yoklama oturumları değişmez.
 - **Program çakışması** (`schedule/internal/clashes.ts`): kesin çakışma 409; uyarı 409 + `{ confirm: true }` (`shared/errors > needsConfirm`), istemci onaylayıp `confirm: true` ile yeniden gönderir.
 - **Ana sınıf ve ek üyelik (enrollment):** `Student.classroomId` ana sınıftır; mevcut özellikler (deneme, karne, skor) buna bakar. `ClassMember` ek sınıflardır. Bir sınıfın bütün öğrencileri `listStudents({ inClass })`; yoklama bunu kullanır.
-- **Etüt mesulü:** `Teacher.role = MENTOR`; sınıfa `Classroom.mentorId` ile bağlanır. Classroom enrollment'ındır ama Teacher schedule'ındır; bu yüzden öğretmenin etüt mesulü olduğu route'ta (`schedule > findTeacher`) doğrulanır, sonra `enrollment > setClassroomMentor` yazar.
+- **Etüt mesulü:** `Teacher.role = MENTOR`; sınıfa `Classroom.mentorId` ile bağlanır. Classroom enrollment'ındır ama Teacher schedule'ındır; bu yüzden öğretmenin etüt mesulü olduğu route'ta (`schedule > findTeacher`) doğrulanır, sonra `enrollment > setClassroomMentor` yazar; Personel sayfasından toplu atama `enrollment > setMentorClasses` (`PUT /api/kurum/ogretmenler/[id]/siniflar`) ile. Branşı yoktur.
 
 ## Roller ve kişisel giriş linki
 

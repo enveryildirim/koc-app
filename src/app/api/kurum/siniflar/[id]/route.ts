@@ -15,7 +15,7 @@ export const PATCH = api<Params<{ id: string }>>(async (req, ctx) => {
     if (mentorId) {
       const t = await findTeacher(ownerId, mentorId);
       if (!t) throw invalid("Öğretmen bulunamadı.");
-      if (t.role !== "MENTOR") throw invalid("Seçilen kişi etüt mesulü değil. Önce Öğretmenler listesinden rolünü değiştirin.");
+      if (t.role !== "MENTOR") throw invalid("Seçilen kişi etüt mesulü değil. Önce Personel sayfasından rolünü değiştirin.");
     }
     await setClassroomMentor(ownerId, id, mentorId);
   }

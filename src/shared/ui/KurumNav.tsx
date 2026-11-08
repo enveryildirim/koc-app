@@ -17,7 +17,7 @@ export const GROUPS: { title: string; links: [string, string][] }[] = [
   {
     title: "Yönetim",
     links: [
-      ["/kurum/ogrenciler", "Öğrenciler"], ["/kurum/siniflar", "Sınıflar"], ["/kurum/dersler", "Dersler"], ["/kurum/ogretmenler", "Öğretmenler"], ["/kurum/ders-programi", "Ders programı"],
+      ["/kurum/ogrenciler", "Öğrenciler"], ["/kurum/personel", "Personel"], ["/kurum/siniflar", "Sınıflar"], ["/kurum/dersler", "Dersler"], ["/kurum/ders-programi", "Ders programı"],
       ["/kurum/takvim", "Takvim ve planlar"], ["/kurum/mufredat", "Müfredat"], ["/kurum/puan-cetvelleri", "Puan cetvelleri"],
     ],
   },
@@ -27,7 +27,7 @@ export const GROUPS: { title: string; links: [string, string][] }[] = [
 const ALIASES: Record<string, string[]> = {
   "/panel": ["/sinav/"], // online test düzenleme
   "/kurum/analiz": ["/kurum/raporlar"], // devam raporları Analiz'in sekmesi
-  "/kurum/ogretmenler": ["/kurum/ders-programi/ogretmen/"], // öğretmen ayrıntısı
+  "/kurum/personel": ["/kurum/ders-programi/ogretmen/", "/kurum/ogretmenler"], // öğretmen ayrıntısı, eski adres
 };
 
 function useIsActive() {

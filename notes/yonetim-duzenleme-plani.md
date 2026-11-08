@@ -143,14 +143,15 @@ Kod: modules/schedule/internal/courses.ts · ui/CourseManager.tsx
 - [x] **Kurulum rehberi (Özet):** "Kurulum · 5/6 adım" + "Sıradaki: …" düğmesi; adımlar sayılarıyla: Sınıflar → Öğretmenler → Öğrenciler → Dersler → Ders programı → Takvim. Her adım ilgili sayfaya (çoğunda ekleme paneline) gider; hepsi dolunca görünmez (`reporting > setupSteps`).
 - [x] **Menü (U6):** kenar çubuğu sıkılaştırıldı (madde ve grup aralıkları, alt bilgi tek satır "… · Çıkış"); 1280×800'de Yönetim'in bütün maddeleri görünüyor.
 
-### Aşama 5: Kullanıcı yönetimi
-Öneri (PoC'ye uygun, en hafif yol):
-- [ ] **Yönetim → Personel** ("Öğretmenler" sayfasının yerine). Sekmeler: **Yöneticiler · Etüt mesulleri · Öğretmenler**. Her rolün kendi formu var:
-  - *Öğretmen:* ad, branş, telefon, giriş linki
-  - *Etüt mesulü:* ad, telefon, **sorumlu olduğu sınıflar** (buradan da atanabilir), giriş linki. Branş yok.
-  - *Yönetici:* ad, e-posta, şifre. Bunun için kurum ile hesap ayrılmalı: yeni bir "kurum üyeliği" tablosu gerekir (veri modeli değişikliği).
-- [ ] **Öğrenciler** ayrı sayfa olarak kalır (çok sayıda kayıt, kendi akışları var). Menüde "Kişiler" başlığı altında Personel ile yan yana durur.
-- [ ] Rol değişikliği (öğretmen ↔ etüt mesulü) Personel'de tek tıkla yapılır; giriş linki korunur.
+### Aşama 5: Kullanıcı yönetimi ✓
+- [x] **Yönetim → Personel** (`/kurum/personel`; eski `/kurum/ogretmenler` yönlenir). Sekmeler: **Öğretmenler (n) · Etüt mesulleri (n) · Yönetici**. Her rolün kendi formu (yan panel):
+  - *Öğretmen:* ad, branş. Listede branş, sorumlusu olduğu ders sayısı, haftalık ders, giriş linki.
+  - *Etüt mesulü:* ad, **sorumlu olduğu sınıflar** (çoklu seçim; başka mesulü olan sınıf seçilirse ona geçer). Branş yok. Listede sınıfları; sınıfı olmayan mesul ve mesulü olmayan sınıflar sarı.
+  - *Yönetici:* kurum hesabı (ad, e-posta) salt okunur + açıklama. Birden fazla yönetici sonraya kaldı (kurum üyeliği tablosu gerekir).
+  - Telefon alanı eklenmedi (veri modeli değişikliği gerektirir; WhatsApp linki numarasız açılıyor). Sonraya.
+- [x] **Öğrenciler** ayrı sayfa; menüde Personel hemen yanında (Yönetim: Öğrenciler, Personel, Sınıflar, …). Ayrı "Kişiler" grubu menüyü uzatacağı için açılmadı.
+- [x] **Rol değişikliği** düzenleme panelinde; kaydedince kişi öbür sekmeye geçer, giriş linki korunur. Öğretmene dönen mesulün sınıfları boşa çıkar (sunucuda).
+- [x] Düzenleme de artık yan panelde (tablo içi düzenleme kalktı); silme panelin altında.
 
 ---
 

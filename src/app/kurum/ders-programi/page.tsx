@@ -15,7 +15,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
   // Eski adres: öğretmenler artık kendi menü maddesinde
-  if (sp.gorunum === "ogretmenler") redirect("/kurum/ogretmenler");
+  if (sp.gorunum === "ogretmenler") redirect("/kurum/personel");
   const tab = sp.gorunum === "ogretmen" ? "ogretmen" : "sinif";
 
   await syncCourses(ownerId); // derse bağlanmamış eski program satırları
@@ -78,7 +78,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         </span>
       </div>
       {tab === "ogretmen" && !teachers.length ? (
-        <Empty>Henüz öğretmen yok. <Link href="/kurum/ogretmenler?yeni=1" className="font-semibold text-brand-600">Öğretmenler</Link> sayfasından ekleyin.</Empty>
+        <Empty>Henüz öğretmen yok. <Link href="/kurum/personel?yeni=1" className="font-semibold text-brand-600">Personel</Link> sayfasından ekleyin.</Empty>
       ) : (
         <ScheduleBoard
           view={tab === "sinif" ? "sinif" : "ogretmen"}

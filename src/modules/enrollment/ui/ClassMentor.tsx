@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -37,7 +38,9 @@ export default function ClassMentor({ classroomId, mentorId, mentors }: { classr
         ))}
       </select>
       {!mentors.length && (
-        <p className="mt-1 text-[13px] text-lead">Listede kimse yok. Menüdeki Öğretmenler sayfasında bir kişinin rolünü “Etüt mesulü” yapın.</p>
+        <p className="mt-1 text-[13px] text-lead">
+          Listede kimse yok. <Link href="/kurum/personel?rol=mesul&yeni=1" className="font-medium text-brand-600 hover:underline">Etüt mesulü ekleyin</Link> ya da Personel&apos;de bir öğretmenin rolünü değiştirin.
+        </p>
       )}
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>

@@ -21,6 +21,10 @@ export type TeacherRow = {
   slotCount: number;
   /** Kişisel giriş linki (yoksa null); lastUsedAt ISO */
   link?: { token: string; lastUsedAt: string | null } | null;
+  /** Etüt mesulünün sorumlu olduğu sınıflar */
+  classes?: { id: string; name: string }[];
+  /** Sorumlusu olduğu ders sayısı */
+  courseCount?: number;
 };
 export type CourseRow = {
   id: string;

@@ -476,6 +476,13 @@ Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `pris
 - **Kenar çubuğu:** `KurumShell` py-3 / gap-3, alt bilgi tek satır ("… · Çıkış"), `KurumNav` grup aralığı 2, madde `py-[2px]`. 1280×800'de bütün maddeler görünüyor (ekran görüntüsüyle).
 - **Doğrulama:** panelde Enter → kaydedip açık kaldı (no 4 → 5), Kaydet → `?eklendi=` iki satır yeşil; Excel "9a" ve "11-A" için uyarı; öğretmen panelinde etüt mesulü seçince branş gizlendi; eski `?tab=yeni` 307. `tsc`, `eslint src` temiz.
 
+**Aşama 5 (Personel):**
+- **`/kurum/personel`** (eski `/kurum/ogretmenler` → yönlendirme; menüde "Personel", Öğrenciler'in hemen altında). Sekmeler `?rol=` boş (Öğretmenler) / `mesul` / `yonetici`. Bileşen `schedule/ui/PersonnelManager.tsx` (`TeacherManager` silindi): sekmenin rolüne göre liste ve form; ekleme `?yeni=1`, düzenleme yerel durumla yan panelde (rol, branş / sınıflar, silme).
+- **Etüt mesulünün sınıfları:** `enrollment > setMentorClasses(ownerId, mentorId, ids)` (verilenleri atar, kalanları bırakır; tek işlem) + `PUT /api/kurum/ogretmenler/[id]/siniflar` (kişi MENTOR değilse 400). `PUT /api/kurum/ogretmenler/[id]` rol öğretmene dönünce `setMentorClasses(..., [])`. Yeni mesul: önce POST, sonra sınıflar PUT (istemci).
+- **Yönetici sekmesi** `getUser()` ile kurum hesabını gösterir; çoklu yönetici ve personel telefonu sonraya (veri modeli değişikliği).
+- Bağlantılar güncellendi: kurulum rehberi adımı "Personel", ders programı boş durumu, öğretmen ayrıntısının geri bağlantısı (rolüne göre sekme), aramadaki grup adı, sınıf sayfasındaki "etüt mesulü yok" notu (→ `?rol=mesul&yeni=1`).
+- **Doğrulama:** mesul + 2 sınıf → ikisi ona geçti; tek sınıfa indirince öbürü boşaldı; öğretmene çevirince sınıfları boşaldı; öğretmene sınıf 400; olmayan sınıf 400; sayfalar 200, eski adres 307. `tsc`, `eslint src` temiz.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

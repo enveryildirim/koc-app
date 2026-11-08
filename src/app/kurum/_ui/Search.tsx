@@ -47,7 +47,7 @@ function search(index: Index | null, q: string): Hit[] {
       ...index.teachers
         .filter((t) => match(`${t.name} ${t.branch}`))
         .slice(0, 4)
-        .map((t) => ({ key: `t${t.id}`, label: t.name, sub: t.branch, href: `/kurum/ders-programi/ogretmen/${t.id}`, group: "Öğretmenler" })),
+        .map((t) => ({ key: `t${t.id}`, label: t.name, sub: t.branch, href: `/kurum/ders-programi/ogretmen/${t.id}`, group: "Personel" })),
     );
   }
   out.push(...PAGES.filter((p) => match(p.label)).slice(0, 4));

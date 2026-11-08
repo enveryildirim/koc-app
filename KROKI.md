@@ -18,7 +18,7 @@ Son güncelleme: 8 Kasım 2026.
 | **Veli** | Öğrenciye özel link `/veli/<anahtar>` | Veli karnesi (salt okunur) | Görüntüleme |
 | **Öğrenci** | Giriş yok | — | Online testi kodla çözer (`/s/<KOD>`) |
 
-- Kurumda tek yönetici hesabı vardır. Etüt mesulü ve öğretmen, Öğretmenler sayfasındaki kayıtlardır (`Teacher.role`).
+- Kurumda tek yönetici hesabı vardır (Personel → Yönetici sekmesinde görünür). Etüt mesulü ve öğretmen, Personel sayfasındaki kayıtlardır (`Teacher.role`). Öğrenciler ayrı sayfadadır.
 - Kişisel link yenilenir ya da kaldırılırsa açık oturumlar kapanır.
 - Bir tarayıcıda tek oturum açık kalır.
 
@@ -55,12 +55,13 @@ Düzey serbest metindir (9, 10, Seviye-2…). Müfredat düzeyleri bu değerlerd
 ### Öğretmen / etüt mesulü (`Teacher`) ve kişisel link (`AccessLink`)
 | | |
 |---|---|
-| Oluşur | Yönetim → **Öğretmenler** → "+ Öğretmen ekle" (yan panel, `?yeni=1`: ad, rol; öğretmende branş) |
-| Düzenlenir | Aynı sayfa → Düzenle (rol değişikliği linke yansır) |
-| Link | Aynı sayfa → "Giriş linki": oluştur, kopyala, yenile, kaldır |
+| Oluşur | Yönetim → **Personel** → Öğretmenler sekmesi "+ Öğretmen ekle" (ad, branş) · Etüt mesulleri sekmesi "+ Etüt mesulü ekle" (ad, sorumlu olduğu sınıflar). Yan panel, `?yeni=1` |
+| Düzenlenir | Aynı sayfa → Düzenle (yan panel): ad, rol, branş / sınıflar; silme. Rol değişince kişi öbür sekmeye geçer, link korunur; öğretmene dönen mesulün sınıfları boşa çıkar |
+| Link | Aynı sayfa → "Giriş linki": oluştur, kopyala, WhatsApp, yenile, kaldır |
+| Sınıfın etüt mesulü | Personel → etüt mesulünün sınıfları **ya da** sınıf sayfasındaki "Etüt mesulü" seçimi (ikisi aynı alanı yazar: `Classroom.mentorId`) |
 | Kullanılır | Ders sorumlusu, Ders programı, Sınıfın etüt mesulü, Takip → Öğretmenler |
 | Kim | Yönetici, etüt mesulü |
-| Kod | `modules/schedule/internal/teachers.ts` · `ui/TeacherManager.tsx` · `modules/identity/internal/access.ts` |
+| Kod | `modules/schedule/internal/teachers.ts` · `ui/PersonnelManager.tsx` · `app/kurum/personel` · `enrollment > setMentorClasses` · `PUT /api/kurum/ogretmenler/[id]/siniflar` · `modules/identity/internal/access.ts` |
 
 Etüt mesulünün branşı yoktur (boş kaydedilir; listelerde "Etüt mesulü" yazar). Telefonda iki satırlık liste; giriş linki satırın içinde.
 
@@ -192,10 +193,10 @@ Araçlar
   Online testler          /panel
 Yönetim
   Öğrenciler              /kurum/ogrenciler      Liste; + Öğrenci ekle → yan panel; Excel'den yükle → listenin üstünde
+  Personel                /kurum/personel        Sekmeler: Öğretmenler · Etüt mesulleri · Yönetici; + ekle / Düzenle → yan panel; giriş linki
   Sınıflar                /kurum/siniflar        Tablo (telefonda liste); + Yeni sınıf → yan panel
     └ Sınıf sayfası       /kurum/siniflar/[id]   Etüt mesulü, Dersler (salt okunur → Dersler), Öğrenciler
   Dersler                 /kurum/dersler         Bütün dersler tek tablo, sınıf süzgeci; + Ders ekle / düzenle → yan panel
-  Öğretmenler             /kurum/ogretmenler     Tablo (telefonda liste), giriş linki; + Öğretmen ekle → yan panel
   Ders programı           /kurum/ders-programi   Çakışma listesi; sınıfa / öğretmene göre hafta; + Saat ekle (ders listeden)
   Takvim ve planlar       /kurum/takvim          Takvim, yıllık ders planı, haftalık plan içe aktarma
   Müfredat                /kurum/mufredat        Ders × düzey konu listeleri, kullanan sınıflar, takip; + Müfredat ekle
@@ -204,9 +205,9 @@ Yönetim
 
 Arama: her sayfada ⌘K / Ctrl+K (öğrenci, sınıf, ders, öğretmen, sayfa).
 
-**Ortak ekleme kalıbı** (Sınıflar, Dersler, Öğrenciler, Öğretmenler): başlıkta "+ … ekle" → `?yeni=1` → yan panel (`shared/ui/Drawer.tsx`; masaüstünde sağdan, telefonda tam ekran; Esc kapatır; Enter kaydeder). "Kaydet" listeye döner ve eklenenleri yeşil vurgular; "Kaydet ve yenisini ekle" panelde kalır. Boş listede ne yapılacağını söyleyen bağlantı.
+**Ortak ekleme kalıbı** (Sınıflar, Dersler, Öğrenciler, Personel): başlıkta "+ … ekle" → `?yeni=1` → yan panel (`shared/ui/Drawer.tsx`; masaüstünde sağdan, telefonda tam ekran; Esc kapatır; Enter kaydeder). "Kaydet" listeye döner ve eklenenleri yeşil vurgular; "Kaydet ve yenisini ekle" panelde kalır. Boş listede ne yapılacağını söyleyen bağlantı.
 
-**Kurulum sırası** (Özet'teki rehber, `reporting > setupSteps`): Sınıflar → Öğretmenler → Öğrenciler → Dersler → Ders programı → Takvim.
+**Kurulum sırası** (Özet'teki rehber, `reporting > setupSteps`): Sınıflar → Personel → Öğrenciler → Dersler → Ders programı → Takvim.
 
 ### Öğretmen ekranı `/ogretmen` (öğretmen, etüt mesulü; telefon öncelikli)
 
@@ -234,7 +235,7 @@ Takip (yalnızca etüt mesulü) → /kurum/takip
 | İşlem | Yönetici | Etüt mesulü | Öğretmen |
 |---|:-:|:-:|:-:|
 | Sınıf, öğrenci, ders, program, takvim, müfredat, cetvel | ✓ | ✓ | — |
-| Öğretmen ekleme, rol, giriş linki | ✓ | ✓ | — |
+| Personel: öğretmen / etüt mesulü ekleme, rol, mesulün sınıfları, giriş linki | ✓ | ✓ | — |
 | Yoklama | ✓ | ✓ | kendi dersi |
 | İşlenen konu | ✓ | ✓ | kendi dersi |
 | Sözlü / yazılı başlatma ve puan | ✓ | sınıfının bütün dersleri | kendi dersi |
