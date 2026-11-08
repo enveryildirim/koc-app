@@ -5,22 +5,30 @@ import { ASSESSMENT_TYPES, assessmentSheet, fmtPercent, percentTone } from "@/mo
 import { PageHeader, th, td } from "@/shared/ui/kurum";
 import ScoreEntry from "@/modules/assessment/ui/ScoreEntry";
 import DeleteAssessment from "@/modules/assessment/ui/DeleteAssessment";
+import { OutlierToggle, withOutliers } from "@/shared/ui/Outliers";
+import { outliersOn, splitOutliers } from "@/shared/stats";
 
 export const dynamic = "force-dynamic";
 
 /** Değerlendirme sonucu: öğrenci × kriter tablosu, kriter ortalamaları; `?gir=1` ile puan girişi. */
-export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ gir?: string }> }) {
+export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ gir?: string; uc?: string }> }) {
   const ownerId = await requireOwner();
   const sheet = await assessmentSheet(ownerId, (await params).id);
   if (!sheet) notFound();
-  const { gir } = await searchParams;
+  const { gir, uc: ucParam } = await searchParams;
+  const uc = outliersOn(ucParam) && !gir;
   const { assessment: a, course, students } = sheet;
-  const scored = students.filter((s) => s.score && !s.score.absent);
+  const allScored = students.filter((s) => s.score && !s.score.absent && s.score.percent !== null);
+  // Uç değerler (düğme açıkken) ortalamaya ve kriter ortalamalarına katılmaz; tabloda işaretli kalır
+  const split = splitOutliers(allScored, (s) => s.score!.percent!);
+  const mark = new Map<string, "low" | "high">(uc ? [...split.low.map((s) => [s.id, "low"] as const), ...split.high.map((s) => [s.id, "high"] as const)] : []);
+  const scored = allScored.filter((s) => !mark.has(s.id));
+  const fullAvg = allScored.length ? allScored.reduce((p, s) => p + s.score!.percent!, 0) / allScored.length : null;
   const critAvg = a.criteria.map((c, i) => {
     const v = scored.map((s) => s.score!.scores[i]).filter((x) => typeof x === "number");
     return v.length ? (v.reduce((p, q) => p + q, 0) / v.length / c.max) * 100 : null;
   });
-  const avg = scored.length ? scored.reduce((p, s) => p + (s.score!.percent ?? 0), 0) / scored.length : null;
+  const avg = scored.length ? scored.reduce((p, s) => p + s.score!.percent!, 0) / scored.length : null;
   const dateLabel = new Date(a.date + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
 
   return (
@@ -38,12 +46,22 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="card p-3"><div className="text-[12.5px] text-lead">Girilen</div><div className="num text-xl font-semibold">{students.filter((s) => s.score).length}/{students.length}</div></div>
-        <div className="card p-3"><div className="text-[12.5px] text-lead">Ortalama</div><div className={`num text-xl font-semibold ${percentTone(avg)}`}>{fmtPercent(avg)}</div></div>
+        <div className="card p-3">
+          <div className="text-[12.5px] text-lead">Ortalama</div>
+          <div className={`num text-xl font-semibold ${percentTone(avg)}`}>{fmtPercent(avg)}</div>
+          {mark.size > 0 && <div className="text-[11.5px] text-lead">{mark.size} ayrıldı · hepsiyle {fmtPercent(fullAvg)}</div>}
+        </div>
         {a.criteria.slice(0, 2).map((c, i) => (
           <div key={c.name} className="card p-3"><div className="text-[12.5px] text-lead">{c.name} ort.</div><div className={`num text-xl font-semibold ${percentTone(critAvg[i])}`}>{fmtPercent(critAvg[i])}</div></div>
         ))}
       </div>
 
+      {!gir && (
+        <div className="flex flex-wrap items-center gap-3">
+          <OutlierToggle on={uc} href={withOutliers(`/kurum/degerlendirme/${a.id}`, !uc)} />
+          {uc && <span className="text-[13px] text-lead">{split.fences ? (mark.size ? "İşaretli puanlar ortalamalara katılmadı." : "Uç değer yok.") : "Puanlanan öğrenci az, ayrılmadı."}</span>}
+        </div>
+      )}
       {gir ? (
         <div className="max-w-2xl">
           <ScoreEntry assessmentId={a.id} criteria={a.criteria} maxTotal={a.maxTotal} students={students.map((s) => ({ id: s.id, no: s.no, name: s.name, guest: s.guest, score: s.score }))} />
@@ -70,6 +88,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <td className={td}>
                     <Link href={`/kurum/ogrenciler/${s.id}`} className="font-medium hover:underline">{s.name}</Link>
                     {s.guest && <span className="text-[12.5px] text-lead"> · {s.guest}</span>}
+                    {mark.has(s.id) && (
+                      <span className={`ml-1.5 whitespace-nowrap text-[11px] font-semibold ${mark.get(s.id) === "low" ? "text-red-600" : "text-emerald-700"}`} title="Uç değer: ortalamaya katılmadı">
+                        {mark.get(s.id) === "low" ? "uç ↓" : "uç ↑"}
+                      </span>
+                    )}
                   </td>
                   {s.score?.absent ? (
                     <td className={`${td} text-lead`} colSpan={a.criteria.length + 2}>Gelmedi</td>

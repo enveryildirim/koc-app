@@ -357,7 +357,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   if (tab === "analiz") {
     const c = choicesFor(exam.type);
     const letters = LETTERS.slice(0, c).split("");
-    const { items, skipped } = itemAnalysis(exam.secs, rows, c);
+    // Uç değerler (düğme açıkken) madde analizine katılmaz: yanlış kitapçıklı bir kâğıt bütün soruların
+    // güçlüğünü düşürür ve ayırt ediciliği bozar. Grup: seçili sınıf ya da kurum.
+    const scopeA = sinif ? report.classAvg.get(sinif) : report.general;
+    const outIds = new Set(uc && scopeA ? [...scopeA.low, ...scopeA.high].map((o) => o.id) : []);
+    const { items, skipped } = itemAnalysis(exam.secs, rows.filter((r) => !outIds.has(r.id)), c);
     const hasTopics = items.some((x) => x.topic);
     const hasLevels = items.some((x) => x.level);
     const flagged = items.filter((x) => x.flag);
@@ -374,9 +378,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <Kpi label="Çok kolay" value={items.filter((x) => x.p > ITEM_RULES.easy).length} hint={`doğru oranı %${ITEM_RULES.easy} üstü`} />
         </div>
         <div className="no-print mb-3 flex flex-wrap items-center gap-2">
-          <ClassFilter base={base} tab="analiz" classes={classes} sinif={sinif} extra="" />
+          <ClassFilter base={base} tab="analiz" classes={classes} sinif={sinif} extra={uc ? "&uc=1" : ""} />
+          <OutlierToggle on={uc} href={withOutliers(`${base}?tab=analiz${sinif ? `&sinif=${sinif}` : ""}`, !uc)} />
+          {uc && (
+            <span className="text-[13px] text-lead">
+              {!scopeA?.fences ? "Grup küçük, ayrılmadı." : outIds.size ? `${outIds.size} uç değer analize katılmadı: ${[...scopeA.low, ...scopeA.high].map((o) => o.name).join(", ")}.` : "Uç değer yok."}
+            </span>
+          )}
           <ExportButton
-            fileName={`${fileBase} - madde analizi`}
+            fileName={`${fileBase} - madde analizi${outIds.size ? " (uç değerler ayrıldı)" : ""}`}
             headers={["Ders", "Soru (A)", ...(hasTopics ? ["Konu"] : []), ...(hasLevels ? ["Bilişsel düzey"] : []), "Cevap", ...letters.map((l) => `${l} %`), "Boş %", "Güçlük (doğru %)", "Ayırt edicilik", "Uyarı"]}
             rows={items.map((x) => [
               x.section,

@@ -1,3 +1,4 @@
+import { splitOutliers } from "@/shared/stats";
 import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { ymd } from "@/shared/date";
@@ -83,11 +84,15 @@ export async function listAssessments(ownerId: string, f: AssessmentFilter = {},
   });
   return list.map((a) => {
     const scored = a.scores.filter((s) => !s.absent && s.percent !== null);
+    // Uç değerler ayrılmış ortalama (sayfadaki düğme açıkken gösterilir)
+    const split = splitOutliers(scored, (s) => s.percent!);
     return {
       id: a.id, date: a.date, title: a.title, type: a.type, rubricName: a.rubricName, planTopic: a.planTopic,
       courseId: a.courseId, course: a.course.name, kind: a.course.kind, classroomId: a.course.classroom.id, classroom: a.course.classroom.name,
       scored: scored.length, absent: a.scores.filter((s) => s.absent).length,
       avg: scored.length ? scored.reduce((s, x) => s + x.percent!, 0) / scored.length : null,
+      trimmedAvg: split.kept.length ? split.kept.reduce((s, x) => s + x.percent!, 0) / split.kept.length : null,
+      removed: split.low.length + split.high.length,
     };
   });
 }

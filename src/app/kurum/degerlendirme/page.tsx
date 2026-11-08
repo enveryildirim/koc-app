@@ -5,17 +5,20 @@ import { listAssessments, listRubrics } from "@/modules/assessment/server";
 import { listCourses } from "@/modules/schedule/server";
 import { PageHeader, Tabs } from "@/shared/ui/kurum";
 import AssessmentList from "@/modules/assessment/ui/AssessmentList";
+import { OutlierToggle, withOutliers } from "@/shared/ui/Outliers";
+import { outliersOn } from "@/shared/stats";
 import RubricManager from "@/modules/assessment/ui/RubricManager";
 import NewAssessmentForm from "@/modules/assessment/ui/NewAssessmentForm";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ tab?: string; sinif?: string }>;
+type SP = Promise<{ tab?: string; sinif?: string; uc?: string }>;
 
 /** Sözlü, yazılı ve uygulama değerlendirmeleri; puan cetvelleri (yönetici). */
 export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
-  const { tab = "liste", sinif = "" } = await searchParams;
+  const { tab = "liste", sinif = "", uc: ucParam } = await searchParams;
+  const uc = outliersOn(ucParam);
   const rubrics = await listRubrics(ownerId);
   const tabs = [
     { key: "liste", label: "Değerlendirmeler", href: "/kurum/degerlendirme" },
@@ -64,10 +67,12 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        {uc && <input type="hidden" name="uc" value="1" />}
         <button className="btn-secondary">Filtrele</button>
+        <OutlierToggle on={uc} href={withOutliers(`/kurum/degerlendirme${sinif ? `?sinif=${sinif}` : ""}`, !uc)} />
         <span className="ml-auto self-center text-sm text-lead">{items.length} değerlendirme</span>
       </form>
-      <AssessmentList items={items} hrefBase="/kurum/degerlendirme" empty="Henüz değerlendirme yok. Öğretmenler telefondan başlatabilir ya da “Yeni” sekmesinden açabilirsiniz." />
+      <AssessmentList items={items} trim={uc} hrefBase="/kurum/degerlendirme" empty="Henüz değerlendirme yok. Öğretmenler telefondan başlatabilir ya da “Yeni” sekmesinden açabilirsiniz." />
     </>
   );
 }

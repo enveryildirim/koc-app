@@ -334,7 +334,18 @@ Demo veride iki bilerek konmuş örnek var (rakamlar her `db:seed`'de biraz değ
 - **Adımlar:** Sınıflar sekmesi → **Uç değerleri ayır**; sonra Dersler sekmesi.
 - **Beklenen:** 10-A'nın sözlü/yazılı ortalaması yükselir ve altında "N uç değer ayrıldı" yazar. Derslerde Fizik satırında "N ayrıldı"; kriter ortalamaları da uç değerler olmadan hesaplanır.
 
-**L6. Küçük grup**
+**L6. Sözlü ve yazılı**
+- **Adımlar:** Sözlü ve yazılı → **Uç değerleri ayır** → "Fizik ara sınavı"nı açın.
+- **Beklenen:**
+  - Listede Fizik ara sınavının ortalaması yükselir, altında "N ayrıldı".
+  - Detayda "Ortalama" kutusunda "N ayrıldı · hepsiyle %…"; düşük kâğıtlar tabloda "uç ↓" ile işaretli; kriter ortalaması da onlarsız.
+  - Düğme "Puan gir" ekranında görünmez (giriş sırasında ortalama değişmesin).
+
+**L7. Madde analizi**
+- **Adımlar:** TYT Deneme 2 → Madde analizi → **12-A** → düğmeyi aç / kapat.
+- **Beklenen:** Açıkken "1 uç değer analize katılmadı: …" yazar; "Gözden geçirilecek soru" sayısı belirgin şekilde azalır (yanlış kitapçıklı kâğıt soruları haksız yere şüpheli gösteriyordu). "Tümü" seçiliyken kâğıt kurum genelinde uç sayılmayabilir; o zaman "Uç değer yok." yazar.
+
+**L8. Küçük grup**
 - **Beklenen:** 8 kişiden az grupta hiçbir şey ayrılmaz; deneme sayfasında "kişi sayısı az, ayrılmadı" yazar.
 
 ---
