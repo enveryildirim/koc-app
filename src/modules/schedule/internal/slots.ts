@@ -1,7 +1,6 @@
 import { prisma } from "@/shared/db";
 import { notFound } from "@/shared/errors";
 import { parseSlot } from "./validate";
-import { courseIdFor } from "./courses";
 import { assertNoClash } from "./clashes";
 
 export type SlotFilter = { classroomId?: string; teacherId?: string; dayOfWeek?: number };
@@ -22,22 +21,20 @@ async function ownedSlot(ownerId: string, id: string) {
 }
 
 /**
- * Programa ders ekler; sınıfın aynı adlı dersine bağlanır (yoksa ders oluşturulur).
+ * Programa ders ekler. Ders sınıfta var olmalı (`parseSlot`); programdan ders açılmaz.
  * Çakışma varsa kaydetmez (bkz. `assertNoClash`); yalnızca uyarı varsa `body.confirm === true` ile kaydedilir.
  */
 export async function createSlot(ownerId: string, body: Record<string, unknown>) {
   const data = await parseSlot(ownerId, body);
   await assertNoClash(ownerId, data, { confirmed: body.confirm === true });
-  const courseId = await courseIdFor(ownerId, data);
-  return prisma.scheduleSlot.create({ data: { ownerId, ...data, courseId } });
+  return prisma.scheduleSlot.create({ data: { ownerId, ...data } });
 }
 
 export async function updateSlot(ownerId: string, id: string, body: Record<string, unknown>) {
   const slot = await ownedSlot(ownerId, id);
   const data = await parseSlot(ownerId, body);
   await assertNoClash(ownerId, data, { selfId: slot.id, confirmed: body.confirm === true });
-  const courseId = await courseIdFor(ownerId, data);
-  await prisma.scheduleSlot.update({ where: { id: slot.id }, data: { ...data, courseId } });
+  await prisma.scheduleSlot.update({ where: { id: slot.id }, data });
 }
 
 /** Programdan siler; geçmiş yoklamalar (LessonSession) korunur (slotId null olur). */

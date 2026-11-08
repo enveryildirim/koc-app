@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { schoolYearLabel, schoolYearRange } from "../calendar";
 import { isHolidayWeek, layoutPlan, mondayOf, parsePlan, PLAN_HELP, type Range } from "../plan";
@@ -27,7 +28,16 @@ const EXAMPLE = "Çarpanlar ve Katlar | 3\nÜslü İfadeler | 3\nKareköklü İf
 export default function PlanEditor(p: Props) {
   const router = useRouter();
   const editing = !!p.planId;
-  const [f, setF] = useState(p.initial);
+  /** Ders sınıfın derslerinden seçilir; düzenlenen planın (eski) dersi listede yoksa o da seçenek olur. */
+  const optionsFor = (classroomId: string) => {
+    const list = p.subjectsByClass[classroomId] ?? [];
+    return editing && p.initial.subject && !list.includes(p.initial.subject) ? [p.initial.subject, ...list] : list;
+  };
+  const pickSubject = (classroomId: string, wanted: string) => {
+    const opts = optionsFor(classroomId);
+    return opts.find((s) => s === wanted) ?? opts.find((s) => subjectMatches(s, wanted)) ?? opts[0] ?? "";
+  };
+  const [f, setF] = useState(() => ({ ...p.initial, subject: pickSubject(p.initial.classroomId, p.initial.subject) }));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (x: Partial<typeof f>) => setF({ ...f, ...x });
@@ -64,7 +74,7 @@ export default function PlanEditor(p: Props) {
     router.refresh();
   }
 
-  const subjects = p.subjectsByClass[f.classroomId] ?? [];
+  const subjects = optionsFor(f.classroomId);
   const allTemplates = p.templatesByClass?.[f.classroomId] ?? [];
   const templates = f.subject.trim() ? allTemplates.filter((t) => subjectMatches(t.subject, f.subject)) : allTemplates;
   const gradeName = (g: string) => (/^\d+$/.test(g) ? `${g}. sınıf` : g);
@@ -78,16 +88,22 @@ export default function PlanEditor(p: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Sınıf</label>
-            <select className="input" value={f.classroomId} disabled={editing} onChange={(e) => set({ classroomId: e.target.value })}>
+            <select className="input" value={f.classroomId} disabled={editing} onChange={(e) => set({ classroomId: e.target.value, subject: pickSubject(e.target.value, f.subject) })}>
               {p.classrooms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Ders</label>
-            <input className="input" list="plan-subjects" value={f.subject} disabled={editing} onChange={(e) => set({ subject: e.target.value })} placeholder="ör. Matematik" />
-            <datalist id="plan-subjects">
-              {subjects.map((s) => <option key={s} value={s} />)}
-            </datalist>
+            {subjects.length ? (
+              <select className="input" value={f.subject} disabled={editing} onChange={(e) => set({ subject: e.target.value })}>
+                {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            ) : (
+              <p className="pt-2 text-sm text-amber-700">
+                Bu sınıfın dersi yok.{" "}
+                <Link href={`/kurum/dersler?sinif=${f.classroomId}&yeni=1`} className="font-medium text-brand-600 hover:underline">Dersler sayfasında ekleyin</Link>.
+              </p>
+            )}
           </div>
           <div>
             <label className="label">Eğitim yılı</label>

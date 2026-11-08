@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
-import { listSlots, listTeachers, scheduleClashes, type Clash } from "@/modules/schedule/server";
+import { listCourses, listSlots, listTeachers, scheduleClashes, syncCourses, type Clash } from "@/modules/schedule/server";
 import { teacherSub } from "@/modules/schedule";
 import { Empty, PageHeader, Tabs } from "@/shared/ui/kurum";
 import ScheduleBoard from "@/modules/schedule/ui/ScheduleBoard";
@@ -18,10 +18,12 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   if (sp.gorunum === "ogretmenler") redirect("/kurum/ogretmenler");
   const tab = sp.gorunum === "ogretmen" ? "ogretmen" : "sinif";
 
-  const [classrooms, teachers, clashes] = await Promise.all([
+  await syncCourses(ownerId); // derse bağlanmamış eski program satırları
+  const [classrooms, teachers, clashes, courses] = await Promise.all([
     classroomsOf(ownerId),
     listTeachers(ownerId),
     scheduleClashes(ownerId),
+    listCourses(ownerId),
   ]);
 
   const tabs = [
@@ -82,6 +84,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
           view={tab === "sinif" ? "sinif" : "ogretmen"}
           defaults={{ classroomId: selClass?.id, teacherId: selTeacher?.id }}
           classrooms={classrooms.map((c) => ({ id: c.id, name: c.name }))}
+          courses={courses.map((c) => ({ id: c.id, classroomId: c.classroomId, name: c.name, kind: c.kind, teacherId: c.teacherId }))}
           teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch, role: t.role }))}
           clash={Object.fromEntries(
             clashes.flatMap((c) => c.slotIds.map((id) => [id, c.hard ? "hard" : "soft"] as const)).sort((a, b) => (a[1] === "hard" ? 1 : 0) - (b[1] === "hard" ? 1 : 0)),
@@ -92,6 +95,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
             classroomName: s.classroom.name,
             teacherId: s.teacherId,
             teacherName: s.teacher.name,
+            courseId: s.courseId,
             subject: s.subject,
             lessonType: s.lessonType,
             dayOfWeek: s.dayOfWeek,

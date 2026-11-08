@@ -1,20 +1,27 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LESSON_TYPES } from "@/modules/schedule";
 import { Opt } from "../types";
 
-/** Programda olmayan ek ders (etüt / özel ders) oluşturup yoklama ekranına geçer. */
-export default function ExtraLessonForm({ date, classrooms, teachers }: { date: string; classrooms: Opt[]; teachers: (Opt & { branch: string })[] }) {
+type CourseOpt = { id: string; classroomId: string; name: string; teacherId: string | null };
+
+/** Programda olmayan ek ders (etüt / özel ders) oluşturup yoklama ekranına geçer. Ders, sınıfın derslerinden seçilir. */
+export default function ExtraLessonForm({ date, classrooms, teachers, courses }: { date: string; classrooms: Opt[]; teachers: Opt[]; courses: CourseOpt[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({
-    classroomId: classrooms[0]?.id ?? "",
-    teacherId: teachers[0]?.id ?? "",
-    subject: teachers[0]?.branch ?? "",
-    lessonType: "ETUT",
-    startTime: "14:00",
-    endTime: "14:40",
+  const coursesOf = (classroomId: string) => courses.filter((c) => c.classroomId === classroomId);
+  const pick = (c: CourseOpt | undefined, teacherId: string) => ({ courseId: c?.id ?? "", teacherId: c?.teacherId ?? teacherId });
+  const [f, setF] = useState(() => {
+    const classroomId = classrooms[0]?.id ?? "";
+    return {
+      classroomId,
+      ...pick(coursesOf(classroomId)[0], teachers[0]?.id ?? ""),
+      lessonType: "ETUT",
+      startTime: "14:00",
+      endTime: "14:40",
+    };
   });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,19 +57,28 @@ export default function ExtraLessonForm({ date, classrooms, teachers }: { date: 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div>
             <label className="label">Sınıf</label>
-            <select className="input" value={f.classroomId} onChange={(e) => set({ classroomId: e.target.value })}>
+            <select className="input" value={f.classroomId} onChange={(e) => set({ classroomId: e.target.value, ...pick(coursesOf(e.target.value)[0], f.teacherId) })}>
               {classrooms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Öğretmen</label>
-            <select className="input" value={f.teacherId} onChange={(e) => set({ teacherId: e.target.value, subject: teachers.find((t) => t.id === e.target.value)?.branch ?? f.subject })}>
+            <select className="input" value={f.teacherId} onChange={(e) => set({ teacherId: e.target.value })}>
               {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
           <div className="col-span-2">
-            <label className="label">Ders adı</label>
-            <input className="input" value={f.subject} onChange={(e) => set({ subject: e.target.value })} />
+            <label className="label">Ders</label>
+            {coursesOf(f.classroomId).length ? (
+              <select className="input" value={f.courseId} onChange={(e) => set(pick(courses.find((c) => c.id === e.target.value), f.teacherId))}>
+                {coursesOf(f.classroomId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            ) : (
+              <p className="text-sm text-amber-700">
+                Bu sınıfın dersi yok.{" "}
+                <Link href={`/kurum/dersler?sinif=${f.classroomId}&yeni=1`} className="font-medium text-brand-600 hover:underline">Dersler sayfasında ekleyin</Link>.
+              </p>
+            )}
           </div>
           <div className="col-span-2">
             <label className="label">Tür</label>
@@ -82,7 +98,7 @@ export default function ExtraLessonForm({ date, classrooms, teachers }: { date: 
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-secondary" onClick={() => setOpen(false)}>Vazgeç</button>
-          <button className="btn-primary" disabled={busy} onClick={create}>Oluştur ve yoklama al</button>
+          <button className="btn-primary" disabled={busy || !f.courseId} onClick={create}>Oluştur ve yoklama al</button>
         </div>
       </div>
     </div>

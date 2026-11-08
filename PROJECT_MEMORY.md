@@ -455,6 +455,14 @@ Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `pris
 - **Ekran görüntüsü notu:** REA tarayıcı senaryosu girdilere `caret-color` stili ekliyor; Next geliştirici göstergesindeki "1 Issue" (hydration) ondan, uygulamadan değil.
 - **Doğrulama:** kopya / öğretmen çakışması 409, ortak öğrenci uyarısı 409+confirm → onaylı 200, bitişik saat 200, düzenlemede kendisi hariç; etüt mesulü branşsız 200, öğretmen branşsız 400; sıradaki no formda; Excel numarasız 3 satır → 2 otomatik numara. `tsc`, `eslint src` temiz. Denemeler test.db'nin kopyasında yapıldı.
 
+**Aşama 2 (ders tek yerde):**
+- **Ders yalnızca Dersler'de açılır** (`schedule/ui/CourseAdmin.tsx`, `app/kurum/dersler`): bütün dersler tek tablo, `?sinif=` süzgeç, `?yeni=1` ekleme paneli (çoklu sınıf → sınıf başına bir POST; ad önerisi kurumdaki adlar; tür `guessCourseKind` ile, elle değişince durur), `?ders=<id>` düzenleme paneli (silme dahil). Bileşen `key={sinif|ders}` ile yeniden kurulur (panel durumu adresten). `CourseManager.tsx` silindi.
+- **Sınıf sayfası:** dersler salt okunur (`CourseList`, sayfa içinde); 30 günden yeni ders (`CourseRow.createdAt`) değerlendirmesizse gri not.
+- **Program / ek ders:** `parseSlot` artık dersi çözer: `courseId` (ya da eski istemci için var olan ad) → `SlotInput.courseId` + `subject` = ders adı; ders yoksa 400. `createSlot`/`updateSlot` `courseIdFor` çağırmaz. Ek ders (`attendance.ts`) aynı kontrolden geçer, oturuma yalnızca ad yazılır. `ScheduleBoard` ders listesi (`courses` prop), öğretmen ve tür dersten (STUDY → ETUT); öğretmen görünümünde öğretmen sabit kalır. Gün düğmesi "+ Saat ekle".
+- **Ödev / yıllık plan:** `HomeworkForm` ve `PlanEditor` serbest metin yerine sınıfın derslerinden `select` (eski kaydın adı listede yoksa seçenek olarak eklenir). `planEditorData.subjectsByClass` program satırlarından değil derslerden. Ödev düzenleme sayfası seçenekleri ödevin sınıfının derslerinden alır (`homeworkSubjects` kaldırıldı). Eskiden düzenleme formunda "Değişiklikleri kaydet" `!classrooms.length` yüzünden pasifti; düzeldi.
+- **Arama:** ders sonucu `/kurum/dersler?sinif=…&ders=…` (düzenleme paneli).
+- **Doğrulama:** olmayan ad 400 ve ders açılmadı; `courseId` ile 200 (satır derse bağlı); başka sınıfın dersi 400; ek ders olmayan ad 400 / `courseId` 200; sayfalar 200; panel ve formlar ekran görüntüsüyle kontrol edildi. `tsc`, `eslint src` temiz.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

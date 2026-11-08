@@ -13,13 +13,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
   const sp = await searchParams;
   const year = Number(sp.yil) >= 2000 && Number(sp.yil) <= 2100 ? Number(sp.yil) : schoolYearOf(ymd());
   const data = await planEditorData(ownerId, year);
-  const classroomId = data.classrooms.some((c) => c.id === sp.sinif) ? sp.sinif! : (data.classrooms[0]?.id ?? "");
+  // Müfredattan "plan oluştur" ile gelince (?ders=) o dersi olan ilk sınıf seçilir
+  const withSubject = sp.ders ? data.classrooms.find((c) => data.subjectsByClass[c.id]?.includes(sp.ders!)) : undefined;
+  const classroomId = data.classrooms.some((c) => c.id === sp.sinif) ? sp.sinif! : (withSubject?.id ?? data.classrooms[0]?.id ?? "");
 
   return (
     <div>
       <PageHeader back={{ href: `/kurum/takvim/plan?yil=${year}`, label: "Yıllık ders planı" }} title="Yeni yıllık plan" sub={`${schoolYearLabel(year)} eğitim yılı`} />
       {!data.classrooms.length ? (
-        <Empty>Önce Öğrenciler sayfasından sınıf ekleyin.</Empty>
+        <Empty>Önce Sınıflar sayfasından sınıf ekleyin.</Empty>
       ) : (
         <PlanEditor
           year={year}

@@ -4,6 +4,8 @@ export type SlotRow = {
   classroomName: string;
   teacherId: string;
   teacherName: string;
+  /** Sınıfın dersi (eski satırlarda null olabilir; `syncCourses` bağlar) */
+  courseId: string | null;
   subject: string;
   lessonType: string;
   dayOfWeek: number;
@@ -28,6 +30,8 @@ export type CourseRow = {
   teacherId: string | null;
   teacherName: string | null;
   external: boolean;
+  /** ISO; yeni dersler için "henüz değerlendirme yok" uyarısı yumuşatılır */
+  createdAt: string;
   /** Programdaki haftalık ders sayısı ve dakikası */
   slotCount: number;
   weeklyMinutes: number;

@@ -1,21 +1,26 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DAYS, LESSON_TYPES, teacherSub } from "@/modules/schedule";
 import { Opt, SlotRow, TYPE_STYLE } from "../types";
 
 type Draft = Omit<SlotRow, "id" | "classroomName" | "teacherName"> & { id?: string };
+/** Sınıfın dersi: programa yalnızca bunlardan biri eklenir (ders Yönetim → Dersler'de açılır). */
+type CourseOpt = { id: string; classroomId: string; name: string; kind: string; teacherId: string | null };
 
 export default function ScheduleBoard({
   slots,
   classrooms,
   teachers,
+  courses,
   view,
   defaults,
   clash = {},
 }: {
   slots: SlotRow[];
   classrooms: Opt[];
+  courses: CourseOpt[];
   teachers: (Opt & { branch: string; role: string })[];
   view: "sinif" | "ogretmen";
   /** Yeni ders formu için önceden seçili sınıf/öğretmen */
@@ -32,15 +37,32 @@ export default function ScheduleBoard({
 
   const days = slots.some((s) => s.dayOfWeek === 7) ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6];
 
+  const coursesOf = (classroomId: string) => courses.filter((c) => c.classroomId === classroomId);
+  /** Ders seçilince: adı, türü (etüt dersi → Etüt) ve sınıf görünümünde öğretmeni dersin sorumlusundan gelir. */
+  const fromCourse = (c: CourseOpt | undefined, teacherId: string): Partial<Draft> => ({
+    courseId: c?.id ?? null,
+    subject: c?.name ?? "",
+    lessonType: c?.kind === "STUDY" ? "ETUT" : "GRUP",
+    teacherId: view === "ogretmen" ? teacherId : c?.teacherId ?? teacherId,
+  });
+  /** Sınıfın ilk dersi; öğretmen görünümünde önce o öğretmenin dersi. */
+  const firstCourse = (classroomId: string) => {
+    const list = coursesOf(classroomId);
+    return (defaults.teacherId && list.find((c) => c.teacherId === defaults.teacherId)) || list[0];
+  };
+
   function openNew(day: number) {
     setError("");
     setWarn("");
+    const classroomId = defaults.classroomId ?? classrooms[0]?.id ?? "";
     const teacherId = defaults.teacherId ?? teachers[0]?.id ?? "";
     setDraft({
-      classroomId: defaults.classroomId ?? classrooms[0]?.id ?? "",
+      classroomId,
       teacherId,
-      subject: teachers.find((t) => t.id === teacherId)?.branch ?? "",
+      courseId: null,
+      subject: "",
       lessonType: "GRUP",
+      ...fromCourse(firstCourse(classroomId), teacherId),
       dayOfWeek: day,
       startTime: "16:00",
       endTime: "16:40",
@@ -66,7 +88,7 @@ export default function ScheduleBoard({
   }
 
   async function remove() {
-    if (!draft?.id || !confirm("Bu ders programdan silinsin mi? Geçmiş yoklamalar korunur.")) return;
+    if (!draft?.id || !confirm("Bu ders saati programdan silinsin mi? Ders ve geçmiş yoklamalar korunur.")) return;
     setBusy(true);
     await fetch(`/api/kurum/program/${draft.id}`, { method: "DELETE" });
     setBusy(false);
@@ -114,8 +136,8 @@ export default function ScheduleBoard({
                 ))}
                 {list.length === 0 && <p className="py-4 text-center text-xs text-lead/70">Ders yok</p>}
               </div>
-              <button className="mt-2 rounded-md py-1 text-xs font-medium text-brand-600 hover:bg-brand-50" onClick={() => openNew(day)}>
-                + Ders ekle
+              <button className="mt-2 rounded-md py-1 text-xs font-medium text-brand-600 hover:bg-brand-50" onClick={() => openNew(day)} aria-label={`${DAYS[day]} gününe ders saati ekle`}>
+                + Saat ekle
               </button>
             </div>
           );
@@ -130,34 +152,51 @@ export default function ScheduleBoard({
       {draft && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setDraft(null)}>
           <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold">{draft.id ? "Dersi düzenle" : "Yeni ders"}</h2>
+            <h2 className="text-lg font-bold">{draft.id ? "Ders saatini düzenle" : "Programa ders saati ekle"}</h2>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Sınıf</label>
-                <select className="input" value={draft.classroomId} onChange={(e) => set({ classroomId: e.target.value })}>
+                <select
+                  className="input"
+                  value={draft.classroomId}
+                  onChange={(e) => set({ classroomId: e.target.value, ...fromCourse(firstCourse(e.target.value), draft.teacherId) })}
+                >
                   {classrooms.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div>
+                <label className="label">Ders</label>
+                {coursesOf(draft.classroomId).length ? (
+                  <select
+                    className="input"
+                    value={draft.courseId ?? ""}
+                    onChange={(e) => set(fromCourse(courses.find((c) => c.id === e.target.value), draft.teacherId))}
+                  >
+                    {!draft.courseId && <option value="">— Ders seçin —</option>}
+                    {coursesOf(draft.classroomId).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="pt-2 text-sm text-amber-700">Bu sınıfın dersi yok.</p>
+                )}
+              </div>
+              <p className="col-span-2 -mt-1 text-[12.5px] text-lead">
+                Ders listede yok mu?{" "}
+                <Link href={`/kurum/dersler?sinif=${draft.classroomId}&yeni=1`} className="font-medium text-brand-600 hover:underline">
+                  Dersler sayfasında ekleyin
+                </Link>
+                ; programa oradaki dersler eklenir.
+              </p>
+              <div className="col-span-2">
                 <label className="label">Öğretmen</label>
-                <select
-                  className="input"
-                  value={draft.teacherId}
-                  onChange={(e) => {
-                    const t = teachers.find((x) => x.id === e.target.value);
-                    set({ teacherId: e.target.value, ...(draft.subject ? {} : { subject: t?.branch ?? "" }) });
-                  }}
-                >
+                <select className="input" value={draft.teacherId} onChange={(e) => set({ teacherId: e.target.value })}>
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>{t.name} ({teacherSub(t)})</option>
                   ))}
                 </select>
-              </div>
-              <div className="col-span-2">
-                <label className="label">Ders adı</label>
-                <input className="input" value={draft.subject} onChange={(e) => set({ subject: e.target.value })} />
               </div>
               <div>
                 <label className="label">Tür</label>
@@ -196,7 +235,7 @@ export default function ScheduleBoard({
                 <button className="btn-danger" disabled={busy} onClick={remove}>Sil</button>
               )}
               <button className="btn-secondary ml-auto" onClick={() => setDraft(null)}>Vazgeç</button>
-              <button className="btn-primary" disabled={busy || !teachers.length} onClick={() => save()}>
+              <button className="btn-primary" disabled={busy || !teachers.length || !draft.courseId} onClick={() => save()}>
                 {busy ? "Kaydediliyor…" : "Kaydet"}
               </button>
             </div>

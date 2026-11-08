@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toInputDate } from "@/shared/date";
 
@@ -15,8 +16,9 @@ export default function HomeworkForm({
   onDone,
 }: {
   classrooms: { id: string; name: string }[];
+  /** Ders seçenekleri; `subjectsByClass` verilmişse kullanılmaz */
   subjects: string[];
-  /** Sınıfın dersleri (ders kaydından); seçili sınıfın dersleri öneri listesinin başında gelir */
+  /** Sınıfın dersleri (ders kaydından): ders yalnızca seçili sınıfın derslerinden seçilir */
   subjectsByClass?: Record<string, string[]>;
   initial?: Partial<Values>;
   homeworkId?: string;
@@ -25,9 +27,15 @@ export default function HomeworkForm({
   const router = useRouter();
   const week = new Date();
   week.setDate(week.getDate() + 7);
+  /** Sınıfın dersleri; düzenlenen eski ödevin dersi listede yoksa o da seçenek olur. */
+  const optionsFor = (classroomId: string) => {
+    const list = subjectsByClass ? subjectsByClass[classroomId] ?? [] : subjects;
+    return initial?.subject && !list.includes(initial.subject) && (homeworkId || classroomId === initial.classroomId) ? [initial.subject, ...list] : list;
+  };
+  const firstClass = initial?.classroomId ?? classrooms[0]?.id ?? "";
   const [v, setV] = useState<Values>({
-    classroomId: initial?.classroomId ?? classrooms[0]?.id ?? "",
-    subject: initial?.subject ?? "",
+    classroomId: firstClass,
+    subject: initial?.subject ?? optionsFor(firstClass)[0] ?? "",
     title: initial?.title ?? "",
     description: initial?.description ?? "",
     dueDate: initial?.dueDate ?? toInputDate(week),
@@ -65,7 +73,15 @@ export default function HomeworkForm({
       {!homeworkId && (
         <div>
           <label className="label">Sınıf</label>
-          <select className="input" value={v.classroomId} onChange={set("classroomId")} required>
+          <select
+            className="input"
+            value={v.classroomId}
+            onChange={(e) => {
+              const opts = optionsFor(e.target.value);
+              setV({ ...v, classroomId: e.target.value, subject: opts.includes(v.subject) ? v.subject : opts[0] ?? "" });
+            }}
+            required
+          >
             {classrooms.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -74,12 +90,18 @@ export default function HomeworkForm({
       )}
       <div>
         <label className="label">Ders</label>
-        <input className="input" list="odev-dersler" value={v.subject} onChange={set("subject")} placeholder="Ör. Matematik" required />
-        <datalist id="odev-dersler">
-          {[...new Set([...(subjectsByClass?.[v.classroomId] ?? []), ...subjects])].map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
+        {optionsFor(v.classroomId).length ? (
+          <select className="input" value={v.subject} onChange={set("subject")} required>
+            {optionsFor(v.classroomId).map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        ) : (
+          <p className="pt-2 text-sm text-amber-700">
+            Bu sınıfın dersi yok.{" "}
+            {subjectsByClass && <Link href={`/kurum/dersler?sinif=${v.classroomId}&yeni=1`} className="font-medium text-brand-600 hover:underline">Dersler sayfasında ekleyin</Link>}
+          </p>
+        )}
       </div>
       <div className={homeworkId ? "" : "md:col-span-2"}>
         <label className="label">Başlık</label>
@@ -94,7 +116,7 @@ export default function HomeworkForm({
         <input type="date" className="input" value={v.dueDate} onChange={set("dueDate")} required />
       </div>
       <div className="flex items-end gap-3">
-        <button className="btn-primary" disabled={busy || !classrooms.length}>
+        <button className="btn-primary" disabled={busy || (!homeworkId && !classrooms.length) || !v.subject}>
           {busy ? "Kaydediliyor…" : homeworkId ? "Değişiklikleri kaydet" : "Ödevi ver"}
         </button>
         {msg && <span className={`text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</span>}

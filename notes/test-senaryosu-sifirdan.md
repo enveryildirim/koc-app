@@ -124,7 +124,7 @@ Numara	Ad	Soyad	Sınıf	Veli Adı	Veli Telefonu
 
 ## 5. Dersler
 
-Yönetim → Dersler → sınıfı seçin → **+ Ders ekle**:
+Ders **yalnızca** Yönetim → Dersler'de açılır. **+ Ders ekle** → yan panel: sınıf(lar)ı seçin, adı yazın, sorumluyu seçin.
 
 | Sınıf | Ders | Tür | Sorumlu | Not |
 |---|---|---|---|---|
@@ -136,19 +136,29 @@ Yönetim → Dersler → sınıfı seçin → **+ Ders ekle**:
 | SEVİYE-2 | Tecvid | Dini | Murat Ilgın | |
 | SEVİYE-2 | İlmihal | Dini | Murat Ilgın | |
 
-- [ ] Hepsini ekleyin.
-- [ ] 9-A'ya ikinci kez "Matematik" eklemeyi deneyin → "Bu sınıfta bu adla bir ders zaten var."
-- **Beklenen:** Dersler sayfasında sınıf düğmelerinde ders sayıları doğru; Fizik "Dışarıda" etiketli.
+- [ ] **Matematik**'i tek seferde ekleyin: panelde hem 9-A hem 10-A'yı seçin → Kaydet → iki satır oluşur.
+- [ ] Kalanları ekleyin. "Kaydet ve yenisini ekle" sınıf seçimini ve türü korur.
+- [ ] Ad yazarken tür kendiliğinden değişir (Tecvid → Dini, Programlama → Mesleki); türü elle değiştirirseniz bir daha değişmez.
+- [ ] Ad kutusunda kurumda daha önce açılmış ders adları önerilir.
+- [ ] 9-A'ya ikinci kez "Matematik" eklemeyi deneyin → "9-A: Bu sınıfta bu adla bir ders zaten var."
+- [ ] Bir satıra tıklayın → düzenleme paneli; adı değiştirip kaydedin, geri alın.
+- [ ] Sınıf sayfası (Sınıflar → 9-A): dersler **salt okunur**; bir derse tıklayınca Dersler'deki düzenleme paneli açılır. "Dersleri düzenle" Dersler'e (9-A süzülü) götürür.
+- [ ] ⌘K → "fizik" → ders sonucu düzenleme panelini açar.
+- **Beklenen:**
+  - Dersler tek tabloda; "Tümü" ve sınıf düğmelerinde sayılar doğru; Fizik "Dışarıda" etiketli; yeni eklenenler yeşil.
+  - Sınıf sayfasında yeni derslerin altında gri "Henüz değerlendirme yok" (sarı uyarı değil).
 
 ---
 
 ## 6. Ders programı
 
-- [ ] Ders programı → 9-A → haftaya Matematik (2 saat), Bilişim (2 saat) yerleştirin.
+- [ ] Ders programı → 9-A → günün altındaki **+ Saat ekle** → "Ders" listesinde yalnızca 9-A'nın dersleri var; öğretmen dersin sorumlusundan dolu gelir. Haftaya Matematik (2 saat), Bilişim (2 saat) yerleştirin.
 - [ ] 10-A → Matematik, Programlama.
 - [ ] SEVİYE-2 → Cumartesi Tecvid, Pazar İlmihal.
 - [ ] **Bugün** olan güne en az bir ders koyun (sonraki adımlarda yoklama için).
-- [ ] Programdan yeni bir ders adıyla ekleme yapın (ör. 9-A Cumartesi *Robotik*) → 9-A'nın ders listesinde kendiliğinden görünür.
+- [ ] Programdan yeni ders **açılamaz**: listede *Robotik* yok → "Dersler sayfasında ekleyin" bağlantısı Dersler'de 9-A seçili ekleme panelini açar → ekleyin → programa dönün, artık listede.
+- [ ] Dersi olmayan bir sınıfta "+ Saat ekle" → "Bu sınıfın dersi yok." Kaydet pasif.
+- [ ] Türü "Etüt" olan bir ders seçince Tür kendiliğinden "Etüt" olur.
 - [ ] Aynı dersi aynı saate ikinci kez ekleyin → "Çakışma: … programda zaten var." Kaydedilmez.
 - [ ] Aynı sınıfa aynı saatte başka bir grup dersi ekleyin → "Çakışma: 9-A sınıfında … var." Kaydedilmez.
 - [ ] Aynı öğretmeni aynı saatte başka sınıfa koyun → "Çakışma: Deniz Aksoy … dersinde." Kaydedilmez.
@@ -171,7 +181,7 @@ Yönetim → Dersler → sınıfı seçin → **+ Ders ekle**:
 - [ ] Müfredat → **Yeni ders müfredatı** → *Tecvid* için 8–10 konu girin (veya Excel ile yükleyin).
 
 **7.3 Yıllık plan**
-- [ ] Takvim ve planlar → Yıllık ders planı → **+ Yeni plan** → SEVİYE-2 · Tecvid, konular müfredattan.
+- [ ] Takvim ve planlar → Yıllık ders planı → **+ Yeni plan** → SEVİYE-2 · Tecvid (ders listeden seçilir), konular müfredattan.
 - **Beklenen:** Konular haftalara dağıtılır, tatil haftası atlanır.
 - [ ] **Haftalık planı içe aktar** → `notes/ornek-haftalik-plan.csv`.
 - **Beklenen:** Sınıf / ders adları bu kurumda farklıysa "Bu adla ders yok" uyarısı çıkar; uyarıya rağmen anlaşılır biçimde ilerlenebilir.
@@ -211,6 +221,8 @@ Yönetim → Dersler → sınıfı seçin → **+ Ders ekle**:
 
 **9.5 Ödev**
 - [ ] Burak Tan → 9-A Bilişim → **+ Ödev ver** → kaydet → "10 öğrenciye atandı".
+- [ ] Yönetici → Ödevler → Yeni ödev: "Ders" artık yazılmıyor, seçilen sınıfın derslerinden seçiliyor; sınıf değişince liste değişir.
+- [ ] Yönetici → Yoklama → **Ek ders ekle**: ders sınıfın derslerinden seçilir.
 - [ ] Ödeve dokunun → durumları işaretleyin.
 
 **9.6 Etüt mesulü**

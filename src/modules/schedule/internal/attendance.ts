@@ -64,8 +64,10 @@ export async function takeAttendance(ownerId: string, input: TakeAttendanceInput
       },
     });
   } else if (input.extra) {
-    const { dayOfWeek: _d, ...d } = await parseSlot(ownerId, { ...input.extra, dayOfWeek: 1 });
+    // Ek ders de sınıfın var olan bir dersine bağlanır; oturum ders adını taşır (LessonSession'da ders kimliği yok)
+    const { dayOfWeek: _d, courseId: _c, ...d } = await parseSlot(ownerId, { ...input.extra, dayOfWeek: 1 });
     void _d;
+    void _c;
     if (opts.teacherId && d.teacherId !== opts.teacherId) throw invalid("Ek dersi yalnızca kendi adınıza girebilirsiniz.");
     session = await prisma.lessonSession.create({ data: { ownerId, slotId: null, date, ...d } });
   } else {

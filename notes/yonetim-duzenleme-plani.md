@@ -119,12 +119,12 @@ Kod: modules/schedule/internal/courses.ts · ui/CourseManager.tsx
 - [x] **Sınıflar listesi:** kartlar yerine tablo. Sütunlar: Sınıf · Düzey · Öğrenci (+ek üye) · Ders · Etüt mesulü. Telefonda iki satırlık liste. "Yeni sınıf" başlıktaki düğmeyle yan panelde açılıyor (aşama 4 kalıbının ilk örneği, ortak bileşen `shared/ui/Drawer.tsx`).
 - [x] **Öğretmenler telefonda (U4, U13):** iki satırlık liste; giriş linki ve Düzenle satırın içinde. "Link oluştur" tek satırda.
 
-### Aşama 2: Ders tek yerde
-- [ ] **Yönetim → Dersler tek ekleme yeri.** Bütün sınıfların dersleri tek tabloda: Sınıf · Ders · Tür · Sorumlu · Haftalık saat. Sınıf süzgeci ve "+ Ders ekle" var.
-- [ ] **Sınıf sayfası:** dersler salt okunur liste olur. Son 30 gün değerlendirme özeti kalır. "Dersleri düzenle" bağlantısı → `/kurum/dersler?sinif=…`
-- [ ] **Ders programı:** "Ders adı" metin kutusu yerine **sınıfın derslerinden seçim**. Öğretmen, dersin sorumlusundan dolu gelir; değiştirilebilir. Ders listede yoksa "Ders ekle" bağlantısı. Programdan kendiliğinden ders açılması kalkar (eski verileri bağlayan `syncCourses` kalır).
-- [ ] **Ödev ve yıllık plan:** ders seçimi sınıfın derslerinden. Serbest metin kalkar.
-- [ ] **Kullanılmayan dersler:** Dersler tablosunda programda saati, ödevi ya da değerlendirmesi olmayan derslere "kullanılmıyor" etiketi. Test DB'deki "Dahili (Okul)" gibi kayıtlar buradan görülüp silinir.
+### Aşama 2: Ders tek yerde ✓
+- [x] **Yönetim → Dersler tek ekleme yeri.** Bütün sınıfların dersleri tek tabloda (Sınıf · Ders + tür · Sorumlu · Programda), "Tümü" ve sınıf süzgeci, "+ Ders ekle". Ekleme ve düzenleme yan panelde (`?yeni=1`, `?ders=<id>`). Eklemede **birden fazla sınıf** seçilebilir; ad kutusu kurumdaki ders adlarını önerir, tür addan tahmin edilir. "Kaydet ve yenisini ekle" sınıfları ve türü korur.
+- [x] **Sınıf sayfası:** dersler salt okunur liste; her ders Dersler'de düzenleme panelini açar, "Dersleri düzenle" bağlantısı. Son 30 gün özeti kalır; 30 günden yeni derste gri "Henüz değerlendirme yok" (U11).
+- [x] **Ders programı:** ders **sınıfın derslerinden seçilir**; öğretmen ve tür (etüt dersi → Etüt) dersten gelir. Sunucu da ders ister (`parseSlot`: `courseId` ya da var olan ad; yoksa "Önce Yönetim → Dersler'den ekleyin"). Programdan ders açılmaz. Gün düğmesi "+ Saat ekle", pencere "Programa ders saati ekle" (Dersler'deki "Ders ekle" ile karışmasın). Yoklamadaki **Ek ders** de aynı kurala bağlandı.
+- [x] **Ödev ve yıllık plan:** ders sınıfın derslerinden seçilir (eski kaydın dersi listede yoksa o da seçenek olarak kalır). Müfredattan "plan oluştur" o dersi olan sınıfı seçer.
+- [x] ~~Kullanılmayan dersler etiketi~~ → Dersler tablosundaki "Programda" sütunu "Programda yok" diyor; programda saati olan ders silinemiyor. Ayrı etiket gerekmedi.
 
 ### Aşama 3: Müfredat
 - [ ] **Müfredat ders açmaz.** "Yeni ders müfredatı" → "Müfredat ekle". Ders adı kurumdaki ders adlarından seçilir (sınıflar arası tekil liste).

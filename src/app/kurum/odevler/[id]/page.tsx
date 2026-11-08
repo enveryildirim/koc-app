@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { fullName } from "@/modules/enrollment";
 import { requireOwner } from "@/modules/identity/server";
-import { findHomework, homeworkSubjects } from "@/modules/homework/server";
+import { findHomework } from "@/modules/homework/server";
+import { listCourses } from "@/modules/schedule/server";
 import { PageHeader } from "@/shared/ui/kurum";
 import StatusEditor from "@/modules/homework/ui/StatusEditor";
 import HomeworkActions from "@/modules/homework/ui/HomeworkActions";
@@ -16,7 +17,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { id } = await params;
   const hw = await findHomework(ownerId, id);
   if (!hw) notFound();
-  const subjects = await homeworkSubjects(ownerId);
+  // Ders, ödevin sınıfının derslerinden seçilir (eski ödevin adı listede yoksa formda ayrıca gösterilir)
+  const subjects = (await listCourses(ownerId, { classroomId: hw.classroomId })).map((c) => c.name);
   const overdue = hw.dueDate < new Date();
 
   return (

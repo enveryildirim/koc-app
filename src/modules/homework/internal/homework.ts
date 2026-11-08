@@ -37,12 +37,6 @@ export async function listHomework(ownerId: string) {
   });
 }
 
-/** Kurumun ödevlerinde kullanılmış ders adları (tr sıralı). */
-export async function homeworkSubjects(ownerId: string) {
-  const rows = await prisma.homework.findMany({ where: { ownerId }, distinct: ["subject"], select: { subject: true } });
-  return rows.map((r) => r.subject).sort((a, b) => a.localeCompare(b, "tr"));
-}
-
 /**
  * Ödev ayrıntısı: sınıfı ve öğrenci listesi (roster). Roster = sınıfın güncel öğrencileri +
  * sınıftan ayrılmış olsa da durum kaydı olan öğrenciler (ada göre); kaydı olmayan PENDING sayılır.

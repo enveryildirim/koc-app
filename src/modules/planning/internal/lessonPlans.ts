@@ -1,7 +1,7 @@
 import { prisma } from "@/shared/db";
 import { conflict, invalid, notFound } from "@/shared/errors";
 import { classroomsOf, getClassroom } from "@/modules/enrollment/server";
-import { listSlots, teachesSubject } from "@/modules/schedule/server";
+import { listCourses, listSlots, teachesSubject } from "@/modules/schedule/server";
 import { schoolYearOf, schoolYearRange, YMD } from "../calendar";
 import { itemState, layoutPlan, mondayOf, parsePlan, planProgress, type PlanSlot, type Range } from "../plan";
 
@@ -189,22 +189,19 @@ export async function topicsForLesson(ownerId: string, classroomId: string, subj
   };
 }
 
-/** Plan editörü için: sınıflar, ders programına göre sınıf başına ders adları ve yılın tatilleri. */
+/** Plan editörü için: sınıflar, sınıf başına ders adları (Yönetim → Dersler) ve yılın tatilleri. */
 export async function planEditorData(ownerId: string, year: number) {
   const { from, to } = schoolYearRange(year);
-  const [classrooms, slots, holidays] = await Promise.all([
+  const [classrooms, courses, holidays] = await Promise.all([
     classroomsOf(ownerId),
-    listSlots(ownerId),
+    listCourses(ownerId),
     prisma.calendarEvent.findMany({
       where: { ownerId, kind: "HOLIDAY", startDate: { lte: to }, endDate: { gte: from } },
       select: { startDate: true, endDate: true, classroomId: true },
     }),
   ]);
   const subjectsByClass: Record<string, string[]> = {};
-  for (const s of slots) {
-    const list = (subjectsByClass[s.classroomId] ??= []);
-    if (!list.includes(s.subject)) list.push(s.subject);
-  }
+  for (const c of courses) (subjectsByClass[c.classroomId] ??= []).push(c.name);
   return {
     classrooms: classrooms.map((c) => ({ id: c.id, name: c.name, level: c.level })),
     subjectsByClass,

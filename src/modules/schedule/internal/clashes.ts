@@ -13,7 +13,7 @@ import type { SlotInput } from "./validate";
  * Uyarılar kullanıcı onaylarsa kaydedilir.
  */
 
-type SlotLike = SlotInput & { id?: string; classroomName: string; teacherName: string };
+type SlotLike = Omit<SlotInput, "courseId"> & { id?: string; classroomName: string; teacherName: string };
 type Roster = Map<string, Map<string, string>>;
 type Kind = "dup" | "class" | "teacher" | "students";
 type Pair = { kind: Kind; hard: boolean; a: SlotLike; b: SlotLike; common?: string[] };

@@ -3,7 +3,7 @@ import { classroomsOf } from "@/modules/enrollment/server";
 import { dayOfWeek, ymd } from "@/shared/date";
 import { DAYS } from "@/modules/schedule";
 import { requireOwner } from "@/modules/identity/server";
-import { lessonsOn, listTeachers } from "@/modules/schedule/server";
+import { lessonsOn, listCourses, listTeachers } from "@/modules/schedule/server";
 import { holidaysOn } from "@/modules/planning/server";
 import { Empty, PageHeader } from "@/shared/ui/kurum";
 import DateNav from "@/modules/schedule/ui/DateNav";
@@ -19,11 +19,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
   const date = tarih && /^\d{4}-\d{2}-\d{2}$/.test(tarih) ? tarih : today;
   const dow = dayOfWeek(date);
 
-  const [lessons, classrooms, teachers, holidays] = await Promise.all([
+  const [lessons, classrooms, teachers, holidays, courses] = await Promise.all([
     lessonsOn(ownerId, date),
     classroomsOf(ownerId),
     listTeachers(ownerId),
     holidaysOn(ownerId, date),
+    listCourses(ownerId),
   ]);
   const holidayFor = (classroomId: string) => holidays.find((h) => !h.classroomId || h.classroomId === classroomId);
   const rows = lessons.map((l) => {
@@ -58,7 +59,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
             <ExtraLessonForm
               date={date}
               classrooms={classrooms.map((c) => ({ id: c.id, name: c.name }))}
-              teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch }))}
+              teachers={teachers.map((t) => ({ id: t.id, name: t.name }))}
+              courses={courses.map((c) => ({ id: c.id, classroomId: c.classroomId, name: c.name, teacherId: c.teacherId }))}
             />
             <Link href="/kurum/raporlar" className="btn-secondary">Devam raporları</Link>
           </>

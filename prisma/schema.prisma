@@ -293,7 +293,7 @@ model ScheduleSlot {
   teacherId   String
   teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   subject     String
-  /// Dersin kaydı; (classroomId, subject) ile eşlenir, programa ders eklenince kendiliğinden oluşur
+  /// Sınıfın dersi; program satırı yalnızca var olan derse eklenir (ders Yönetim → Dersler'de açılır). Eski satırlar syncCourses ile bağlanır
   courseId    String?
   course      Course?         @relation(fields: [courseId], references: [id], onDelete: SetNull)
   /// GRUP | ETUT | OZEL

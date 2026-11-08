@@ -69,19 +69,18 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 
 | | |
 |---|---|
-| Oluşur | Yönetim → **Dersler** → sınıf seç → "+ Ders ekle" |
-| ⚠ Ayrıca oluşur | **Sınıf sayfası** → Dersler → "+ Ders ekle" (aynı form, ikinci giriş noktası) |
-| ⚠ Ayrıca oluşur | **Ders programı** → "+ Ders ekle": ders adı serbest metin; o adla ders yoksa kendiliğinden açılır. Ad kutusu öğretmenin branşıyla dolu gelir (U3) |
-| ⚠ Ders gibi görünür | **Müfredat** → "+ Yeni ders": ders açmaz ama öyle görünür (U1) |
-| Düzenlenir | Dersler / sınıf sayfası: ad, tür, sorumlu, dışarıda. Ad değişince programdaki satırlar da değişir |
-| Kullanılır | Ders programı (ad ile), Sözlü/yazılı (kimlik ile), Deneme → derse bağla (kimlik ile), Ödev ve Yıllık plan (⚠ ad ile, serbest metin), Takip → Dersler |
+| Oluşur | **Yalnızca** Yönetim → **Dersler** → "+ Ders ekle" (yan panel, `?yeni=1`). Birden fazla sınıf seçilebilir |
+| Düzenlenir / silinir | Dersler → satıra tıkla (yan panel, `?ders=<id>`): ad, tür, sorumlu, dışarıda. Ad değişince programdaki satırlar da değişir. Programda saati olan ders silinmez |
+| Görüntülenir | Sınıf sayfası (salt okunur; ders Dersler'deki paneli açar), ⌘K arama (paneli açar) |
+| Seçilir | Ders programı ve ek ders (kimlik ile; sunucu da var olan ders ister), Sözlü/yazılı (kimlik ile), Deneme → derse bağla (kimlik ile), Ödev ve Yıllık plan (sınıfın derslerinden seçilen ad ile), Takip → Dersler (ad ile birleşir) |
+| ⚠ Ders gibi görünür | **Müfredat** → "+ Yeni ders": ders açmaz ama öyle görünür (U1, aşama 3) |
 | Kim | Yönetici, etüt mesulü |
-| Kod | `modules/schedule/internal/courses.ts` (`courseIdFor`: programdan kendiliğinden açma) · `ui/CourseManager.tsx` |
+| Kod | `modules/schedule/internal/courses.ts` · `ui/CourseAdmin.tsx` · `app/kurum/dersler/page.tsx`. `courseIdFor` / `syncCourses` yalnızca derse bağlanmamış eski program satırları için |
 
 ### Ders programı satırı (`ScheduleSlot`)
 | | |
 |---|---|
-| Oluşur | Yönetim → **Ders programı** → gün → "+ Ders ekle" (sınıf, öğretmen, ders adı, tür, gün, saat) |
+| Oluşur | Yönetim → **Ders programı** → gün → "+ Saat ekle" (sınıf, **ders listeden**, öğretmen ve tür dersten gelir, gün, saat). Ders listede yoksa Dersler'e bağlantı |
 | Düzenlenir / silinir | Aynı ekranda derse tıklayınca; silinince geçmiş yoklamalar korunur |
 | Kullanılır | Yoklama (günün dersleri), Öğretmenin "Bugün" ekranı, Eksik girişler, Takip |
 | Kim | Yönetici, etüt mesulü |
@@ -92,7 +91,7 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 ### Yoklama (`LessonSession`, `Attendance`)
 | | |
 |---|---|
-| Oluşur | Öğretmen: `/ogretmen` → derse dokun → yoklama. Yönetici: Giriş → **Yoklama** (ek ders / etüt dahil) |
+| Oluşur | Öğretmen: `/ogretmen` → derse dokun → yoklama. Yönetici: Giriş → **Yoklama** (programdaki dersler; "Ek ders ekle" ile sınıfın derslerinden biri için ek ders / etüt) |
 | Kim | Öğretmen (kendi dersi), etüt mesulü, yönetici |
 | Kod | `modules/schedule/internal/attendance.ts` |
 
@@ -124,7 +123,7 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 | Kim | Plan: yönetici, etüt mesulü. İşaret: öğretmen de |
 | Kod | `modules/planning/internal/lessonPlans.ts` · `weeklyImport.ts` |
 
-⚠ Derse ad ile bağlı (serbest metin, öneri listeli).
+Derse ad ile bağlı; formda ad sınıfın derslerinden seçilir. Haftalık plan içe aktarmada (CSV) ad tutmazsa uyarı verilir, kayıt yine yapılır.
 
 ### Puan cetveli (`Rubric`)
 | | |
@@ -150,7 +149,7 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 | Kim | Öğretmen (kendi dersi), etüt mesulü, yönetici |
 | Kod | `modules/homework/` |
 
-⚠ Derse ad ile bağlı (serbest metin).
+Derse ad ile bağlı; formda ad sınıfın derslerinden seçilir (öğretmen ekranında dersin kendisi).
 
 ### Deneme / sınav (`Exam`, `ExamResult`)
 | | |
@@ -194,10 +193,10 @@ Araçlar
 Yönetim
   Öğrenciler              /kurum/ogrenciler      Sekmeler: Liste · Tek tek ekle · Excel'den yükle   ⚠ U7
   Sınıflar                /kurum/siniflar        Tablo (telefonda liste); + Yeni sınıf → yan panel
-    └ Sınıf sayfası       /kurum/siniflar/[id]   Etüt mesulü, Dersler (+ Ders ekle ⚠), Öğrenciler
-  Dersler                 /kurum/dersler         Sınıf seç → dersler (+ Ders ekle)
+    └ Sınıf sayfası       /kurum/siniflar/[id]   Etüt mesulü, Dersler (salt okunur → Dersler), Öğrenciler
+  Dersler                 /kurum/dersler         Bütün dersler tek tablo, sınıf süzgeci; + Ders ekle / düzenle → yan panel
   Öğretmenler             /kurum/ogretmenler     Tablo (telefonda liste) + sağda Öğretmen ekle formu, giriş linki   ⚠ U12
-  Ders programı           /kurum/ders-programi   Çakışma listesi; sınıfa / öğretmene göre hafta; + Ders ekle   ⚠ U3
+  Ders programı           /kurum/ders-programi   Çakışma listesi; sınıfa / öğretmene göre hafta; + Saat ekle (ders listeden)
   Takvim ve planlar       /kurum/takvim          Takvim, yıllık ders planı, haftalık plan içe aktarma
   Müfredat                /kurum/mufredat        Ders × düzey konu listeleri, takip                  ⚠ U1
   Puan cetvelleri         /kurum/puan-cetvelleri

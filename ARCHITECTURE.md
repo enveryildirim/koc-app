@@ -75,7 +75,9 @@ modules/<m>/
 ## Ders, sınıf üyeliği ve etüt mesulü
 
 - **Ders (`Course`, schedule):** sınıfın dersi; (classroomId, name) tektir. Türü (`kind`): okul, mesleki, dini, hazırlık, etüt. Tür yalnızca varsayılanları belirler. `external` = başka kurumda alınan ders (bilgisini sorumlusu, genelde etüt mesulü girer).
-- **Programla bağ:** program satırı eklenince/değişince `courseIdFor` aynı adlı dersi bulur ya da oluşturur (tür addan tahmin edilir: `guessCourseKind`). Eski satırlar `syncCourses` ile bağlanır (sınıf sayfası açılırken). Ders yeniden adlandırılırsa program satırlarının adı da değişir; geçmiş yoklama oturumları değişmez.
+- **Ders tek yerde açılır:** yalnızca `createCourse` (Yönetim → Dersler). Program satırı ve ek ders var olan derse bağlanır: `parseSlot` dersi `courseId` (ya da var olan ad) ile çözer, yoksa 400. Ödev ve yıllık plan dersi ad ile taşır; formlar adı sınıfın derslerinden seçtirir. Ürün tarafındaki harita: `KROKI.md`.
+- **Programla bağ:** derse bağlanmamış eski program satırları `syncCourses` → `courseIdFor` ile bağlanır (gerekirse ders açılır; tür addan: `guessCourseKind`). Ders yeniden adlandırılırsa program satırlarının adı da değişir; geçmiş yoklama oturumları değişmez.
+- **Program çakışması** (`schedule/internal/clashes.ts`): kesin çakışma 409; uyarı 409 + `{ confirm: true }` (`shared/errors > needsConfirm`), istemci onaylayıp `confirm: true` ile yeniden gönderir.
 - **Ana sınıf ve ek üyelik (enrollment):** `Student.classroomId` ana sınıftır; mevcut özellikler (deneme, karne, skor) buna bakar. `ClassMember` ek sınıflardır. Bir sınıfın bütün öğrencileri `listStudents({ inClass })`; yoklama bunu kullanır.
 - **Etüt mesulü:** `Teacher.role = MENTOR`; sınıfa `Classroom.mentorId` ile bağlanır. Classroom enrollment'ındır ama Teacher schedule'ındır; bu yüzden öğretmenin etüt mesulü olduğu route'ta (`schedule > findTeacher`) doğrulanır, sonra `enrollment > setClassroomMentor` yazar.
 

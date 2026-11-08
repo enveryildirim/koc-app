@@ -6,11 +6,12 @@ import type { CourseRow } from "../types";
 
 /*
  * Ders (Course): sınıfın dersi. (classroomId, name) tektir.
- * Program satırı eklenince ya da değişince ders kendiliğinden bulunur / oluşturulur (`courseIdFor`).
- * Ödev ve yıllık plan bugün (sınıf, ders adı) taşır; derse ad üzerinden eşlenir.
+ * Ders yalnızca Yönetim → Dersler'de açılır (`createCourse`). Program satırı ve ek ders var olan derse bağlanır (`parseSlot`).
+ * `courseIdFor` yalnızca derse bağlanmamış eski program satırları içindir (`syncCourses`).
+ * Ödev ve yıllık plan bugün (sınıf, ders adı) taşır; formlarda ad sınıfın derslerinden seçilir.
  */
 
-/** Sınıf + ders adına karşılık gelen dersin kimliği; yoksa ders oluşturulur (türü addan tahmin edilir). */
+/** Eski veriler için: sınıf + ders adına karşılık gelen dersin kimliği; yoksa ders oluşturulur (türü addan tahmin edilir). */
 export async function courseIdFor(ownerId: string, s: { classroomId: string; subject: string; lessonType: string; teacherId: string }) {
   const found = await prisma.course.findUnique({ where: { classroomId_name: { classroomId: s.classroomId, name: s.subject } } });
   if (found) return found.id;
@@ -59,6 +60,7 @@ export async function listCourses(ownerId: string, f: CourseFilter = {}): Promis
     teacherId: c.teacherId,
     teacherName: c.teacher?.name ?? null,
     external: c.external,
+    createdAt: c.createdAt.toISOString(),
     slotCount: c.slots.length,
     weeklyMinutes: c.slots.reduce((s, x) => s + minutes(x.startTime, x.endTime), 0),
   }));
