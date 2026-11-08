@@ -167,6 +167,10 @@ Ders **yalnızca** Yönetim → Dersler'de açılır. **+ Ders ekle** → yan pa
 - [ ] Türü "Etüt" olan bir ders seçince Tür kendiliğinden "Etüt" olur.
 - [ ] **Çok gün:** "+ Saat ekle" → tıklanan gün seçili gelir; "Günler"den 2 gün daha seçin → düğme "3 güne kaydet" → aynı saat üç güne eklenir. Her gün ayrı düzenlenir (düzenlemede tek gün).
 - [ ] Seçilen günlerden birinde çakışma olsun → "Çakışma: … Pazartesi …" ve **hiçbir gün** kaydedilmez.
+- [ ] **Düzenleme:** çok güne eklenmiş bir ders saatine tıklayın → o dersin aynı saatteki bütün günleri seçili gelir, "Bu ders saati Pzt, Çar günlerinde var" yazar.
+  - Saati değiştirip kaydedin → bütün günlerde değişir.
+  - Bir gün ekleyin → o güne de eklenir. Bir günü çıkarın → "Silinecek: …" uyarısı, kaydedince o gün silinir.
+  - "Çar gününü sil" → yalnızca açtığınız gün silinir, öbürleri kalır.
 - [ ] Aynı dersi aynı saate ikinci kez ekleyin → "Çakışma: … programda zaten var." Kaydedilmez.
 - [ ] Aynı sınıfa aynı saatte başka bir grup dersi ekleyin → "Çakışma: 9-A sınıfında … var." Kaydedilmez.
 - [ ] Aynı öğretmeni aynı saatte başka sınıfa koyun → "Çakışma: Deniz Aksoy … dersinde." Kaydedilmez.

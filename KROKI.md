@@ -81,7 +81,7 @@ Sınıfın dersidir; (sınıf, ad) tektir. Türü: Okul · Mesleki · Dini · Ha
 | | |
 |---|---|
 | Oluşur | Yönetim → **Ders programı** → gün → "+ Saat ekle" (sınıf, **ders listeden**, öğretmen ve tür dersten gelir, **günler çoklu seçilir**, saat). Aynı saat seçilen her güne ayrı satır olarak eklenir; bir günde çakışma varsa hiçbiri kaydedilmez. Ders listede yoksa Dersler'e bağlantı |
-| Düzenlenir / silinir | Aynı ekranda derse tıklayınca; silinince geçmiş yoklamalar korunur |
+| Düzenlenir / silinir | Aynı ekranda derse tıklayınca. Günler, aynı dersin aynı saatte başka günlerdeki satırlarıyla (seri) birlikte gelir: değişiklik seçili günlerin hepsine uygulanır, gün eklemek satır açar, gün çıkarmak o günü siler (uyarıyla). "Sil" yalnızca açılan günü siler. Silinince geçmiş yoklamalar korunur |
 | Kullanılır | Yoklama (günün dersleri), Öğretmenin "Bugün" ekranı, Eksik girişler, Takip |
 | Kim | Yönetici, etüt mesulü |
 | Kod | `modules/schedule/internal/slots.ts` · `validate.ts` · `ui/ScheduleBoard.tsx` |

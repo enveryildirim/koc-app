@@ -5,8 +5,20 @@ import { useRouter } from "next/navigation";
 import { DAYS, DAYS_SHORT, LESSON_TYPES, teacherSub } from "@/modules/schedule";
 import { Opt, SlotRow, TYPE_STYLE } from "../types";
 
-/** `days`: yeni ders saatinde seçilen günler (aynı saat her birine eklenir); düzenlemede tek gün (`dayOfWeek`). */
-type Draft = Omit<SlotRow, "id" | "classroomName" | "teacherName"> & { id?: string; days?: number[] };
+/**
+ * `days`: seçili günler. Yenide aynı saat her güne eklenir. Düzenlemede açılan satırın serisinin günleriyle başlar
+ * (`seriesDays`); değişiklik seçili günlerin hepsine uygulanır, seçimden çıkan günlerin satırı silinir.
+ */
+type Draft = Omit<SlotRow, "id" | "classroomName" | "teacherName"> & { id?: string; days?: number[]; seriesDays?: number[] };
+
+/** Aynı dersin başka günlerdeki aynı saati mi (sınıf, ders, öğretmen, tür, saat aynı). Sunucudaki `slotSeries` ile aynı kural. */
+const sameSeries = (a: SlotRow, b: SlotRow) =>
+  a.classroomId === b.classroomId &&
+  a.teacherId === b.teacherId &&
+  a.lessonType === b.lessonType &&
+  a.startTime === b.startTime &&
+  a.endTime === b.endTime &&
+  (a.courseId ? a.courseId === b.courseId : a.subject === b.subject);
 /** Sınıfın dersi: programa yalnızca bunlardan biri eklenir (ders Yönetim → Dersler'de açılır). */
 type CourseOpt = { id: string; classroomId: string; name: string; kind: string; teacherId: string | null };
 
@@ -79,7 +91,7 @@ export default function ScheduleBoard({
     const res = await fetch(draft.id ? `/api/kurum/program/${draft.id}` : "/api/kurum/program", {
       method: draft.id ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft.id ? { ...draft, confirm } : { ...draft, dayOfWeeks: draft.days ?? [draft.dayOfWeek], confirm }),
+      body: JSON.stringify({ ...draft, dayOfWeeks: draft.days ?? [draft.dayOfWeek], confirm }),
     });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
@@ -89,14 +101,18 @@ export default function ScheduleBoard({
     router.refresh();
   }
 
+  /** Yalnızca açılan günün ders saatini siler (serinin öbür günleri kalır). */
   async function remove() {
-    if (!draft?.id || !confirm("Bu ders saati programdan silinsin mi? Ders ve geçmiş yoklamalar korunur.")) return;
+    if (!draft?.id || !confirm(`${DAYS[draft.dayOfWeek]} günündeki bu ders saati programdan silinsin mi? Ders ve geçmiş yoklamalar korunur.`)) return;
     setBusy(true);
     await fetch(`/api/kurum/program/${draft.id}`, { method: "DELETE" });
     setBusy(false);
     setDraft(null);
     router.refresh();
   }
+
+  /** Düzenlemede seçimden çıkarılan (kaydedince silinecek) günler */
+  const removedDays = draft?.id ? (draft.seriesDays ?? []).filter((d) => !draft.days?.includes(d)) : [];
 
   const set = (p: Partial<Draft>) => {
     setWarn("");
@@ -121,7 +137,8 @@ export default function ScheduleBoard({
                     onClick={() => {
                       setError("");
                       setWarn("");
-                      setDraft({ ...s });
+                      const seriesDays = [...new Set(slots.filter((x) => sameSeries(x, s)).map((x) => x.dayOfWeek))].sort((a, b) => a - b);
+                      setDraft({ ...s, days: seriesDays, seriesDays });
                     }}
                     className={`w-full rounded-lg border px-2.5 py-2 text-left text-xs transition hover:shadow ${TYPE_STYLE[s.lessonType] ?? TYPE_STYLE.GRUP} ${clash[s.id] === "hard" ? "ring-2 ring-red-500" : clash[s.id] === "soft" ? "ring-2 ring-amber-400" : ""}`}
                   >
@@ -200,8 +217,7 @@ export default function ScheduleBoard({
                   ))}
                 </select>
               </div>
-              {!draft.id && (
-                <fieldset className="col-span-2">
+              <fieldset className="col-span-2">
                   <legend className="label">Günler</legend>
                   <div className="flex flex-wrap gap-1.5">
                     {[1, 2, 3, 4, 5, 6, 7].map((d) => {
@@ -219,10 +235,20 @@ export default function ScheduleBoard({
                       );
                     })}
                   </div>
-                  <p className="mt-1 text-[12.5px] text-lead">Aynı saat seçilen her güne eklenir; her gün ayrı düzenlenebilir.</p>
-                </fieldset>
-              )}
-              <div className={draft.id ? "" : "col-span-2"}>
+                  <p className="mt-1 text-[12.5px] text-lead">
+                    {draft.id
+                      ? (draft.seriesDays?.length ?? 0) > 1
+                        ? `Bu ders saati ${draft.seriesDays!.map((d) => DAYS_SHORT[d]).join(", ")} günlerinde var; değişiklik seçili günlerin hepsine uygulanır.`
+                        : "Başka gün seçerseniz aynı saat o güne de eklenir."
+                      : "Aynı saat seçilen her güne eklenir."}
+                  </p>
+                  {removedDays.length > 0 && (
+                    <p className="mt-1 text-[12.5px] font-medium text-amber-700">
+                      Silinecek: {removedDays.map((d) => DAYS[d]).join(", ")} (seçimden çıkardınız).
+                    </p>
+                  )}
+              </fieldset>
+              <div className="col-span-2">
                 <label className="label">Tür</label>
                 <select className="input" value={draft.lessonType} onChange={(e) => set({ lessonType: e.target.value })}>
                   {Object.entries(LESSON_TYPES).map(([k, v]) => (
@@ -230,16 +256,6 @@ export default function ScheduleBoard({
                   ))}
                 </select>
               </div>
-              {draft.id && (
-                <div>
-                  <label className="label">Gün</label>
-                  <select className="input" value={draft.dayOfWeek} onChange={(e) => set({ dayOfWeek: Number(e.target.value) })}>
-                    {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                      <option key={d} value={d}>{DAYS[d]}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div>
                 <label className="label">Başlangıç</label>
                 <input type="time" className="input" value={draft.startTime} onChange={(e) => set({ startTime: e.target.value })} />
@@ -258,11 +274,13 @@ export default function ScheduleBoard({
             )}
             <div className="mt-5 flex items-center gap-2">
               {draft.id && (
-                <button className="btn-danger" disabled={busy} onClick={remove}>Sil</button>
+                <button className="btn-danger" disabled={busy} onClick={remove}>
+                  {(draft.seriesDays?.length ?? 0) > 1 ? `${DAYS_SHORT[draft.dayOfWeek]} gününü sil` : "Sil"}
+                </button>
               )}
               <button className="btn-secondary ml-auto" onClick={() => setDraft(null)}>Vazgeç</button>
-              <button className="btn-primary" disabled={busy || !teachers.length || !draft.courseId || (!draft.id && !draft.days?.length)} onClick={() => save()}>
-                {busy ? "Kaydediliyor…" : !draft.id && (draft.days?.length ?? 0) > 1 ? `${draft.days!.length} güne kaydet` : "Kaydet"}
+              <button className="btn-primary" disabled={busy || !teachers.length || !draft.courseId || !draft.days?.length} onClick={() => save()}>
+                {busy ? "Kaydediliyor…" : (draft.days?.length ?? 0) > 1 ? `${draft.days!.length} güne kaydet` : "Kaydet"}
               </button>
             </div>
             {!teachers.length && <p className="mt-2 text-xs text-amber-600">Önce menüdeki “Personel” sayfasından öğretmen ekleyin.</p>}

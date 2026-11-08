@@ -86,10 +86,10 @@ function listMessage({ kind, a, b, common }: Pair) {
 }
 
 /** Kaydedilecek dersin çakışma mesajları: kesin (`hard`) ve onayla geçilebilen (`soft`). */
-async function clashMessages(ownerId: string, s: SlotInput, selfId?: string) {
+async function clashMessages(ownerId: string, s: SlotInput, excludeIds: string[]) {
   const [others, cls, teacher, rosters] = await Promise.all([
     prisma.scheduleSlot.findMany({
-      where: { ownerId, dayOfWeek: s.dayOfWeek, ...(selfId ? { NOT: { id: selfId } } : {}) },
+      where: { ownerId, dayOfWeek: s.dayOfWeek, ...(excludeIds.length ? { id: { notIn: excludeIds } } : {}) },
       include: { classroom: { select: { name: true } }, teacher: { select: { name: true } } },
     }),
     prisma.classroom.findFirst({ where: { id: s.classroomId, ownerId }, select: { name: true } }),
@@ -105,9 +105,10 @@ async function clashMessages(ownerId: string, s: SlotInput, selfId?: string) {
  * Kaydedilecek ders(ler)in çakışmalarını denetler (birden çok gün tek seferde). Herhangi bir günde kesin çakışma varsa 409
  * ve hiçbiri kaydedilmez; yalnızca uyarı varsa ve `confirmed` değilse 409 + `{ confirm: true }` fırlatır
  * (istemci onay alıp `confirm: true` ile yeniden gönderir). Mesajlar günü içerir.
+ * `excludeIds`: yerine yazılacak (düzenlenen) satırlar; kendileriyle çakışmış sayılmaz.
  */
-export async function assertNoClash(ownerId: string, slots: SlotInput | SlotInput[], opts: { selfId?: string; confirmed?: boolean } = {}) {
-  const all = await Promise.all((Array.isArray(slots) ? slots : [slots]).map((s) => clashMessages(ownerId, s, opts.selfId)));
+export async function assertNoClash(ownerId: string, slots: SlotInput | SlotInput[], opts: { excludeIds?: string[]; confirmed?: boolean } = {}) {
+  const all = await Promise.all((Array.isArray(slots) ? slots : [slots]).map((s) => clashMessages(ownerId, s, opts.excludeIds ?? [])));
   const hard = [...new Set(all.flatMap((m) => m.hard))];
   const soft = [...new Set(all.flatMap((m) => m.soft))];
   if (hard.length) throw conflict(`Çakışma: ${hard.join(" ")}`);
