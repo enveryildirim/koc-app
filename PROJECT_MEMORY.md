@@ -419,6 +419,16 @@ PoC 1. adımı (temel) yapıldı:
 - **Sınırlar:** bir konu en fazla 20 hafta sürebilir (plan metni sınırı); plan yılı başlangıç tarihinden (`schoolYearOf`, Eylül–Ağustos) belirlenir. Ağustos'ta başlayan bir tablo (ör. 9. sınıflar) önceki eğitim yılına düşer.
 - **Doğrulama:** örnek CSV: 13 hafta, 2 izin, 5 ders; SEVİYE-2'ye ilk kayıtta Tecvid planı var olduğu için atlandı, 4 plan + 2 tatil oluştu; "yeniden yaz" ile 5 plan güncellendi; Tecvid "Medd-i lâzım" 23 Kasım'a düştü (9 Kasım izni atlandı), tablodakiyle aynı; boş sınıf / olmayan sınıf 400, girişsiz 401. `tsc`, `lint`, `build` temiz. Demo veri sonra yeniden yüklendi.
 
+## 4p. Uç değerleri ayır (8 Kasım 2026)
+
+- **Karar:** uç değerler silinmez, yalnızca ortalamadan ayrılır ve "Uç değerler" kutusunda ayrıca listelenir (ekstrem durumlar takip edilsin). Düğme varsayılan kapalı; adreste `uc=1`, sekmeler arasında korunur.
+- **Yöntem:** `shared/stats.ts`: kutu grafiği kuralı (Tukey, 1,5 × IQR, Excel ÇEYREK.DAHİL ile aynı çeyrek). 8 kişiden az grupta ya da IQR = 0 ise tespit yok. Standart sapma kuralı küçük sınıflarda uç değeri gizlediği için seçilmedi.
+- **Nerede:** deneme → Sınıf ortalamaları (her sınıf kendi içinde, kurum geneli kurum içinde), Sıralı liste (seçili grup; sıra ve yüzdelik dilim değişmez, satırda "uç ↓/↑"), Analiz → Sınıf gelişimi (her sınıf × deneme hücresi kendi içinde). Uygulanmayan yerler: öğrenci karnesi, veli karnesi, sıra, yüzdelik, yoklama.
+- **Arayüz:** `shared/ui/Outliers.tsx` (`OutlierToggle`, `OutlierBox`, `withOutliers`). `examReport` her gruba `trimmed`, `low`, `high`, `fences` ekler; `classProgress(…, trim)` hücreye `removed` ekler.
+- **Demo:** seed'de TYT Deneme 2'ye giren ilk öğrenci A kitapçığını çözüp B işaretlemiş (−7 net). Uç değer olarak yakalanır; Sınıf gelişiminde 12-A düğme kapalıyken ▼ 3,42, açıkken ▲ 1,73.
+- **Sonraki adımlar (onaylı sıra):** 2) Takip → Sınıflar / Dersler ve dikkat listesine "uç değer" gerekçesi; 3) sözlü / yazılı ortalamaları ve madde analizi.
+- **Not:** `npm run build`, çalışan `next dev`'in `.next` klasörünü bozar; derlemeden sonra dev sunucusu `.next` silinip yeniden başlatılmalı.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

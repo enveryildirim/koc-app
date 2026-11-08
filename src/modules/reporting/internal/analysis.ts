@@ -1,5 +1,6 @@
 /** Analiz & Uyarılar merkezi için veri katmanı (sunucu). */
 import { prisma } from "@/shared/db";
+import { splitOutliers } from "@/shared/stats";
 import { subjectMatches } from "@/shared/subjects";
 import { ExamSection, parseSections, round2 } from "@/modules/exams";
 
@@ -17,7 +18,8 @@ export async function examTypesOf(ownerId: string) {
 
 /* =============================== 1. Sınıf gelişimi =============================== */
 
-export async function classProgress(ownerId: string, type: string, section: string) {
+/** `trim`: her hücrede (sınıf × deneme) uç değerler o grubun içinde ayrılır; `removed` kaç kişinin ayrıldığıdır. */
+export async function classProgress(ownerId: string, type: string, section: string, trim = false) {
   const exams = await prisma.exam.findMany({
     where: { ownerId, type, results: { some: {} } },
     orderBy: { date: "asc" },
@@ -45,8 +47,16 @@ export async function classProgress(ownerId: string, type: string, section: stri
   const classrooms = await prisma.classroom.findMany({ where: { ownerId, id: { in: [...classIds] } }, orderBy: { name: "asc" } });
 
   const cell = (list: (typeof exams)[number]["results"], e: (typeof exams)[number]) => {
-    const vals = list.map((r) => valueOf(e, r)).filter((v): v is number => v !== null);
-    return { net: mean(vals), score: mean(list.map((r) => r.score)), n: list.length };
+    if (!trim) {
+      const vals = list.map((r) => valueOf(e, r)).filter((v): v is number => v !== null);
+      return { net: mean(vals), score: mean(list.map((r) => r.score)), n: list.length, removed: 0 };
+    }
+    const withVal = list.flatMap((r) => {
+      const v = valueOf(e, r);
+      return v === null ? [] : [{ v, score: r.score }];
+    });
+    const s = splitOutliers(withVal, (x) => x.v);
+    return { net: mean(s.kept.map((x) => x.v)), score: mean(s.kept.map((x) => x.score)), n: list.length, removed: s.low.length + s.high.length };
   };
 
   const rows = classrooms.map((c) => ({

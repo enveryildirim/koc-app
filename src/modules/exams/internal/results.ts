@@ -1,3 +1,4 @@
+import { splitOutliers } from "@/shared/stats";
 import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { listStudents, studentNoMatcher } from "@/modules/enrollment/server";
@@ -118,8 +119,15 @@ export async function examReport(ownerId: string, examId: string) {
     total: mean(list.map((r) => r.totalNet)),
     score: mean(list.map((r) => r.score)),
   });
-  const classAvg = new Map([...byClass.entries()].map(([k, list]) => [k, { name: list[0].className, size: list.length, ...avg(list) }]));
-  return { exam, secs, scoring, maxScore: maxScore(secs, scoring), rows, general: avg(rows), classAvg };
+  // Uç değerler (toplam nete göre) her grubun kendi içinde ayrılır: sınıf satırı sınıfa, kurum geneli kuruma göre.
+  // Sıra ve yüzdelik dilim değişmez; yalnızca ortalamalar için "ayrılmış" bir ikinci hesap tutulur.
+  const summary = (list: typeof rows) => {
+    const s = splitOutliers(list, (r) => r.totalNet);
+    const pick = (x: typeof rows) => x.map((r) => ({ id: r.id, name: r.name, className: r.className, totalNet: r.totalNet }));
+    return { ...avg(list), trimmed: s.fences ? avg(s.kept) : null, low: pick(s.low), high: pick(s.high), fences: s.fences };
+  };
+  const classAvg = new Map([...byClass.entries()].map(([k, list]) => [k, { name: list[0].className, size: list.length, ...summary(list) }]));
+  return { exam, secs, scoring, maxScore: maxScore(secs, scoring), rows, general: summary(rows), classAvg };
 }
 
 export type ExamReport = NonNullable<Awaited<ReturnType<typeof examReport>>>;

@@ -20,10 +20,12 @@ import OmrScanner from "@/shared/omr/OmrScanner";
 import FormSvg from "@/shared/omr/FormSvg";
 import PrintButton from "@/shared/ui/PrintButton";
 import ExportButton from "@/shared/ui/ExportButton";
+import { OutlierBox, OutlierToggle, withOutliers, type OutlierItem } from "@/shared/ui/Outliers";
+import { outliersOn } from "@/shared/stats";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ tab?: string; sinif?: string; kitapcik?: string }>;
+type SP = Promise<{ tab?: string; sinif?: string; kitapcik?: string; uc?: string }>;
 
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const ownerId = await requireOwner();
@@ -36,6 +38,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const worksheet = exam.purpose === "WORKSHEET";
   const tab = worksheet ? "anahtar" : (sp.tab ?? (keyed ? "sonuclar" : "anahtar"));
   const base = `/kurum/denemeler/${id}`;
+  // "Uç değerleri ayır" sekmeler arasında açık kalır
+  const uc = outliersOn(sp.uc);
   const allTabs = [
     { key: "sonuclar", label: "Sıralı liste", href: `${base}?tab=sonuclar` },
     { key: "anahtar", label: "Cevap anahtarı", href: `${base}?tab=anahtar` },
@@ -48,7 +52,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     { key: "girmeyenler", label: "Girmeyenler", href: `${base}?tab=girmeyenler` },
   ];
   // Çalışma kağıdı puanlanmaz: yalnızca cevap anahtarı (isteğe bağlı) ve kitapçık
-  const tabs = worksheet ? allTabs.filter((t) => t.key === "anahtar") : allTabs;
+  const tabs = (worksheet ? allTabs.filter((t) => t.key === "anahtar") : allTabs).map((t) => ({ ...t, href: withOutliers(t.href, uc) }));
   const courses = await listCourses(ownerId);
   const fileBase = exam.name;
   const header = (
@@ -481,11 +485,31 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   /* ----------------------------- Sınıf ortalamaları ---------------------------- */
   if (tab === "siniflar") {
-    const list = [...report.classAvg.values()].sort((a, b) => b.total - a.total);
+    // Düğme açıkken her satır kendi grubunda uç değerleri ayrılmış ortalamayı gösterir (grup küçükse olduğu gibi)
+    type Avg = { sections: number[]; total: number; score: number };
+    const view = (c: Avg & { trimmed: Avg | null }): Avg => (uc && c.trimmed ? c.trimmed : c);
+    const removed = (c: { low: unknown[]; high: unknown[] }) => (uc ? c.low.length + c.high.length : 0);
+    const gen = view(report.general);
+    const list = [...report.classAvg.values()].sort((a, b) => view(b).total - view(a).total);
     const maxTotal = totalQuestions(exam.secs);
+    const outliers: OutlierItem[] = uc
+      ? list.flatMap((c) => [
+          ...c.low.map((o) => ({ key: o.id, name: o.name, sub: c.name, value: `${fmtNet(o.totalNet)} net`, dir: "low" as const, href: `${base}/karne/${o.id}` })),
+          ...c.high.map((o) => ({ key: o.id, name: o.name, sub: c.name, value: `${fmtNet(o.totalNet)} net`, dir: "high" as const, href: `${base}/karne/${o.id}` })),
+        ])
+      : [];
+    const small = list.filter((c) => !c.fences).map((c) => c.name);
     return (
       <>
         {header}
+        <div className="no-print mb-3 flex flex-wrap items-center gap-3">
+          <OutlierToggle on={uc} href={withOutliers(`${base}?tab=siniflar`, !uc)} />
+          {uc && (
+            <span className="text-[13px] text-lead">
+              Her sınıfın uç değerleri kendi içinde ayrıldı.{small.length ? ` ${small.join(", ")}: kişi sayısı az, ayrılmadı.` : ""}
+            </span>
+          )}
+        </div>
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-paper">
@@ -501,30 +525,45 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </tr>
             </thead>
             <tbody className="divide-y divide-rule/70">
-              {list.map((c) => (
-                <tr key={c.name}>
-                  <td className={`${td} font-semibold`}>{c.name}</td>
-                  <td className={`${td} text-right`}>{c.size}</td>
-                  {c.sections.map((v, i) => (
-                    <td key={i} className={`${td} text-right tabular-nums ${v < report.general.sections[i] ? "text-red-600" : "text-emerald-700"}`}>{fmtNet(v)}</td>
-                  ))}
-                  <td className={`${td} text-right font-bold tabular-nums`}>{fmtNet(c.total)}</td>
-                  <td className={`${td} text-right tabular-nums`}>{fmtNet(c.score)}</td>
-                  <td className={`${td} w-40`}>
-                    <div className="h-2 overflow-hidden rounded bg-mist">
-                      <div className="h-full bg-graphite" style={{ width: `${(c.total / maxTotal) * 100}%` }} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {list.map((c) => {
+                const v = view(c);
+                return (
+                  <tr key={c.name}>
+                    <td className={`${td} font-semibold`}>{c.name}</td>
+                    <td className={`${td} text-right`}>
+                      {c.size}
+                      {removed(c) > 0 && <div className="text-[11px] font-normal text-lead">{removed(c)} ayrıldı</div>}
+                    </td>
+                    {v.sections.map((x, i) => (
+                      <td key={i} className={`${td} text-right tabular-nums ${x < gen.sections[i] ? "text-red-600" : "text-emerald-700"}`}>{fmtNet(x)}</td>
+                    ))}
+                    <td className={`${td} text-right font-bold tabular-nums`}>
+                      {fmtNet(v.total)}
+                      {removed(c) > 0 && <div className="text-[11px] font-normal text-lead">hepsiyle {fmtNet(c.total)}</div>}
+                    </td>
+                    <td className={`${td} text-right tabular-nums`}>{fmtNet(v.score)}</td>
+                    <td className={`${td} w-40`}>
+                      <div className="h-2 overflow-hidden rounded bg-mist">
+                        <div className="h-full bg-graphite" style={{ width: `${(v.total / maxTotal) * 100}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               <tr className="border-t-2 border-graphite bg-paper font-semibold">
                 <td className={td}>Kurum geneli</td>
-                <td className={`${td} text-right`}>{report.general.n}</td>
-                {report.general.sections.map((v, i) => (
-                  <td key={i} className={`${td} text-right tabular-nums`}>{fmtNet(v)}</td>
+                <td className={`${td} text-right`}>
+                  {report.general.n}
+                  {removed(report.general) > 0 && <div className="text-[11px] font-normal text-lead">{removed(report.general)} ayrıldı</div>}
+                </td>
+                {gen.sections.map((x, i) => (
+                  <td key={i} className={`${td} text-right tabular-nums`}>{fmtNet(x)}</td>
                 ))}
-                <td className={`${td} text-right tabular-nums`}>{fmtNet(report.general.total)}</td>
-                <td className={`${td} text-right tabular-nums`}>{fmtNet(report.general.score)}</td>
+                <td className={`${td} text-right tabular-nums`}>
+                  {fmtNet(gen.total)}
+                  {removed(report.general) > 0 && <div className="text-[11px] font-normal text-lead">hepsiyle {fmtNet(report.general.total)}</div>}
+                </td>
+                <td className={`${td} text-right tabular-nums`}>{fmtNet(gen.score)}</td>
                 <td />
               </tr>
             </tbody>
@@ -533,31 +572,43 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-lead">Yeşil: kurum ortalamasının üstü · Kırmızı: altı · Puanlar tahminidir.</p>
           <ExportButton
-            fileName={`${fileBase} - sınıf ortalamaları`}
-            headers={["Sınıf", "Öğrenci", ...exam.secs.map((s) => `${s.name} net`), "Toplam net", "Ort. puan"]}
+            fileName={`${fileBase} - sınıf ortalamaları${uc ? " (uç değerler ayrıldı)" : ""}`}
+            headers={["Sınıf", "Öğrenci", ...(uc ? ["Ayrılan uç değer"] : []), ...exam.secs.map((s) => `${s.name} net`), "Toplam net", "Ort. puan"]}
             rows={[
-              ...list.map((c) => [c.name, c.size, ...c.sections, c.total, c.score]),
-              ["Kurum geneli", report.general.n, ...report.general.sections, report.general.total, report.general.score],
+              ...list.map((c) => [c.name, c.size, ...(uc ? [removed(c)] : []), ...view(c).sections, view(c).total, view(c).score]),
+              ["Kurum geneli", report.general.n, ...(uc ? [removed(report.general)] : []), ...gen.sections, gen.total, gen.score],
             ]}
           />
         </div>
+        <OutlierBox items={outliers} />
       </>
     );
   }
 
   /* -------------------------------- Sıralı liste ------------------------------- */
   const sel = sinif ? report.classAvg.get(sinif) : null;
+  // Uç değerler seçili grubun (sınıf ya da kurum) içinde; sıra ve yüzdelik dilim değişmez, yalnızca ortalamalar
+  const scope = sel ?? report.general;
+  const shown = uc && scope.trimmed ? scope.trimmed : scope;
+  const removedN = uc ? scope.low.length + scope.high.length : 0;
+  const mark = new Map<string, "low" | "high">(uc ? [...scope.low.map((o) => [o.id, "low"] as const), ...scope.high.map((o) => [o.id, "high"] as const)] : []);
+  const avgHint = !uc ? undefined : !scope.fences ? `${OUTLIER_NOTE_SMALL}` : removedN ? `${removedN} ayrıldı · hepsiyle ${fmtNet(scope.total)}` : "Uç değer yok";
+  const outliers: OutlierItem[] = [...mark.entries()].map(([rid, dir]) => {
+    const r = report.rows.find((x) => x.id === rid)!;
+    return { key: rid, name: r.name, sub: r.className, value: `${fmtNet(r.totalNet)} net`, dir, href: `${base}/karne/${rid}` };
+  });
   return (
     <>
       {header}
       <div className="no-print mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi label="Katılım" value={rows.length} />
-        <Kpi label="Ortalama net" value={fmtNet(sel ? sel.total : report.general.total)} />
-        <Kpi label="Ort. tahmini puan" value={fmtNet(sel ? sel.score : report.general.score)} hint={`En yüksek ${fmtNet(Math.max(...rows.map((r) => r.score)))}`} />
+        <Kpi label="Ortalama net" value={fmtNet(shown.total)} hint={avgHint} />
+        <Kpi label="Ort. tahmini puan" value={fmtNet(shown.score)} hint={`En yüksek ${fmtNet(Math.max(...rows.map((r) => r.score)))}`} />
         <Kpi label="Net aralığı" value={`${fmtNet(Math.min(...rows.map((r) => r.totalNet)))} – ${fmtNet(Math.max(...rows.map((r) => r.totalNet)))}`} />
       </div>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
-        <ClassFilter base={base} tab="sonuclar" classes={classes} sinif={sinif} />
+        <ClassFilter base={base} tab="sonuclar" classes={classes} sinif={sinif} extra={uc ? "&uc=1" : ""} />
+        <OutlierToggle on={uc} href={withOutliers(`${base}?tab=sonuclar${sinif ? `&sinif=${sinif}` : ""}`, !uc)} />
         <Link href={`${base}/karneler${sinif ? `?sinif=${sinif}` : ""}`} className="btn-secondary">Tüm karneleri yazdır</Link>
         <ExportButton
           fileName={`${fileBase} - sıralı liste`}
@@ -611,6 +662,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <td className={`${td} num`}>{r.studentNo}</td>
                 <td className={td}>
                   <Link href={`${base}/karne/${r.id}`} className="font-medium hover:text-brand-600">{r.name}</Link>
+                  {mark.has(r.id) && (
+                    <span className={`no-print ml-1.5 whitespace-nowrap text-[11px] font-semibold ${mark.get(r.id) === "low" ? "text-red-600" : "text-emerald-700"}`} title="Uç değer: ortalamaya katılmadı">
+                      {mark.get(r.id) === "low" ? "uç ↓" : "uç ↑"}
+                    </span>
+                  )}
                 </td>
                 <td className={td}>{r.className}</td>
                 <td className={td}>{r.booklet}</td>
@@ -628,9 +684,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </tbody>
         </table>
       </div>
+      <div className="no-print">
+        <OutlierBox items={outliers} note={sel ? `Uç değerler ${sel.name} içinde hesaplandı.` : "Uç değerler kurumun tamamı içinde hesaplandı; sınıf seçerek sınıf içine bakabilirsiniz."} />
+      </div>
     </>
   );
 }
+
+const OUTLIER_NOTE_SMALL = "Grup küçük, uç değer ayrılmadı";
 
 function Sub() {
   return (

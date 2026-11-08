@@ -173,9 +173,14 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
     });
     const takers = classes.filter((c) => c.level === e.level).flatMap((c) => c.students);
     const rows = [];
+    // Uç değer demosu: TYT Deneme 2'de sınava giren ilk öğrenci A kitapçığını çözüp formda B işaretlemiş
+    // (gerçekte en sık görülen okuma hatası). Neti çok düşük çıkar; "Uç değerleri ayır" düğmesi onu ayırır.
+    let mixUp = e.name === "TYT Deneme 2";
     for (const st of takers) {
       if (Math.random() < 0.06) continue; // sınava girmeyen
-      const booklet = Math.random() < 0.5 ? "A" : "B";
+      const marked = mixUp ? "B" : Math.random() < 0.5 ? "A" : "B";
+      const booklet = mixUp ? "A" : marked; // öğrencinin gerçekte çözdüğü kitapçık
+      mixUp = false;
       let answers = "";
       for (const [si, s] of sections.entries()) {
         const key = booklet === "B" ? truth[si].keyB : truth[si].keyA;
@@ -190,11 +195,11 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
           else answers += LETTERS[Math.floor(Math.random() * t.choices)];
         }
       }
-      const g = gradeExam(sections, answers, booklet, t.wrongPer, scoring);
+      const g = gradeExam(sections, answers, marked, t.wrongPer, scoring);
       rows.push({
         examId: exam.id,
         studentId: st.id,
-        booklet,
+        booklet: marked,
         answers,
         stats: JSON.stringify(g.stats),
         totalNet: g.totalNet,

@@ -12,11 +12,13 @@ import { planAlerts } from "@/modules/planning/server";
 import { ymd } from "@/shared/date";
 import ExportButton from "@/shared/ui/ExportButton";
 import PrintButton from "@/shared/ui/PrintButton";
+import { OutlierToggle } from "@/shared/ui/Outliers";
+import { outliersOn } from "@/shared/stats";
 import LineChart, { SERIES_COLORS } from "@/modules/reporting/ui/LineChart";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ tab?: string; tur?: string; ders?: string; sinif?: string; seviye?: string }>;
+type SP = Promise<{ tab?: string; tur?: string; ders?: string; sinif?: string; seviye?: string; uc?: string }>;
 
 const TABS = [
   { key: "gelisim", label: "Sınıf gelişimi" },
@@ -40,7 +42,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         actions={<PrintButton />}
       />
       <Tabs tabs={TABS.map((t) => ({ ...t, href: `/kurum/analiz?tab=${t.key}` }))} active={tab} />
-      {tab === "gelisim" && <Progress ownerId={ownerId} tur={sp.tur} ders={sp.ders ?? ""} />}
+      {tab === "gelisim" && <Progress ownerId={ownerId} tur={sp.tur} ders={sp.ders ?? ""} uc={outliersOn(sp.uc)} />}
       {tab === "skor" && <Score ownerId={ownerId} sinif={sp.sinif ?? ""} seviye={sp.seviye ?? ""} />}
       {tab === "ogretmen" && <Teachers ownerId={ownerId} />}
       {tab === "plan" && <PlanTab ownerId={ownerId} />}
@@ -50,13 +52,13 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
 /* ================================ Sınıf gelişimi ================================ */
 
-async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string; ders: string }) {
+async function Progress({ ownerId, tur, ders, uc }: { ownerId: string; tur?: string; ders: string; uc: boolean }) {
   const types = await examTypesOf(ownerId);
   if (!types.length) return <Empty>Henüz sonucu olan deneme yok.</Empty>;
   const type = tur && types.includes(tur) ? tur : types[0];
-  const p = await classProgress(ownerId, type, ders);
+  const p = await classProgress(ownerId, type, ders, uc);
   const href = (q: Record<string, string>) => {
-    const s = new URLSearchParams({ tab: "gelisim", tur: type, ...(p.section ? { ders: p.section } : {}), ...q });
+    const s = new URLSearchParams({ tab: "gelisim", tur: type, ...(p.section ? { ders: p.section } : {}), ...(uc ? { uc: "1" } : {}), ...q });
     for (const [k, v] of [...s.entries()]) if (!v) s.delete(k);
     return `/kurum/analiz?${s}`;
   };
@@ -90,9 +92,10 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
             </Link>
           ))}
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <OutlierToggle on={uc} href={href({ uc: uc ? "" : "1" })} />
           <ExportButton
-            fileName={`sinif_gelisimi_${type}${p.section ? "_" + p.section : ""}`}
+            fileName={`sinif_gelisimi_${type}${p.section ? "_" + p.section : ""}${uc ? "_uc_degerler_ayrildi" : ""}`}
             headers={["Sınıf", ...p.exams.map((e) => `${e.name} (${fmtDate(e.date)})`), ...(p.section ? [] : ["Son deneme ort. tahmini puan"])]}
             rows={exportRows}
           />
@@ -131,7 +134,14 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
                         <>
                           <b>{fmtNet(c.net)}</b>
                           <Delta now={c.net} prev={prevValue(vals, i)} />
-                          <div className="text-[10px] text-lead/70">{c.n} öğr.</div>
+                          <div className="text-[10px] text-lead/70">
+                            {c.n} öğr.
+                            {c.removed > 0 && (
+                              <Link href={`/kurum/denemeler/${p.exams[i].id}?tab=siniflar&uc=1`} className="ml-1 text-amber-700 hover:underline" title="Uç değerler ortalamaya katılmadı; kim olduklarını görmek için tıklayın">
+                                · {c.removed} ayrıldı
+                              </Link>
+                            )}
+                          </div>
                         </>
                       )}
                     </td>
@@ -147,6 +157,7 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
                 <td key={i} className={`${td} text-right tabular-nums`}>
                   {c.net === null ? "—" : fmtNet(c.net)}
                   {c.net !== null && <Delta now={c.net} prev={prevValue(p.total.map((x) => x.net), i)} />}
+                  {c.removed > 0 && <div className="text-[10px] font-normal text-amber-700">{c.removed} ayrıldı</div>}
                 </td>
               ))}
               <td className={`${td} text-right tabular-nums`}>
@@ -173,7 +184,8 @@ async function Progress({ ownerId, tur, ders }: { ownerId: string; tur?: string;
         />
       </div>
       <p className="text-xs text-lead">
-        Hücreler sınıfın o denemedeki ortalama netidir; ▲/▼ bir önceki denemeye göre değişim. Tahmini puan, deneme ayarlarındaki taban puan ve ders katsayılarıyla hesaplanır.
+        Hücreler sınıfın o denemedeki ortalama netidir; ▲/▼ bir önceki denemeye göre değişim.
+        {uc && " Uç değerler her sınıfın ve kurumun o denemesinde kendi içinde ayrıldı; 8 kişiden az grupta ayrılmaz."} Tahmini puan, deneme ayarlarındaki taban puan ve ders katsayılarıyla hesaplanır.
       </p>
     </div>
   );
