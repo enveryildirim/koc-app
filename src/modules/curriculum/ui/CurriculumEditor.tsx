@@ -111,7 +111,7 @@ export default function CurriculumEditor({
               <th className="px-2 py-1.5 font-semibold">Konu</th>
               <th className="w-28 px-2 py-1.5 font-semibold">Kazanım kodu</th>
               <th className="px-2 py-1.5 font-semibold">Kazanım</th>
-              <th className="w-16 px-2 py-1.5 font-semibold">Hafta</th>
+              <th className="w-16 px-2 py-1.5 font-semibold" title="Konunun kaç ders haftası süreceği (tarih değil). Tarihleri yıllık plan verir.">Süre (hf)</th>
               <th className="w-20 px-2 py-1.5" />
             </tr>
           </thead>
@@ -132,7 +132,7 @@ export default function CurriculumEditor({
                   <textarea rows={1} className="input min-h-8 px-2 py-1 text-xs" value={r.outcome} onChange={(e) => set(i, { outcome: e.target.value })} aria-label={`${i + 1}. satır kazanım`} />
                 </td>
                 <td className="px-1 py-1">
-                  <input type="number" min={1} max={20} className="input px-2 py-1 text-center" value={r.weeks} onChange={(e) => set(i, { weeks: Number(e.target.value) || 1 })} aria-label={`${i + 1}. satır hafta`} />
+                  <input type="number" min={1} max={20} className="input px-2 py-1 text-center" value={r.weeks} onChange={(e) => set(i, { weeks: Number(e.target.value) || 1 })} aria-label={`${i + 1}. satır süre (hafta)`} />
                 </td>
                 <td className="px-1 py-1.5 whitespace-nowrap text-xs text-lead">
                   <button onClick={() => move(i, -1)} disabled={i === 0} className="px-1 disabled:opacity-30" aria-label="Yukarı">↑</button>

@@ -252,7 +252,7 @@ async function SetView({ ownerId, subject, grade, tab, users, isCourse }: { owne
             <tr>
               <th className={`${th} w-24`}>Kod</th>
               <th className={th}>Konu</th>
-              <th className={`${th} text-right`}>Hafta</th>
+              <th className={`${th} text-right`} title="Konunun kaç ders haftası süreceği; tarihleri yıllık plan verir">Süre (hf)</th>
               <th className={`${th} w-36`}>Yıllık plan</th>
               <th className={`${th} w-28`}>Değerlendirme</th>
               <th className={`${th} text-right`}>Havuz</th>

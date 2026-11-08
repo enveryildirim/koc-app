@@ -114,7 +114,8 @@ export default function CurriculumImport({
       </div>
       <p className="mt-1 text-[13px] text-lead">
         Sütunlar: {CURRICULUM_COLUMNS.map((c) => (c.required ? <b key={c.key}>{c.label}</b> : c.label)).reduce<React.ReactNode[]>((a, x, i) => (i ? [...a, ", ", x] : [x]), [])}. Kalın
-        olanlar zorunlu; ders ve sınıf boşsa üstteki satırınki kullanılır. Bir dosyada birden çok ders ve sınıf olabilir.
+        olanlar zorunlu; ders ve sınıf boşsa üstteki satırınki kullanılır. Süre, konunun kaç ders haftası süreceğidir (tarih değil); boşsa 1 hafta
+        sayılır, tarihleri yıllık plan verir. Bir dosyada birden çok ders ve sınıf olabilir.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <label className="btn-secondary cursor-pointer">

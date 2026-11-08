@@ -88,7 +88,8 @@ export const CURRICULUM_COLUMNS: { key: Field; label: string; aliases: string[];
   { key: "topic", label: "Konu", aliases: ["konu", "konu adi", "alt konu"], required: true },
   { key: "code", label: "Kazanım kodu", aliases: ["kazanim kodu", "kod", "kazanim no"] },
   { key: "outcome", label: "Kazanım", aliases: ["kazanim", "kazanim aciklamasi", "aciklama"] },
-  { key: "weeks", label: "Hafta", aliases: ["hafta", "hafta sayisi", "sure", "sure hafta"] },
+  // Tarih değil süre: konunun kaç ders haftası süreceği. Boşsa 1; tarihleri yıllık plan verir.
+  { key: "weeks", label: "Süre (hafta)", aliases: ["hafta", "hafta sayisi", "sure", "sure hafta", "sure hafta sayisi"] },
 ];
 
 const normH = (s: string) =>
@@ -141,7 +142,7 @@ export function parseCurriculumTable(table: unknown[][]): { rows: CurriculumRow[
     const line = i + 2;
     if (!subject || !grade) return errors.push(`${line}. satır: ders ve sınıf gerekli.`);
     if (!topic) return errors.push(`${line}. satır: konu boş.`);
-    if (!Number.isInteger(weeks) || weeks < 1 || weeks > 20) return errors.push(`${line}. satır: hafta 1–20 arası tam sayı olmalı.`);
+    if (!Number.isInteger(weeks) || weeks < 1 || weeks > 20) return errors.push(`${line}. satır: süre 1–20 hafta arası tam sayı olmalı.`);
     rows.push({
       subject: subject.slice(0, 60),
       grade: grade.slice(0, 20),

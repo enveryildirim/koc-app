@@ -13,7 +13,7 @@ function cleanRow(r: Partial<CurriculumRow>, i: number): CurriculumRow {
   const weeks = Math.round(Number(r.weeks ?? 1));
   if (!subject || !grade) throw invalid(`${i + 1}. satır: ders ve sınıf gerekli.`);
   if (!topic) throw invalid(`${i + 1}. satır: konu boş.`);
-  if (!(weeks >= 1 && weeks <= 20)) throw invalid(`${i + 1}. satır: hafta 1–20 arası olmalı.`);
+  if (!(weeks >= 1 && weeks <= 20)) throw invalid(`${i + 1}. satır: süre 1–20 hafta arası olmalı.`);
   return { subject, grade, topic, weeks, unit: str(r.unit, 120), code: str(r.code, 40), outcome: str(r.outcome, 400) };
 }
 
