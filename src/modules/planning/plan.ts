@@ -62,41 +62,32 @@ export function isHolidayWeek(monday: string, holidays: Range[]) {
 
 /**
  * Konuları başlangıç haftasından itibaren sırayla ders haftalarına yerleştirir; tatil haftaları atlanır.
- * `+` ile başlayan konu önceki konunun haftalarını paylaşır.
- * `parallel`: her ünite başlangıç haftasından kendi sırasıyla ilerler (üniteler aynı haftalarda işlenir).
+ * `+` ile başlayan konu önceki konunun haftalarını paylaşır. Üniteler art arda işlenir.
  */
-export function layoutPlan(lines: PlanLine[], startDate: string, holidays: Range[], parallel = false): PlanSlot[] {
+export function layoutPlan(lines: PlanLine[], startDate: string, holidays: Range[]): PlanSlot[] {
   const slots: PlanSlot[] = [];
-  const start = mondayOf(startDate);
-  /** Sıradaki boş hafta: paralelde ünite başına, değilse tek sıra */
-  const nextOf = new Map<string, string>();
+  let next = mondayOf(startDate);
   const teachingWeek = (from: string) => {
     let w = from;
     for (let guard = 0; guard < 60 && isHolidayWeek(w, holidays); guard++) w = addDays(w, 7);
     return w;
   };
   lines.forEach((l, order) => {
-    const lane = parallel ? l.unit : "";
-    if (l.sameWeek) {
-      const prev = [...slots].reverse().find((s) => s.unit === l.unit) ?? slots[slots.length - 1];
-      if (prev) {
-        slots.push({ order, topic: l.topic, unit: l.unit, week: prev.week, endWeek: prev.endWeek });
-        return;
-      }
+    const prev = slots[slots.length - 1];
+    if (l.sameWeek && prev) {
+      slots.push({ order, topic: l.topic, unit: l.unit, week: prev.week, endWeek: prev.endWeek });
+      return;
     }
-    const week = teachingWeek(nextOf.get(lane) ?? start);
+    const week = teachingWeek(next);
     let end = week;
     for (let k = 1; k < l.weeks; k++) end = teachingWeek(addDays(end, 7));
     slots.push({ order, topic: l.topic, unit: l.unit, week, endWeek: end });
-    nextOf.set(lane, addDays(end, 7));
+    next = addDays(end, 7);
   });
   return slots;
 }
 
-/** Plan metninde ünite başlığı var mı (paralel seçeneği yalnızca o zaman anlamlı). */
-export const planUnits = (lines: PlanLine[]) => [...new Set(lines.map((l) => l.unit))].filter(Boolean);
-
-/** Plan satırları hafta sırasıyla (paralel planlarda üniteler aynı haftada yan yana gelir). */
+/** Plan satırları hafta sırasıyla. */
 export const byWeek = <T extends { week: string; order: number }>(items: T[]) =>
   [...items].sort((a, b) => a.week.localeCompare(b.week) || a.order - b.order);
 

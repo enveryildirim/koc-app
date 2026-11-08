@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { schoolYearLabel, schoolYearRange } from "../calendar";
-import { isHolidayWeek, layoutPlan, mondayOf, parsePlan, PLAN_HELP, planUnits, type Range } from "../plan";
+import { isHolidayWeek, layoutPlan, mondayOf, parsePlan, PLAN_HELP, type Range } from "../plan";
 import { addDays } from "@/shared/date";
 import { subjectMatches } from "@/shared/subjects";
 
@@ -15,9 +15,9 @@ type Props = {
   classrooms: { id: string; name: string }[];
   subjectsByClass: Record<string, string[]>;
   /** Sınıfın düzeyine uyan müfredat setlerinden hazır plan metinleri (müfredat ekranından). */
-  templatesByClass?: Record<string, { subject: string; grade: string; topics: number; source: string; units: number; weeks: number }[]>;
+  templatesByClass?: Record<string, { subject: string; grade: string; topics: number; source: string }[]>;
   holidays: Holiday[];
-  initial: { classroomId: string; subject: string; startDate: string; source: string; parallel?: boolean };
+  initial: { classroomId: string; subject: string; startDate: string; source: string };
 };
 
 const fmt = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
@@ -37,7 +37,7 @@ export default function PlanEditor(p: Props) {
     const opts = optionsFor(classroomId);
     return opts.find((s) => s === wanted) ?? opts.find((s) => subjectMatches(s, wanted)) ?? opts[0] ?? "";
   };
-  const [f, setF] = useState(() => ({ ...p.initial, parallel: !!p.initial.parallel, subject: pickSubject(p.initial.classroomId, p.initial.subject) }));
+  const [f, setF] = useState(() => ({ ...p.initial, subject: pickSubject(p.initial.classroomId, p.initial.subject) }));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (x: Partial<typeof f>) => setF({ ...f, ...x });
@@ -45,9 +45,7 @@ export default function PlanEditor(p: Props) {
 
   const holidays = useMemo(() => p.holidays.filter((h) => !h.classroomId || h.classroomId === f.classroomId), [p.holidays, f.classroomId]);
   const { lines, errors } = useMemo(() => parsePlan(f.source), [f.source]);
-  const units = useMemo(() => planUnits(lines), [lines]);
-  const parallel = f.parallel && units.length > 1;
-  const slots = useMemo(() => (f.startDate ? layoutPlan(lines, f.startDate, holidays, parallel) : []), [lines, f.startDate, holidays, parallel]);
+  const slots = useMemo(() => (f.startDate ? layoutPlan(lines, f.startDate, holidays) : []), [lines, f.startDate, holidays]);
   const last = slots.length ? slots[slots.length - 1].endWeek : null;
   const overflow = last !== null && addDays(last, 4) > range.to;
 
@@ -58,12 +56,12 @@ export default function PlanEditor(p: Props) {
     for (let w = mondayOf(f.startDate); w <= last!; w = addDays(w, 7)) {
       out.push({
         week: w,
-        topics: slots.filter((s) => s.week <= w && w <= s.endWeek).map((s) => (parallel && s.unit ? `${s.unit}: ${s.topic}` : s.topic)),
+        topics: slots.filter((s) => s.week <= w && w <= s.endWeek).map((s) => s.topic),
         holiday: isHolidayWeek(w, holidays),
       });
     }
     return out;
-  }, [slots, f.startDate, last, holidays, parallel]);
+  }, [slots, f.startDate, last, holidays]);
 
   async function save() {
     setBusy(true);
@@ -71,7 +69,7 @@ export default function PlanEditor(p: Props) {
     const res = await fetch(editing ? `/api/kurum/plan/${p.planId}` : "/api/kurum/plan", {
       method: editing ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...f, parallel, year: p.year }),
+      body: JSON.stringify({ ...f, year: p.year }),
     });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
@@ -86,8 +84,7 @@ export default function PlanEditor(p: Props) {
   const gradeName = (g: string) => (/^\d+$/.test(g) ? `${g}. sınıf` : g);
   function applyTemplate(t: (typeof allTemplates)[number]) {
     if (f.source.trim() && !confirm("Konu listesi müfredattaki konularla değiştirilsin mi?")) return;
-    // Ünitelerin toplamı bir eğitim yılına sığmıyorsa üniteler paralel işleniyordur (ör. Kur'ân · Tecvid · Ezber)
-    set({ source: t.source, subject: f.subject.trim() || t.subject, parallel: t.units > 1 && t.weeks > 40 });
+    set({ source: t.source, subject: f.subject.trim() || t.subject });
   }
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -148,17 +145,6 @@ export default function PlanEditor(p: Props) {
           />
           <p className="mt-1 text-xs text-lead">{PLAN_HELP} Excel&apos;den iki sütun (konu, hafta) kopyalayıp yapıştırabilirsiniz.</p>
         </div>
-        {units.length > 1 && (
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" className="mt-0.5 h-4 w-4" checked={f.parallel} onChange={(e) => set({ parallel: e.target.checked })} />
-            <span>
-              Üniteler aynı haftalarda paralel işlenir
-              <span className="block text-xs text-lead">
-                {units.length} ünite ({units.slice(0, 4).join(", ")}{units.length > 4 ? "…" : ""}) ilk haftadan başlayıp yan yana ilerler. İşaretsizse üniteler art arda işlenir.
-              </span>
-            </span>
-          </label>
-        )}
         {errors.length > 0 && (
           <ul className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
             {errors.slice(0, 5).map((e) => <li key={e}>{e}</li>)}

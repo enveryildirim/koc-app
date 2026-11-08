@@ -48,3 +48,4 @@ prisma/test.db*
 /storage/
 
 !.env.example
+/.next-*/

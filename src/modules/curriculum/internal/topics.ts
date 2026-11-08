@@ -142,7 +142,7 @@ export async function deleteCurriculumSet(ownerId: string, subject: unknown, gra
   return { deleted: r.count };
 }
 
-export type PlanTemplate = { subject: string; grade: string; topics: number; source: string; units: number; weeks: number };
+export type PlanTemplate = { subject: string; grade: string; topics: number; source: string };
 
 /**
  * Yıllık plan ekranı için: her sınıfa, düzeyine uyan müfredat setlerinden hazır plan metni.
@@ -160,8 +160,6 @@ export async function planTemplatesByClass(ownerId: string, classrooms: { id: st
     grade: l[0].grade,
     topics: l.length,
     source: planSourceOf(l),
-    units: new Set(l.map((r) => r.unit).filter(Boolean)).size,
-    weeks: l.reduce((a, r) => a + r.weeks, 0),
   }));
   return Object.fromEntries(
     classrooms.map((c) => [c.id, c.level ? templates.filter((t) => gradeScope(t.grade).levels.includes(c.level)) : templates]),

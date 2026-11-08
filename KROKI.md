@@ -128,7 +128,7 @@ Düzey seçenekleri: sınıf düzeyleri + 8 varsa LGS, 11 / 12 varsa TYT ve AYT 
 | Kod | `modules/planning/internal/lessonPlans.ts` · `weeklyImport.ts` · `plan.ts` (`parsePlan`, `layoutPlan`) · `reporting/internal/topicTracking.ts` + `reporting/ui/TopicTracking.tsx` |
 
 Derse ad ile bağlı; formda ad sınıfın derslerinden seçilir. Haftalık plan içe aktarmada (CSV) ad tutmazsa uyarı verilir, kayıt yine yapılır.
-Plan metninde `# Ünite` satırı ünite başlığıdır. "Üniteler paralel işlenir" (`LessonPlan.parallel`) seçiliyse her ünite ilk haftadan kendi sırasıyla ilerler (Kur'ân · Tecvid · Ezber tek derste). Her satır kaydedilirken sınıfın müfredat setine bağlanır (ünite + konu adı, şapka / büyük-küçük harf farkı gözetilmez); bağsız satır konu takibinde "müfredatta yok" görünür. Plan düzenlenince satırlar yerinde güncellenir; işlendi bilgisi, yoklama bağı ve konuya bağlı değerlendirmeler korunur.
+Plan metninde `# Ünite` satırı ünite başlığıdır; üniteler art arda işlenir (paralel ünite yok, bilinçli olarak basit tutuldu). Her satır kaydedilirken sınıfın müfredat setine bağlanır (ünite + konu adı, şapka / büyük-küçük harf farkı gözetilmez); bağsız satır konu takibinde "müfredatta yok" görünür. Plan düzenlenince satırlar yerinde güncellenir; işlendi bilgisi, yoklama bağı ve konuya bağlı değerlendirmeler korunur.
 
 ### Puan cetveli (`Rubric`)
 | | |

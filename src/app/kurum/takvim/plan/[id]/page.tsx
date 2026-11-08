@@ -34,7 +34,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           subjectsByClass={data.subjectsByClass}
           templatesByClass={await planTemplatesByClass(ownerId, data.classrooms)}
           holidays={data.holidays}
-          initial={{ classroomId: plan.classroomId, subject: plan.subject, startDate: plan.startDate, source: plan.source, parallel: plan.parallel }}
+          initial={{ classroomId: plan.classroomId, subject: plan.subject, startDate: plan.startDate, source: plan.source }}
         />
       </div>
     );
@@ -49,7 +49,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <PageHeader
         back={back}
         title={title}
-        sub={`${schoolYearLabel(plan.year)} · konu takibi${plan.parallel ? " · üniteler paralel" : ""}`}
+        sub={`${schoolYearLabel(plan.year)} · konu takibi`}
         actions={<PlanActions planId={plan.id} classrooms={others} />}
       />
       <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">

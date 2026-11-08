@@ -88,7 +88,7 @@ export async function planTopicTracking(ownerId: string, planId: string, today =
   });
 
   return {
-    plan: { id: plan.id, subject: plan.subject, year: plan.year, startDate: plan.startDate, parallel: plan.parallel, classroom: plan.classroom },
+    plan: { id: plan.id, subject: plan.subject, year: plan.year, startDate: plan.startDate, classroom: plan.classroom },
     holidays: plan.holidays,
     progress: planProgress(plan.items, today),
     linked: rows.filter((r) => r.curriculum).length,

@@ -371,8 +371,6 @@ model LessonPlan {
   startDate   String
   /// Yöneticinin girdiği metin (satır başına konu; "| n" hafta, "+" aynı hafta)
   source      String
-  /// Üniteler ("# Ünite" satırları) aynı haftalardan başlayıp paralel işlenir (ör. Kur'ân-ı Kerîm · Tecvid · Ezber)
-  parallel    Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   items       PlanItem[]

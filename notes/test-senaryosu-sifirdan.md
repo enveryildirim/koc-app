@@ -201,10 +201,10 @@ Ders **yalnızca** Yönetim → Dersler'de açılır. **+ Ders ekle** → yan pa
 - **Beklenen:** Konular haftalara dağıtılır, tatil haftası atlanır.
 - [ ] Müfredatı olmayan bir sınıf + ders seçin (ör. 9-A · Matematik).
 - **Beklenen:** Sarı not "Bu ders ve sınıf düzeyi için müfredat yok… Müfredat ekle".
-- [ ] Üniteli bir müfredattan doldurun (ör. `notes/Seviye-2 müfredat …xlsx` ile yüklenen Kuranı Kerim: Kur'ân · Tecvid · Ezber).
-- **Beklenen:** Metinde `# Ünite` satırları gelir; toplam yılı aştığı için "Üniteler aynı haftalarda paralel işlenir" kendiliğinden işaretlenir; önizlemede her hafta üç ünitenin konusu yan yana, ~45 ders haftası.
+- [ ] Üniteli bir müfredattan doldurun (ör. Kitabet · Seviye-2).
+- **Beklenen:** Metinde `# Ünite` satırları gelir; üniteler art arda dağıtılır. Toplam yılı aşarsa önizlemede "Plan eğitim yılının sonunu aşıyor" uyarısı.
 - [ ] Planı oluşturun → plan sayfası **Konu takibi** olarak açılır.
-- **Beklenen:** "Müfredata bağlı 105/105"; süzgeçler (Tümü / Gecikenler / İşlenmeyenler / İşlenenler) ve ünite seçimi; geçmiş haftalar "Gecikti", bu hafta vurgulu.
+- **Beklenen:** "Müfredata bağlı N/N"; süzgeçler (Tümü / Gecikenler / İşlenmeyenler / İşlenenler) ve ünite seçimi; geçmiş haftalar "Gecikti", bu hafta vurgulu.
 - [ ] Birkaç konuyu işaretleyin → **Düzenle** → bir konunun adını değiştirip kaydedin.
 - **Beklenen:** İşaretler kaybolmaz; adı değişen konu "müfredatta yok" rozeti alır.
 - [ ] Bir konuya bağlı sözlü değerlendirme açın (öğretmen ekranı → Sözlü/yazılı → konu seçerek).

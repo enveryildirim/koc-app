@@ -56,8 +56,8 @@ const newRows = (planId: string, slots: Slot[]) =>
   slots.map((s) => ({ planId, order: s.order, topic: s.topic, unit: s.unit, week: s.week, endWeek: s.endWeek, curriculumTopicId: s.curriculumTopicId }));
 
 /** Metin + başlangıç → bağlı satırlar. */
-async function buildSlots(ownerId: string, classroomId: string, subject: string, year: number, source: string, startDate: string, parallel: boolean) {
-  const slots = layoutPlan(parseSource(source), startDate, await holidayRanges(ownerId, classroomId, year), parallel);
+async function buildSlots(ownerId: string, classroomId: string, subject: string, year: number, source: string, startDate: string) {
+  const slots = layoutPlan(parseSource(source), startDate, await holidayRanges(ownerId, classroomId, year));
   return linkSlots(ownerId, classroomId, subject, slots);
 }
 
@@ -121,18 +121,17 @@ export async function createPlan(ownerId: string, body: Record<string, unknown>)
     throw invalid("Sınıf bulunamadı.");
   }
   checkStart(startDate, year);
-  const parallel = body.parallel === true;
-  const slots = await buildSlots(ownerId, classroomId, subject, year, source, startDate, parallel);
+  const slots = await buildSlots(ownerId, classroomId, subject, year, source, startDate);
   if (await prisma.lessonPlan.findUnique({ where: { ownerId_classroomId_subject_year: { ownerId, classroomId, subject, year } } })) {
     throw conflict("Bu sınıfın bu ders için bu yıla ait planı zaten var.");
   }
-  const plan = await prisma.lessonPlan.create({ data: { ownerId, classroomId, subject, year, startDate, source, parallel } });
+  const plan = await prisma.lessonPlan.create({ data: { ownerId, classroomId, subject, year, startDate, source } });
   await prisma.planItem.createMany({ data: newRows(plan.id, slots) });
   return plan;
 }
 
 /**
- * Metni, başlangıcı ya da paralel seçeneğini değiştirir; konular yeniden dağıtılır. Var olan satırlar yerinde
+ * Metni ya da başlangıcı değiştirir; konular yeniden dağıtılır. Var olan satırlar yerinde
  * güncellenir (aynı müfredat konusu, yoksa aynı ünite + konu adı, yoksa aynı konu adı), böylece "işlendi" bilgisi,
  * yoklama bağı ve konuya bağlı değerlendirmeler korunur. Karşılığı kalmayan satırlar silinir.
  */
@@ -140,9 +139,8 @@ export async function updatePlan(ownerId: string, id: string, body: Record<strin
   const plan = await ownedPlan(ownerId, id);
   const startDate = String(body.startDate ?? plan.startDate);
   const source = String(body.source ?? plan.source);
-  const parallel = typeof body.parallel === "boolean" ? body.parallel : plan.parallel;
   checkStart(startDate, plan.year);
-  const slots = await buildSlots(ownerId, plan.classroomId, plan.subject, plan.year, source, startDate, parallel);
+  const slots = await buildSlots(ownerId, plan.classroomId, plan.subject, plan.year, source, startDate);
 
   const left = [...plan.items].sort((a, b) => a.order - b.order);
   const take = (test: (i: (typeof left)[number]) => boolean) => {
@@ -162,7 +160,7 @@ export async function updatePlan(ownerId: string, id: string, body: Record<strin
     ),
     prisma.planItem.deleteMany({ where: { id: { in: left.map((i) => i.id) } } }),
     prisma.planItem.createMany({ data: newRows(plan.id, fresh) }),
-    prisma.lessonPlan.update({ where: { id: plan.id }, data: { startDate, source, parallel } }),
+    prisma.lessonPlan.update({ where: { id: plan.id }, data: { startDate, source } }),
   ]);
 }
 
@@ -201,9 +199,9 @@ export async function copyPlan(ownerId: string, id: string, classroomIds: unknow
       skipped.push(name);
       continue;
     }
-    const slots = await buildSlots(ownerId, cid, plan.subject, plan.year, plan.source, plan.startDate, plan.parallel);
+    const slots = await buildSlots(ownerId, cid, plan.subject, plan.year, plan.source, plan.startDate);
     const copy = await prisma.lessonPlan.create({
-      data: { ownerId, classroomId: cid, subject: plan.subject, year: plan.year, startDate: plan.startDate, source: plan.source, parallel: plan.parallel },
+      data: { ownerId, classroomId: cid, subject: plan.subject, year: plan.year, startDate: plan.startDate, source: plan.source },
     });
     await prisma.planItem.createMany({ data: newRows(copy.id, slots) });
     created.push(name);

@@ -156,6 +156,7 @@ function Row({ r, first, current, pending, onToggle, showUnit }: { r: TopicRow; 
                 müfredatta yok
               </span>
             )}
+            {r.curriculum?.outcome && <span className="block text-xs text-lead">{r.curriculum.outcome}</span>}
           </span>
         </label>
       </td>

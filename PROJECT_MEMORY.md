@@ -488,14 +488,15 @@ Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `pris
 
 ## 4s. Müfredat ↔ yıllık plan bağı ve konu takibi (8 Kasım 2026)
 
-- **Sorun:** Plan konuları müfredattan metin olarak kopyalanıyor, takip ad benzerliğiyle yapılıyordu (`topicMatches`, 3 harften kısa sözcükleri ve sayıları atıyordu: Seviye-2 Kuranı Kerim'de 93 konudan 81'i birbirine karışıyordu). Plan düzenlenince bütün satırlar silinip yeniden açıldığından konuya bağlı değerlendirmelerin `planItemId` bağı kopuyordu. Paralel üniteler (Kur'ân · Tecvid · Ezber) tek plana sığmıyordu (135 hafta art arda).
-- **Veri:** `PlanItem.unit`, `PlanItem.curriculumTopicId` (→ `CurriculumTopic`, SetNull), `LessonPlan.parallel`. Bağımlılık: `planning → curriculum` eklendi (`eslint.config.mjs > MODULES`).
-- **Plan metni:** `# Ünite` başlığı (`parsePlan`), `layoutPlan(..., parallel)` ünite başına ayrı sıra. `planSourceOf` ünite başlıklarını yazar; şablon `units` / `weeks` taşır, editör toplam > 40 hafta ve > 1 ünite ise paraleli kendisi işaretler.
+- **Sorun:** Plan konuları müfredattan metin olarak kopyalanıyor, takip ad benzerliğiyle yapılıyordu (`topicMatches`, 3 harften kısa sözcükleri ve sayıları atıyordu: Seviye-2 Kuranı Kerim'de 93 konudan 81'i birbirine karışıyordu). Plan düzenlenince bütün satırlar silinip yeniden açıldığından konuya bağlı değerlendirmelerin `planItemId` bağı kopuyordu. Seviye-2 Kuranı Kerim müfredatı üç ünitesi (Kur'ân · Tecvid · Ezber) aynı haftalarda işlendiği için tek plana sığmıyor (135 hafta art arda).
+- **Veri:** `PlanItem.unit`, `PlanItem.curriculumTopicId` (→ `CurriculumTopic`, SetNull). Bağımlılık: `planning → curriculum` eklendi (`eslint.config.mjs > MODULES`).
+- **Plan metni:** `# Ünite` başlığı (`parsePlan`); `planSourceOf` ünite başlıklarını yazar. Üniteler art arda işlenir. Paralel ünite seçeneği (`LessonPlan.parallel`) denendi, kullanıcı isteğiyle kaldırıldı ("şimdilik basit olsun"); paralel işlenen içerik için ya ayrı ders ya da haftalık birleşik konu.
 - **Bağ:** `linkSlots` (lessonPlans) sınıfın düzeyine uyan müfredat setinde ünite + konu adı (`curriculum > topicKey`: küçük harf, şapkasız), olmazsa yalnızca konu adı; her müfredat konusu bir satıra. `updatePlan` satırları yerinde günceller (önce müfredat kimliği, sonra ünite + ad, sonra ad); `relinkPlans` müfredat kaydı / içe aktarma / örnek yükleme sonrası (API route'larından) çağrılır. `writeSets` kimlikleri korur (ünite + konu anahtarıyla update / create / delete).
 - **Eşleştirme:** `topicMatches` sayıları ayırt edici sayar (deneme ve soru havuzu ad eşleşmesi için).
 - **Takip:** `reporting > planTopicTracking(planId)` (durum, yoklama oturumu, `Assessment.planItemId` değerlendirmeleri, `examPlanCoverage` ile deneme başarısı) → plan sayfası "Konu takibi" (`reporting/ui/TopicTracking.tsx`, `PlanItems.tsx` silindi). `curriculumTracking`: bağlı planlarda kimlikle, bağsız (eski) planlarda adla; `plan.late`, `assess`, `classPlans`. Müfredat → Takip: sınıf tablosu, geciken konu, değerlendirme sütunu; deneme türü olmayan düzeyde deneme sütunu gizli.
-- **Yoklama:** `topicsForLesson` hafta sırasıyla (paralel ünitelerin konuları yan yana), satırda ünite adı.
-- **Doğrulama (test.db kopyası):** S-2 Kuranı Kerim paralel plan → 105/105 bağlı, üç ünite 14 Eyl'den başlıyor; müfredat aynı dosyayla yeniden yüklenince 186 konudan yalnızca adı değişen 1'inin kimliği değişti; plan düzenlenince işaretler korundu; bağlı sözlü değerlendirme iki takip ekranında göründü. `tsc`, `eslint src` temiz.
+- **Yoklama:** `topicsForLesson` hafta sırasıyla, satırda ünite adı.
+- **Doğrulama (test.db kopyası):** S-2 Kuranı Kerim planı → 105/105 bağlı; müfredat aynı dosyayla yeniden yüklenince 186 konudan yalnızca adı değişen 1'inin kimliği değişti; plan düzenlenince işaretler korundu; bağlı sözlü değerlendirme iki takip ekranında göründü. `tsc`, `eslint src` temiz.
+- **Tuzak:** ikinci `next dev` aynı `.next` klasörünü kullanırsa çalışan sunucunun derlemesi bozulur (ENOENT `.next/server/...page.js`, ChunkLoadError). `next.config.ts` `distDir: NEXT_DIST_DIR`; test sunucusu `NEXT_DIST_DIR=.next-test` ile başlatılır.
 
 ## 5. Özellik durumu
 
