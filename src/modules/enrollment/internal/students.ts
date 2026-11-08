@@ -67,6 +67,20 @@ export async function studentNoMatcher(ownerId: string) {
   return (studentNo: string) => byNo.get(normStudentNo(studentNo));
 }
 
+const MAX_NO = 999_999; // optik formda 6 hane
+
+/** En büyük sayısal öğrenci numarası (yoksa 0). */
+async function maxStudentNo(ownerId: string) {
+  const list = await prisma.student.findMany({ where: { ownerId }, select: { studentNo: true } });
+  return list.reduce((m, s) => Math.max(m, Number(s.studentNo) || 0), 0);
+}
+
+/** Sıradaki öğrenci numarası: en büyük numara + 1. 6 haneyi aşarsa boş (elle girilir). */
+export async function nextStudentNo(ownerId: string) {
+  const n = (await maxStudentNo(ownerId)) + 1;
+  return n <= MAX_NO ? String(n) : "";
+}
+
 async function assertClassroom(ownerId: string, classroomId: string | null) {
   if (!classroomId) return;
   const c = await prisma.classroom.findFirst({ where: { id: classroomId, ownerId }, select: { id: true } });
@@ -106,6 +120,7 @@ export async function deleteStudent(ownerId: string, id: string) {
 /**
  * Toplu öğrenci yükleme. rows: [{ studentNo, firstName, lastName, className, phone, parentName, parentPhone }]
  * Aynı numara varsa öğrenci güncellenir; sınıf adı yoksa sınıf oluşturulur. Hatalı satırlar atlanıp raporlanır.
+ * Numarası boş satırlara sıradaki numaralar verilir (kurumdaki ve dosyadaki en büyük numaradan sonra); `numbered` bunların sayısıdır.
  */
 export async function importStudents(ownerId: string, rows: unknown) {
   if (!Array.isArray(rows) || rows.length === 0) throw invalid("Satır yok.");
@@ -114,9 +129,22 @@ export async function importStudents(ownerId: string, rows: unknown) {
   const classes = new Map((await prisma.classroom.findMany({ where: { ownerId } })).map((c) => [c.name, c.id]));
   let created = 0;
   let updated = 0;
+  let numbered = 0;
   const errors: string[] = [];
+  const list = rows as Record<string, unknown>[];
+  const noOf = (r: Record<string, unknown>) => String(r.studentNo ?? "").trim();
+  let next = Math.max(await maxStudentNo(ownerId), ...list.map((r) => Number(noOf(r)) || 0)) + 1;
 
-  for (const [i, r] of (rows as Record<string, unknown>[]).entries()) {
+  for (const [i, row] of list.entries()) {
+    let r = row;
+    if (!noOf(r)) {
+      if (next > MAX_NO) {
+        errors.push(`Satır ${i + 2}: numara verilemedi (6 hane doldu); numarayı elle girin.`);
+        continue;
+      }
+      r = { ...r, studentNo: String(next++) };
+      numbered++;
+    }
     const className = normClassName(r.className);
     let classroomId: string | null = null;
     if (className) {
@@ -140,5 +168,5 @@ export async function importStudents(ownerId: string, rows: unknown) {
       created++;
     }
   }
-  return { created, updated, errors };
+  return { created, updated, numbered, errors };
 }

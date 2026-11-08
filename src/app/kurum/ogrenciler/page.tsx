@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { classroomsOf, listStudents, type StudentFilter } from "@/modules/enrollment/server";
+import { classroomsOf, listStudents, nextStudentNo, type StudentFilter } from "@/modules/enrollment/server";
 import { resultCountsByStudent } from "@/modules/exams/server";
 import { requireOwner } from "@/modules/identity/server";
 import { PageHeader, Tabs, th, td, Empty } from "@/shared/ui/kurum";
@@ -29,7 +29,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         {header}
         <Tabs tabs={tabs} active={tab} />
         <div className="card max-w-2xl p-6">
-          <StudentForm classes={classes.map((c) => ({ id: c.id, name: c.name }))} />
+          <StudentForm classes={classes.map((c) => ({ id: c.id, name: c.name }))} nextNo={await nextStudentNo(ownerId)} />
         </div>
       </>
     );

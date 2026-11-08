@@ -442,6 +442,19 @@ PoC 1. adımı (temel) yapıldı:
 - **Test notu:** başsız Chrome'da panoya yazma yok; kod `prompt` ile linki gösterir ve CDP betiği orada takılır (gerçek tarayıcıda sorun değil; telefonda http://IP ile girişte de prompt çıkar, mevcut "Kopyala" düğmesiyle aynı).
 - **Arama** (`app/kurum/_ui/Search.tsx`; ⌘K / Ctrl+K, kenar çubuğunda "Ara…", telefonda büyüteç): öğrenci, sınıf, ders, öğretmen ve menü sayfaları. `GET /api/kurum/ara` dizini pencere ilk açıldığında bir kez çeker (152 öğrenci ≈ 15 KB; 1000 öğrenci ≈ 100 KB); arama istemcide: `fold` Türkçe harfleri eşler (SQLite `contains` Türkçe büyük/küçük harfi ayırmaz), her kelime ayrı aranır. Kısayolu yalnızca masaüstü örneği dinler. `ShellTools.tsx`: `SidebarTools` / `BarTools` (üç düzen kullanır).
 
+## 4r. Yönetim düzenlemesi (8 Kasım 2026, aşama 0–1)
+
+Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `prisma/test.db`; senaryo `notes/test-senaryosu-sifirdan.md`). Plan, UX değerlendirmesi (U1–U14) ve kararlar: `notes/yonetim-duzenleme-plani.md`. Ürün haritası: **`KROKI.md`** (kayıt nerede oluşur / kullanılır, sayfa haritası, rol tablosu; ekran değişince aynı commit'te güncellenir).
+
+- **Program çakışması** (`schedule/internal/clashes.ts`): `assertNoClash` create/update'te. Aynı ders iki kez ve aynı sınıf / aynı öğretmende kesişen iki GRUP dersi 409; ETÜT/ÖZEL işin içindeyse ya da iki sınıfın ortak öğrencisi varsa (`enrollment > classRosters`: ana sınıf + ek üye) uyarı → 409 + `{ confirm: true }`, istemci "Yine de kaydet" ile `confirm: true` gönderir. Saatler "SS:DD" metin karşılaştırması; bitişik saat çakışmaz. `scheduleClashes` sayfa üstünde liste + derslerde kırmızı/sarı çerçeve.
+- **`shared/errors`:** `AppError` isteğe bağlı `data` taşır, `api()` yanıta ekler; `needsConfirm(m)` kısayolu.
+- **Etüt mesulünün branşı yok:** `parseTeacher` MENTOR'da branşı boş kaydeder, öğretmende zorunlu. Gösterim `teacherSub(t)` (schedule index): branş ya da "Etüt mesulü". Eski kayıtlarda branş dolu kalabilir; gösterilmez.
+- **Öğrenci no:** `nextStudentNo` (en büyük sayısal + 1, ≤ 999999) formda hazır gelir; arka arkaya girişte sınıf korunur, numara ilerler. Excel'de Numara isteğe bağlı: boş satırlara kurumdaki **ve dosyadaki** en büyük numaradan sonrası verilir (`numbered`).
+- **Sınıflar:** tablo (telefonda liste), ders sayısı sütunu; "+ Yeni sınıf" → `?yeni=1` → yan panel (`shared/ui/Drawer.tsx`; masaüstünde sağdan 420 px, telefonda tam ekran, Esc kapatır, ilk alana odak). "Kaydet ve yenisini ekle"; eklenen satır yeşil. Bu, aşama 4'teki ortak ekleme kalıbının ilk örneği.
+- **Öğretmenler telefonda:** iki satırlık liste, link ve işlemler satırda (tablo `sm:` üstünde).
+- **Ekran görüntüsü notu:** REA tarayıcı senaryosu girdilere `caret-color` stili ekliyor; Next geliştirici göstergesindeki "1 Issue" (hydration) ondan, uygulamadan değil.
+- **Doğrulama:** kopya / öğretmen çakışması 409, ortak öğrenci uyarısı 409+confirm → onaylı 200, bitişik saat 200, düzenlemede kendisi hariç; etüt mesulü branşsız 200, öğretmen branşsız 400; sıradaki no formda; Excel numarasız 3 satır → 2 otomatik numara. `tsc`, `eslint src` temiz. Denemeler test.db'nin kopyasında yapıldı.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

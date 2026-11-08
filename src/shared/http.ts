@@ -14,7 +14,7 @@ export function api<Ctx = unknown>(handler: (req: Request, ctx: Ctx) => Promise<
       const out = await handler(req, ctx);
       return out instanceof Response ? out : NextResponse.json(out ?? { ok: true });
     } catch (e) {
-      if (e instanceof AppError) return NextResponse.json({ error: e.message }, { status: STATUS[e.kind] });
+      if (e instanceof AppError) return NextResponse.json({ ...e.data, error: e.message }, { status: STATUS[e.kind] });
       throw e;
     }
   };

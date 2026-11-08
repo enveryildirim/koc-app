@@ -19,13 +19,16 @@ export default function StudentForm({
   classes,
   initial,
   studentId,
+  nextNo = "",
 }: {
   classes: { id: string; name: string }[];
   initial?: StudentValues;
   studentId?: string;
+  /** Yeni öğrencide önerilen numara (kurumdaki en büyük numara + 1); değiştirilebilir */
+  nextNo?: string;
 }) {
   const router = useRouter();
-  const [v, setV] = useState<StudentValues>(initial ?? EMPTY);
+  const [v, setV] = useState<StudentValues>(initial ?? { ...EMPTY, studentNo: nextNo });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof StudentValues) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -48,7 +51,9 @@ export default function StudentForm({
       router.refresh();
     } else {
       setMsg({ ok: true, text: `${v.firstName} ${v.lastName} eklendi.` });
-      setV({ ...EMPTY, classroomId: v.classroomId });
+      // Arka arkaya giriş: sınıf korunur, numara bir sonrakine geçer (önerilen numaradan küçük elle bir numara girildiyse öneriye döner)
+      const following = Math.max(Number(nextNo) || 0, Number(v.studentNo) + 1);
+      setV({ ...EMPTY, classroomId: v.classroomId, studentNo: following <= 999_999 ? String(following) : "" });
       router.refresh();
     }
   }
@@ -65,6 +70,7 @@ export default function StudentForm({
       <div>
         <label className="label">Öğrenci no *</label>
         <input className="input num" value={v.studentNo} onChange={set("studentNo")} required maxLength={6} inputMode="numeric" />
+        {!studentId && <p className="mt-1 text-[12.5px] text-lead">Sıradaki numara yazıldı; okul numarasını kullanıyorsanız değiştirin.</p>}
       </div>
       <div>
         <label className="label">Sınıf</label>

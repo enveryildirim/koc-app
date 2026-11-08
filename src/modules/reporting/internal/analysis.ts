@@ -3,6 +3,7 @@ import { prisma } from "@/shared/db";
 import { splitOutliers } from "@/shared/stats";
 import { subjectMatches } from "@/shared/subjects";
 import { ExamSection, parseSections, round2 } from "@/modules/exams";
+import { teacherSub } from "@/modules/schedule";
 
 type Stat = { d: number; y: number; b: number; net: number };
 
@@ -148,7 +149,7 @@ export async function teacherPerformance(ownerId: string) {
       rows.push({
         teacherId: slot.teacherId,
         teacher: slot.teacher.name,
-        branch: slot.teacher.branch,
+        branch: teacherSub(slot.teacher),
         className: slot.classroom.name,
         subject: slot.subject,
         section: l.exam.secs[l.idx].name,

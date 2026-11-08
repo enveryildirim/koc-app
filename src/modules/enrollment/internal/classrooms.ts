@@ -89,3 +89,22 @@ export async function removeClassMember(ownerId: string, classroomId: string, st
   if (!m) throw notFound();
   await prisma.classMember.delete({ where: { id: m.id } });
 }
+
+/**
+ * Sınıfların öğrencileri (ana sınıf + ek üyeler): sınıf kimliği → (öğrenci kimliği → "Ad Soyad").
+ * Ders programı çakışma denetimi kullanır (aynı öğrenci aynı saatte iki derste mi).
+ */
+export async function classRosters(ownerId: string) {
+  const [students, members] = await Promise.all([
+    prisma.student.findMany({ where: { ownerId, classroomId: { not: null } }, select: { id: true, firstName: true, lastName: true, classroomId: true } }),
+    prisma.classMember.findMany({ where: { ownerId }, select: { classroomId: true, student: { select: { id: true, firstName: true, lastName: true } } } }),
+  ]);
+  const map = new Map<string, Map<string, string>>();
+  const add = (classroomId: string, s: { id: string; firstName: string; lastName: string }) => {
+    if (!map.has(classroomId)) map.set(classroomId, new Map());
+    map.get(classroomId)!.set(s.id, `${s.firstName} ${s.lastName}`);
+  };
+  for (const s of students) add(s.classroomId!, s);
+  for (const m of members) add(m.classroomId, m.student);
+  return map;
+}

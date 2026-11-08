@@ -19,13 +19,17 @@ async function ownedTeacher(ownerId: string, id: string) {
   return t;
 }
 
-/** Rol gönderilmezse `fallbackRole` kalır (düzenlemede mevcut rol korunur). */
+/**
+ * Rol gönderilmezse `fallbackRole` kalır (düzenlemede mevcut rol korunur).
+ * Etüt mesulünün branşı yoktur: boş kaydedilir. Öğretmende branş zorunludur.
+ */
 function parseTeacher(body: Record<string, unknown>, fallbackRole = "TEACHER") {
   const name = String(body.name ?? "").trim();
-  const branch = String(body.branch ?? "").trim();
   const role = String(body.role ?? fallbackRole);
-  if (!name || !branch) throw invalid("Ad ve branş gerekli.");
+  if (!name) throw invalid("Ad soyad gerekli.");
   if (!TEACHER_ROLE_KEYS.includes(role)) throw invalid("Geçersiz rol.");
+  const branch = role === "MENTOR" ? "" : String(body.branch ?? "").trim();
+  if (role !== "MENTOR" && !branch) throw invalid("Öğretmenin branşı gerekli.");
   return { name, branch, role };
 }
 

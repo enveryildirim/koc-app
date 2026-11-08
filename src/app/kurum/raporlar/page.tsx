@@ -1,6 +1,6 @@
 import { classroomsOf } from "@/modules/enrollment/server";
 import { fullName } from "@/modules/enrollment";
-import { LESSON_TYPES } from "@/modules/schedule";
+import { LESSON_TYPES, teacherSub } from "@/modules/schedule";
 import { requireOwner } from "@/modules/identity/server";
 import { absenceByStudent, absentees, lessonsByStudent, teacherLessonCounts, type LessonRange } from "@/modules/reporting/server";
 import { ymd } from "@/shared/date";
@@ -163,13 +163,13 @@ async function TeacherCounts({ ownerId, range }: P) {
       <ExportBar
         fileName="ogretmen_ders_sayilari"
         headers={["Öğretmen", "Branş", "Toplam ders", ...Object.values(LESSON_TYPES), "Toplam saat"]}
-        rows={rows.map((r) => [r.t.name, r.t.branch, r.count, ...Object.keys(LESSON_TYPES).map((k) => r.byType[k] ?? 0), Math.round((r.minutes / 60) * 10) / 10])}
+        rows={rows.map((r) => [r.t.name, teacherSub(r.t), r.count, ...Object.keys(LESSON_TYPES).map((k) => r.byType[k] ?? 0), Math.round((r.minutes / 60) * 10) / 10])}
       />
       <Table pin={0} head={["Öğretmen", "Branş", "Toplam ders", ...Object.values(LESSON_TYPES), "Toplam saat"]}>
         {rows.map((r) => (
           <tr key={r.t.id}>
             <td className={td + " pin font-medium"}>{r.t.name}</td>
-            <td className={td}>{r.t.branch}</td>
+            <td className={td}>{teacherSub(r.t)}</td>
             <td className={td + " font-semibold"}>{r.count}</td>
             {Object.keys(LESSON_TYPES).map((k) => <td key={k} className={td}>{r.byType[k] || "—"}</td>)}
             <td className={td}>{hours(r.minutes)}</td>

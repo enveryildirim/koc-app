@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
     return (
       <>
         {header}
-        <Empty>Önce <Link href="/kurum/siniflar" className="font-semibold text-brand-600">Sınıflar</Link> sayfasından sınıf ekleyin.</Empty>
+        <Empty>Önce <Link href="/kurum/siniflar?yeni=1" className="font-semibold text-brand-600">Sınıflar</Link> sayfasından sınıf ekleyin.</Empty>
       </>
     );
   }

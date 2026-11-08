@@ -9,7 +9,9 @@
     "lint": "eslint",
     "db:setup": "prisma db push && prisma db seed",
     "db:seed": "prisma db seed",
-    "setup": "npm run db:setup"
+    "setup": "npm run db:setup",
+    "dev:test": "DATABASE_URL=file:./test.db next dev",
+    "db:test:reset": "rm -f prisma/test.db prisma/test.db-journal && DATABASE_URL=file:./test.db prisma db push --skip-generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

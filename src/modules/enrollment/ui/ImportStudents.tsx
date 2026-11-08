@@ -34,7 +34,8 @@ function mapRows(table: string[][]): { rows: Row[]; missing: string[] } {
   for (const f of FIELDS) idx[f.key] = header.findIndex((h) => f.aliases.includes(h));
   // "Ad Soyad" tek sütunsa böl
   const fullIdx = header.findIndex((h) => h === "ad soyad" || h === "adi soyadi");
-  const missing = FIELDS.filter((f) => ["studentNo", "firstName", "lastName"].includes(f.key) && idx[f.key] < 0 && !(fullIdx >= 0 && f.key !== "studentNo")).map((f) => f.label);
+  // Numara zorunlu değil: boş numaralara yüklerken sıradaki numaralar verilir
+  const missing = FIELDS.filter((f) => ["firstName", "lastName"].includes(f.key) && idx[f.key] < 0 && fullIdx < 0).map((f) => f.label);
   const rows = table
     .slice(1)
     .filter((r) => r.some((c) => String(c ?? "").trim()))
@@ -71,10 +72,10 @@ function validate(rows: Row[]) {
   const seen = new Map<string, number>();
   return rows.map((r, i) => {
     const errs: string[] = [];
-    if (!/^\d{1,6}$/.test(r.studentNo)) errs.push("numara 1–6 hane olmalı");
+    if (r.studentNo && !/^\d{1,6}$/.test(r.studentNo)) errs.push("numara 1–6 hane olmalı");
     if (!r.firstName || !r.lastName) errs.push("ad/soyad eksik");
-    if (seen.has(r.studentNo)) errs.push(`numara ${seen.get(r.studentNo)! + 2}. satırla aynı`);
-    seen.set(r.studentNo, i);
+    if (r.studentNo && seen.has(r.studentNo)) errs.push(`numara ${seen.get(r.studentNo)! + 2}. satırla aynı`);
+    if (r.studentNo) seen.set(r.studentNo, i);
     return errs;
   });
 }
@@ -85,7 +86,7 @@ export default function ImportStudents() {
   const [info, setInfo] = useState("");
   const [paste, setPaste] = useState("");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{ created: number; updated: number; numbered?: number; errors: string[] } | null>(null);
 
   function load(table: string[][], from: string) {
     const { rows, missing } = mapRows(table);
@@ -160,8 +161,8 @@ export default function ImportStudents() {
         <div>
           <h2 className="font-semibold">1. Dosya seçin</h2>
           <p className="mt-1 text-sm text-lead">
-            Excel (.xlsx) veya CSV. İlk satır başlık olmalı: <b>Numara, Ad, Soyad, Sınıf</b> (zorunlu olmayanlar: Telefon, Veli Adı, Veli Telefonu).
-            Aynı numaralı öğrenci varsa bilgileri güncellenir, olmayan sınıflar otomatik oluşturulur.
+            Excel (.xlsx) veya CSV. İlk satır başlık olmalı: <b>Ad, Soyad, Sınıf</b> (isteğe bağlı: Numara, Telefon, Veli Adı, Veli Telefonu).
+            Numara boşsa sıradaki numaralar verilir. Aynı numaralı öğrenci varsa bilgileri güncellenir, olmayan sınıflar otomatik oluşturulur.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <label className="btn-primary cursor-pointer">
@@ -191,6 +192,7 @@ export default function ImportStudents() {
       {result && (
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-200">
           {result.created} öğrenci eklendi, {result.updated} öğrenci güncellendi.
+          {!!result.numbered && ` ${result.numbered} öğrenciye sıradaki numara verildi.`}
           {result.errors.length > 0 && (
             <ul className="mt-2 list-disc pl-5 text-red-700">
               {result.errors.map((e) => (
@@ -225,7 +227,9 @@ export default function ImportStudents() {
                   <tr key={i} className={errs[i].length ? "bg-red-50" : ""}>
                     <td className="px-3 py-1.5 text-lead/70">{i + 2}</td>
                     {FIELDS.map((f) => (
-                      <td key={f.key} className="px-3 py-1.5">{r[f.key]}</td>
+                      <td key={f.key} className="px-3 py-1.5">
+                        {f.key === "studentNo" && !r.studentNo ? <span className="text-xs text-lead/70">otomatik</span> : r[f.key]}
+                      </td>
                     ))}
                     <td className="px-3 py-1.5 text-xs">
                       {errs[i].length ? <span className="text-red-700">{errs[i].join(", ")}</span> : <span className="text-emerald-700">✓</span>}

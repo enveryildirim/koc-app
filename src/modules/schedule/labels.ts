@@ -16,6 +16,9 @@ export const ATTENDANCE: Record<string, { label: string; cls: string }> = {
 export const TEACHER_ROLES: Record<string, string> = { TEACHER: "Öğretmen", MENTOR: "Etüt mesulü" };
 export const TEACHER_ROLE_KEYS = Object.keys(TEACHER_ROLES);
 
+/** Öğretmenin kısa tanımı (listelerde adın yanında): branşı; etüt mesulünün branşı yoktur, "Etüt mesulü" yazılır. */
+export const teacherSub = (t: { branch: string; role: string }) => (t.role === "MENTOR" ? "Etüt mesulü" : t.branch);
+
 /**
  * Ders türleri. Tür yalnızca varsayılanları belirler (ör. ölçme yöntemi); bütün türler aynı araçlarla
  * (yoklama, işlenen konu, değerlendirme, sınav, ödev) takip edilir.

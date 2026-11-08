@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
-import { listSlots, listTeachers } from "@/modules/schedule/server";
+import { listSlots, listTeachers, scheduleClashes, type Clash } from "@/modules/schedule/server";
+import { teacherSub } from "@/modules/schedule";
 import { Empty, PageHeader, Tabs } from "@/shared/ui/kurum";
 import ScheduleBoard from "@/modules/schedule/ui/ScheduleBoard";
 
@@ -17,9 +18,10 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   if (sp.gorunum === "ogretmenler") redirect("/kurum/ogretmenler");
   const tab = sp.gorunum === "ogretmen" ? "ogretmen" : "sinif";
 
-  const [classrooms, teachers] = await Promise.all([
+  const [classrooms, teachers, clashes] = await Promise.all([
     classroomsOf(ownerId),
     listTeachers(ownerId),
+    scheduleClashes(ownerId),
   ]);
 
   const tabs = [
@@ -39,7 +41,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     return (
       <div>
         {header}
-        <Empty>Ders programı oluşturmak için önce <Link href="/kurum/siniflar" className="font-semibold text-brand-600">Sınıflar</Link> sayfasından sınıf ekleyin.</Empty>
+        <Empty>Ders programı oluşturmak için önce <Link href="/kurum/siniflar?yeni=1" className="font-semibold text-brand-600">Sınıflar</Link> sayfasından sınıf ekleyin.</Empty>
       </div>
     );
   }
@@ -52,11 +54,12 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
   const chips = tab === "sinif"
     ? classrooms.map((c) => ({ id: c.id, label: c.name, href: `/kurum/ders-programi?sinif=${c.id}`, active: c.id === selClass?.id }))
-    : teachers.map((t) => ({ id: t.id, label: `${t.name} · ${t.branch}`, href: `/kurum/ders-programi?gorunum=ogretmen&ogretmen=${t.id}`, active: t.id === selTeacher?.id }));
+    : teachers.map((t) => ({ id: t.id, label: `${t.name} · ${teacherSub(t)}`, href: `/kurum/ders-programi?gorunum=ogretmen&ogretmen=${t.id}`, active: t.id === selTeacher?.id }));
 
   return (
     <div>
       {header}
+      <ClashList clashes={clashes} />
       <Tabs tabs={tabs} active={tab} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {chips.map((c) => (
@@ -79,7 +82,10 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
           view={tab === "sinif" ? "sinif" : "ogretmen"}
           defaults={{ classroomId: selClass?.id, teacherId: selTeacher?.id }}
           classrooms={classrooms.map((c) => ({ id: c.id, name: c.name }))}
-          teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch }))}
+          teachers={teachers.map((t) => ({ id: t.id, name: t.name, branch: t.branch, role: t.role }))}
+          clash={Object.fromEntries(
+            clashes.flatMap((c) => c.slotIds.map((id) => [id, c.hard ? "hard" : "soft"] as const)).sort((a, b) => (a[1] === "hard" ? 1 : 0) - (b[1] === "hard" ? 1 : 0)),
+          )}
           slots={slots.map((s) => ({
             id: s.id,
             classroomId: s.classroomId,
@@ -95,6 +101,30 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         />
       )}
     </div>
+  );
+}
+
+/** Programdaki çakışmalar: kesinler kırmızı, uyarılar sarı. Her satır çakışmanın görüldüğü sınıfın programına götürür. */
+function ClashList({ clashes }: { clashes: Clash[] }) {
+  if (!clashes.length) return null;
+  const hard = clashes.filter((c) => c.hard).length;
+  const soft = clashes.length - hard;
+  const title = [hard ? `${hard} çakışma` : null, soft ? `${soft} uyarı` : null].filter(Boolean).join(" · ");
+  return (
+    <details open={clashes.length <= 5} className={`mb-4 rounded-lg px-3.5 py-2.5 text-sm ring-1 ${hard ? "bg-red-50 ring-red-200" : "bg-amber-50 ring-amber-200"}`}>
+      <summary className={`cursor-pointer font-semibold ${hard ? "text-red-800" : "text-amber-800"}`}>
+        Programda {title}
+      </summary>
+      <ul className="mt-2 space-y-1">
+        {clashes.map((c) => (
+          <li key={c.message} className="flex gap-2">
+            <span className={`mt-0.5 shrink-0 text-xs font-semibold ${c.hard ? "text-red-700" : "text-amber-700"}`}>{c.hard ? "Çakışma" : "Uyarı"}</span>
+            <Link href={`/kurum/ders-programi?sinif=${c.classroomId}`} className="text-graphite hover:underline">{c.message}</Link>
+          </li>
+        ))}
+      </ul>
+      {hard > 0 && <p className="mt-2 text-[13px] text-lead">Çakışan dersler programda kırmızı çerçeveli. Derse tıklayıp saatini ya da öğretmenini değiştirin veya silin.</p>}
+    </details>
   );
 }
 

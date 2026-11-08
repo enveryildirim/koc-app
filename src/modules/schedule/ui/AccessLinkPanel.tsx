@@ -42,7 +42,7 @@ export default function AccessLinkPanel({ teacherId, name, link }: { teacherId: 
   if (!link) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <button className="btn-secondary py-1" disabled={busy} onClick={() => send("POST")}>Link oluştur</button>
+        <button className="btn-secondary whitespace-nowrap py-1" disabled={busy} onClick={() => send("POST")}>Link oluştur</button>
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     );

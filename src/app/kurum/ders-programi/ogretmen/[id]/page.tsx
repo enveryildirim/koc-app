@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
 import { ALL_KINDS, mondayOf } from "@/modules/planning";
 import { calendarFeed, plansForPairs } from "@/modules/planning/server";
-import { DAYS, LESSON_TYPES } from "@/modules/schedule";
+import { DAYS, LESSON_TYPES, teacherSub } from "@/modules/schedule";
 import { findTeacher, listSlots } from "@/modules/schedule/server";
 import { addDays, ymd } from "@/shared/date";
 import { subjectMatches } from "@/shared/subjects";
@@ -49,7 +49,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <PageHeader
         back={{ href: "/kurum/ogretmenler", label: "Öğretmenler" }}
         title={teacher.name}
-        sub={`${teacher.branch} · ${fmt(thisWeek, { day: "numeric", month: "long" })} haftası`}
+        sub={`${teacherSub(teacher)} · ${fmt(thisWeek, { day: "numeric", month: "long" })} haftası`}
         actions={
           <>
             <Link href={`/kurum/ders-programi?gorunum=ogretmen&ogretmen=${teacher.id}`} className="btn-secondary">Programı düzenle</Link>
@@ -58,7 +58,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         }
       />
       <h1 className="mb-4 hidden text-xl font-bold print:block">
-        {teacher.name} · {teacher.branch} — {fmt(thisWeek, { day: "numeric", month: "long", year: "numeric" })} haftası
+        {teacher.name} · {teacherSub(teacher)} — {fmt(thisWeek, { day: "numeric", month: "long", year: "numeric" })} haftası
       </h1>
 
       <div className="mb-6 grid grid-cols-2 gap-2 lg:grid-cols-4">

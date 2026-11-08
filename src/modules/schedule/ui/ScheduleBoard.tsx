@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DAYS, LESSON_TYPES } from "@/modules/schedule";
+import { DAYS, LESSON_TYPES, teacherSub } from "@/modules/schedule";
 import { Opt, SlotRow, TYPE_STYLE } from "../types";
 
 type Draft = Omit<SlotRow, "id" | "classroomName" | "teacherName"> & { id?: string };
@@ -12,23 +12,29 @@ export default function ScheduleBoard({
   teachers,
   view,
   defaults,
+  clash = {},
 }: {
   slots: SlotRow[];
   classrooms: Opt[];
-  teachers: (Opt & { branch: string })[];
+  teachers: (Opt & { branch: string; role: string })[];
   view: "sinif" | "ogretmen";
   /** Yeni ders formu için önceden seçili sınıf/öğretmen */
   defaults: { classroomId?: string; teacherId?: string };
+  /** Çakışan program satırları: kesin çakışma (hard) ya da uyarı (soft) */
+  clash?: Record<string, "hard" | "soft">;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState("");
+  /** Sunucunun onay istediği uyarı (ör. ortak öğrenciler aynı saatte başka derste) */
+  const [warn, setWarn] = useState("");
   const [busy, setBusy] = useState(false);
 
   const days = slots.some((s) => s.dayOfWeek === 7) ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6];
 
   function openNew(day: number) {
     setError("");
+    setWarn("");
     const teacherId = defaults.teacherId ?? teachers[0]?.id ?? "";
     setDraft({
       classroomId: defaults.classroomId ?? classrooms[0]?.id ?? "",
@@ -41,17 +47,19 @@ export default function ScheduleBoard({
     });
   }
 
-  async function save() {
+  async function save(confirm = false) {
     if (!draft) return;
     setBusy(true);
     setError("");
+    setWarn("");
     const res = await fetch(draft.id ? `/api/kurum/program/${draft.id}` : "/api/kurum/program", {
       method: draft.id ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
+      body: JSON.stringify({ ...draft, confirm }),
     });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
+    if (!res.ok && json.confirm) return setWarn(json.error);
     if (!res.ok) return setError(json.error ?? "Kaydedilemedi.");
     setDraft(null);
     router.refresh();
@@ -66,7 +74,10 @@ export default function ScheduleBoard({
     router.refresh();
   }
 
-  const set = (p: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...p } : d));
+  const set = (p: Partial<Draft>) => {
+    setWarn("");
+    setDraft((d) => (d ? { ...d, ...p } : d));
+  };
 
   return (
     <>
@@ -85,10 +96,16 @@ export default function ScheduleBoard({
                     key={s.id}
                     onClick={() => {
                       setError("");
+                      setWarn("");
                       setDraft({ ...s });
                     }}
-                    className={`w-full rounded-lg border px-2.5 py-2 text-left text-xs transition hover:shadow ${TYPE_STYLE[s.lessonType] ?? TYPE_STYLE.GRUP}`}
+                    className={`w-full rounded-lg border px-2.5 py-2 text-left text-xs transition hover:shadow ${TYPE_STYLE[s.lessonType] ?? TYPE_STYLE.GRUP} ${clash[s.id] === "hard" ? "ring-2 ring-red-500" : clash[s.id] === "soft" ? "ring-2 ring-amber-400" : ""}`}
                   >
+                    {clash[s.id] && (
+                      <div className={`mb-0.5 font-semibold ${clash[s.id] === "hard" ? "text-red-700" : "text-amber-700"}`}>
+                        {clash[s.id] === "hard" ? "Çakışma" : "Uyarı"}
+                      </div>
+                    )}
                     <div className="num font-semibold">{s.startTime}–{s.endTime}</div>
                     <div className="mt-0.5 text-sm font-semibold">{s.subject}</div>
                     <div className="opacity-80">{view === "sinif" ? s.teacherName : `Sınıf ${s.classroomName}`}</div>
@@ -134,7 +151,7 @@ export default function ScheduleBoard({
                   }}
                 >
                   {teachers.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.branch})</option>
+                    <option key={t.id} value={t.id}>{t.name} ({teacherSub(t)})</option>
                   ))}
                 </select>
               </div>
@@ -168,12 +185,18 @@ export default function ScheduleBoard({
               </div>
             </div>
             {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+            {warn && (
+              <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <p>{warn}</p>
+                <button className="btn-secondary mt-2 py-1" disabled={busy} onClick={() => save(true)}>Yine de kaydet</button>
+              </div>
+            )}
             <div className="mt-5 flex items-center gap-2">
               {draft.id && (
                 <button className="btn-danger" disabled={busy} onClick={remove}>Sil</button>
               )}
               <button className="btn-secondary ml-auto" onClick={() => setDraft(null)}>Vazgeç</button>
-              <button className="btn-primary" disabled={busy || !teachers.length} onClick={save}>
+              <button className="btn-primary" disabled={busy || !teachers.length} onClick={() => save()}>
                 {busy ? "Kaydediliyor…" : "Kaydet"}
               </button>
             </div>
