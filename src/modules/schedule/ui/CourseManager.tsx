@@ -80,7 +80,7 @@ export default function CourseManager({ classroomId, courses, teachers, notes = 
       <div className="flex items-center justify-between border-b border-rule/70 px-3.5 py-2.5">
         <h2 className="font-semibold">Dersler <span className="font-normal text-lead">({courses.length})</span></h2>
         {!add && (
-          <button className="text-sm font-medium text-brand-600" onClick={() => { setAdd(EMPTY); setEdit(null); }}>+ Ders ekle</button>
+          <button className="btn-primary px-3 py-1.5 text-sm" onClick={() => { setAdd(EMPTY); setEdit(null); }}>+ Ders ekle</button>
         )}
       </div>
       {error && <p className="px-3.5 pt-2 text-sm text-red-600">{error}</p>}

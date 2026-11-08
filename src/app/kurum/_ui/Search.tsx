@@ -43,7 +43,7 @@ function search(index: Index | null, q: string): Hit[] {
       ...index.courses
         .filter((c) => match(`${c.name} ${c.cls}`))
         .slice(0, 5)
-        .map((c) => ({ key: `d${c.id}`, label: `${c.cls} · ${c.name}`, sub: c.teacher, href: `/kurum/siniflar/${c.classroomId}`, group: "Dersler" })),
+        .map((c) => ({ key: `d${c.id}`, label: `${c.cls} · ${c.name}`, sub: c.teacher, href: `/kurum/dersler?sinif=${c.classroomId}`, group: "Dersler" })),
       ...index.teachers
         .filter((t) => match(`${t.name} ${t.branch}`))
         .slice(0, 4)

@@ -1,22 +1,14 @@
-import QuickAdd from "./QuickAdd";
 import Search from "./Search";
 
-/** Kenar çubuğunun üstü: "+ Ekle" ve arama (⌘K). */
+/**
+ * Kenar çubuğunun üstü: arama (⌘K). Hızlı "+ Ekle" düğmesi kaldırıldı (sınıf / öğretmen / ders
+ * nadiren eklenir; Yönetim sayfalarında formları var). Geri gerekirse: commit 2dc619c, QuickAdd.tsx.
+ */
 export function SidebarTools() {
-  return (
-    <div className="space-y-2">
-      <QuickAdd />
-      <Search />
-    </div>
-  );
+  return <Search />;
 }
 
-/** Telefon üst çubuğu: arama ve "+" simgeleri. */
+/** Telefon üst çubuğu: arama simgesi. */
 export function BarTools() {
-  return (
-    <span className="flex items-center">
-      <Search compact />
-      <QuickAdd compact />
-    </span>
-  );
+  return <Search compact />;
 }

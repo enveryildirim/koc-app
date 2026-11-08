@@ -350,26 +350,23 @@ Demo veride iki bilerek konmuş örnek var (rakamlar her `db:seed`'de biraz değ
 
 ---
 
-## M. Menü ve "+ Ekle"
+## M. Menü ve arama
 
 **M1. Yeni menü**
-- **Beklenen:** Gruplar: Özet · Giriş (Yoklama, Sözlü ve yazılı, Ödevler, Denemeler ve optik) · Takibat (Takip, Analiz, Veli karnesi, Haftalık veli raporu) · Kurum (Öğrenciler, Sınıflar, Öğretmenler, Ders programı, Takvim ve planlar, Müfredat, Puan cetvelleri) · Araçlar. Masaüstünde kaydırmadan sığar.
+- **Beklenen:** Gruplar: Özet · Giriş (Yoklama, Sözlü ve yazılı, Ödevler, Denemeler ve optik) · Takibat (Takip, Analiz, Veli karnesi, Haftalık veli raporu) · Araçlar (Soru havuzu, Online testler) · en altta Yönetim (Öğrenciler, Sınıflar, Dersler, Öğretmenler, Ders programı, Takvim ve planlar, Müfredat, Puan cetvelleri). Masaüstünde kaydırmadan sığar.
 - Analiz → **Devam raporları** sekmesi eski "Devam raporları" sayfasıdır; menüde "Analiz" seçili görünür.
 - Eski adresler yönlendirir: `/kurum/ogrenciler?tab=siniflar` → Sınıflar, `/kurum/ders-programi?gorunum=ogretmenler` → Öğretmenler, `/kurum/degerlendirme?tab=cetveller` → Puan cetvelleri.
 
-**M2. Hızlı sınıf / öğretmen / ders**
-- **Adımlar:** Herhangi bir sayfada **+ Ekle** (telefonda üst çubukta **+**) → Sınıf: *9-C* → Kaydet → "Sınıfı aç". Sonra + Ekle → Öğretmen → ad, branş → Kaydet → "Telefondan giriş linkini oluştur ve kopyala". Sonra + Ekle → Ders → 9-C, *Tecvid* → Kaydet.
-- **Beklenen:** Sayfadan çıkmadan eklenir; ders türü addan tahmin edilir (Tecvid → Dini); aynı sınıfta aynı adla ikinci ders "Bu sınıfta bu adla bir ders zaten var."; "Bir tane daha" formu boşaltır.
-
-**M3. Formlara kısayol**
-- **Beklenen:** + Ekle → Öğrenci / Öğrenci (Excel'den) / Sözlü-yazılı ilgili sekmeyi açar; Ödev, ödev formu açık olarak gelir; Deneme, sayfadaki "Yeni deneme" formuna kaydırır.
+**M2. Ekleme yerleri**
+- Sınıf: Yönetim → Sınıflar → sağdaki "Yeni sınıf". Öğretmen: Yönetim → Öğretmenler.
+- Ders: Yönetim → **Dersler** → sınıfı seçin (düğmelerde ders sayısı) → **+ Ders ekle**. Aynı bölüm sınıf sayfasında da var. Ödev: Ödevler → `/kurum/odevler?yeni=1` formu açık getirir.
 
 **M4. Arama**
-- **Adımlar:** Herhangi bir sayfada **⌘K** (Windows'ta Ctrl+K) ya da menüdeki "Ara…" (telefonda büyüteç). Şunları deneyin: *ozturk*, *ela 9-b*, *2046*, *tecvid*, *mahmut*, *yoklama*. ↑ ↓ ve Enter.
+- **Adımlar:** Herhangi bir sayfada **⌘K** (Windows'ta Ctrl+K) ya da menünün üstündeki "Ara…" (telefonda büyüteç). Şunları deneyin: *ozturk*, *ela 9-b*, *2046*, *tecvid*, *mahmut*, *yoklama*. ↑ ↓ ve Enter.
 - **Beklenen:**
   - Türkçe harf yazmadan bulur (ozturk → Öztürk); kelimeler birlikte aranır (ela 9-b → yalnızca 9-B'deki Ela).
   - Öğrenci numarasıyla bulur; Enter öğrenci profilini açar.
-  - Dersler sınıf sayfasına, öğretmenler öğretmen sayfasına, "yoklama" Yoklama sayfasına götürür.
+  - Dersler o sınıfın Dersler sayfasına, öğretmenler öğretmen sayfasına, "yoklama" Yoklama sayfasına götürür.
 
 ---
 

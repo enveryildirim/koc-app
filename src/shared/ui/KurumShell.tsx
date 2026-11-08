@@ -8,7 +8,7 @@ import Logo from "./Logo";
  */
 type ShellUser = { name: string; email: string; staff?: { name: string } | null };
 
-/** `add` / `addCompact`: "+ Ekle" düğmesi (kenar çubuğu ve telefon üst çubuğu); düzen verir. */
+/** `add` / `addCompact`: kenar çubuğu ve telefon üst çubuğundaki araçlar (arama); düzen verir. */
 export default function KurumShell({ user, children, add, addCompact }: { user: ShellUser; children: React.ReactNode; add?: React.ReactNode; addCompact?: React.ReactNode }) {
   // Etüt mesulü kendi adıyla görünür ve kendi ders ekranına geçebilir
   const who = user.staff ? `${user.staff.name} · etüt mesulü` : user.email;

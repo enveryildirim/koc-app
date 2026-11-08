@@ -5,21 +5,22 @@ import { useEffect, useState } from "react";
 import { AnswerRow } from "./Logo";
 
 /**
- * Menü işe göre gruplanır: günlük bilgi girişi ve takibat üstte, yılda birkaç kez yapılan tanımlar ("Kurum") altta.
+ * Menü işe göre gruplanır: günlük bilgi girişi ve takibat üstte; yılda birkaç kez yapılan tanımlar
+ * (öğrenci, sınıf, öğretmen, program, takvim…) en altta "Yönetim"de.
  * Aktif madde doldurulmuş bir cevap baloncuğuyla gösterilir.
  */
 export const GROUPS: { title: string; links: [string, string][] }[] = [
   { title: "Bugün", links: [["/kurum", "Özet"]] },
   { title: "Giriş", links: [["/kurum/yoklama", "Yoklama"], ["/kurum/degerlendirme", "Sözlü ve yazılı"], ["/kurum/odevler", "Ödevler"], ["/kurum/denemeler", "Denemeler ve optik"]] },
   { title: "Takibat", links: [["/kurum/takip", "Takip"], ["/kurum/analiz", "Analiz"], ["/kurum/veli-karnesi", "Veli karnesi"], ["/kurum/veli-bulteni", "Haftalık veli raporu"]] },
+  { title: "Araçlar", links: [["/kurum/soru-havuzu", "Soru havuzu"], ["/panel", "Online testler"]] },
   {
-    title: "Kurum",
+    title: "Yönetim",
     links: [
-      ["/kurum/ogrenciler", "Öğrenciler"], ["/kurum/siniflar", "Sınıflar"], ["/kurum/ogretmenler", "Öğretmenler"], ["/kurum/ders-programi", "Ders programı"],
+      ["/kurum/ogrenciler", "Öğrenciler"], ["/kurum/siniflar", "Sınıflar"], ["/kurum/dersler", "Dersler"], ["/kurum/ogretmenler", "Öğretmenler"], ["/kurum/ders-programi", "Ders programı"],
       ["/kurum/takvim", "Takvim ve planlar"], ["/kurum/mufredat", "Müfredat"], ["/kurum/puan-cetvelleri", "Puan cetvelleri"],
     ],
   },
-  { title: "Araçlar", links: [["/kurum/soru-havuzu", "Soru havuzu"], ["/panel", "Online testler"]] },
 ];
 
 /** Menüde ayrı maddesi olmayan sayfalar: hangi maddenin altında sayılır. */
