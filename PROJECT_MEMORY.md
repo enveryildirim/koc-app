@@ -469,6 +469,13 @@ Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `pris
 - Excel önizlemesi kurumda olmayan ders adı / düzeyi uyarır (engellemez). Sunucu (`saveCurriculumSet`, `importCurriculum`) serbest kaldı: haftalık plan içe aktarmadaki gibi uyarı istemcide.
 - **Doğrulama:** Seviye-2 seçeneği geldi; "Tecvid · Seviye-2" seti "Kullanan sınıflar: S-2" gösterdi, plan ekranı şablonu S-2'ye önerdi; örnek 8. sınıf seti uyarı verdi. `tsc`, `eslint src` temiz.
 
+**Aşama 4 (ortak ekleme kalıbı, kurulum rehberi):**
+- **Kalıp:** başlıkta "+ … ekle" bağlantısı `?yeni=1` → istemci bileşeni `Drawer` açar; kapatınca `router.replace` ile parametre kalkar. Panellerde gizli submit yok: `Drawer > enterSubmits(fn)` form `onKeyDown`'da Enter'ı yakalar (textarea / select / button hariç). Sınıflar, Dersler, Öğrenciler (`enrollment/ui/StudentAdd.tsx`), Öğretmenler (`TeacherManager` `open` prop) bu kalıpta.
+- **Öğrenciler:** sekmeler kalktı (`?tab=yeni|ice-aktar` yönlenir). `StudentForm.tsx` → `StudentFields` (ortak alanlar) + `StudentForm` (yalnızca profil düzenleme) + `EMPTY_STUDENT`. Panel kapanınca eklenenler `?eklendi=id,…` (en çok 50) ile sunucu listesinde yeşil. Excel `?yukle=1` ile listenin üstünde (önizleme tablosu geniş). `ImportStudents` `classNames` alır; sunucudaki `normClassName` gibi büyük harfe çevirip olmayan sınıfları "Yeni sınıf açılacak" diye listeler.
+- **Kurulum rehberi:** `reporting > setupSteps` (6 sayım) → Özet'te `SetupGuide`; hepsi > 0 ise görünmez; "Sıradaki" ilk boş adım.
+- **Kenar çubuğu:** `KurumShell` py-3 / gap-3, alt bilgi tek satır ("… · Çıkış"), `KurumNav` grup aralığı 2, madde `py-[2px]`. 1280×800'de bütün maddeler görünüyor (ekran görüntüsüyle).
+- **Doğrulama:** panelde Enter → kaydedip açık kaldı (no 4 → 5), Kaydet → `?eklendi=` iki satır yeşil; Excel "9a" ve "11-A" için uyarı; öğretmen panelinde etüt mesulü seçince branş gizlendi; eski `?tab=yeni` 307. `tsc`, `eslint src` temiz.
+
 ## 5. Özellik durumu
 
 ### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)

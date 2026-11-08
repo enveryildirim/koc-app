@@ -64,3 +64,29 @@ export async function institutionDashboard(ownerId: string) {
     }),
   };
 }
+
+export type SetupStep = { key: string; label: string; count: number; unit: string; href: string; action: string };
+
+/**
+ * Kurulum rehberi (Özet sayfası): yeni kurumun sırayla yapacağı tanımlar ve her birinin kayıt sayısı.
+ * Sıra kayıtların birbirine bağlılığını izler: sınıf → öğretmen → öğrenci → ders → program → takvim.
+ * Hepsinde en az bir kayıt varsa rehber gösterilmez (KROKI.md > Sayfa haritası).
+ */
+export async function setupSteps(ownerId: string): Promise<SetupStep[]> {
+  const [classes, teachers, students, courses, slots, events] = await Promise.all([
+    prisma.classroom.count({ where: { ownerId } }),
+    prisma.teacher.count({ where: { ownerId } }),
+    prisma.student.count({ where: { ownerId, external: false } }),
+    prisma.course.count({ where: { ownerId } }),
+    prisma.scheduleSlot.count({ where: { ownerId } }),
+    prisma.calendarEvent.count({ where: { ownerId } }),
+  ]);
+  return [
+    { key: "siniflar", label: "Sınıflar", count: classes, unit: "sınıf", href: "/kurum/siniflar?yeni=1", action: "Sınıf ekle" },
+    { key: "ogretmenler", label: "Öğretmenler", count: teachers, unit: "kişi", href: "/kurum/ogretmenler?yeni=1", action: "Öğretmen ekle" },
+    { key: "ogrenciler", label: "Öğrenciler", count: students, unit: "öğrenci", href: "/kurum/ogrenciler", action: "Öğrenci ekle" },
+    { key: "dersler", label: "Dersler", count: courses, unit: "ders", href: "/kurum/dersler?yeni=1", action: "Ders ekle" },
+    { key: "program", label: "Ders programı", count: slots, unit: "saat", href: "/kurum/ders-programi", action: "Programı kur" },
+    { key: "takvim", label: "Takvim", count: events, unit: "kayıt", href: "/kurum/takvim", action: "Tatilleri ekle" },
+  ];
+}

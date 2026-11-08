@@ -80,7 +80,14 @@ function validate(rows: Row[]) {
   });
 }
 
-export default function ImportStudents() {
+/** Sunucudaki gibi: sınıf adları büyük harfe çevrilip karşılaştırılır (`normClassName`). */
+const normClass = (s: string) => s.trim().toLocaleUpperCase("tr-TR");
+
+/**
+ * Excel / CSV / yapıştırma ile toplu öğrenci yükleme. `classNames`: kurumdaki sınıflar; dosyada olmayan bir sınıf
+ * adı geçerse önizlemede "yeni sınıf açılacak" uyarısı çıkar (yazım hatası sessizce sınıf açmasın).
+ */
+export default function ImportStudents({ classNames = [] }: { classNames?: string[] }) {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
   const [info, setInfo] = useState("");
@@ -154,6 +161,12 @@ export default function ImportStudents() {
 
   const errs = validate(rows);
   const bad = errs.filter((e) => e.length).length;
+  const known = new Set(classNames.map(normClass));
+  const newClasses = new Map<string, number>();
+  for (const r of rows) {
+    const c = normClass(r.className);
+    if (c && !known.has(c)) newClasses.set(c, (newClasses.get(c) ?? 0) + 1);
+  }
 
   return (
     <div className="space-y-4">
@@ -211,6 +224,12 @@ export default function ImportStudents() {
               {busy ? "Yükleniyor…" : `${rows.length - bad} öğrenciyi yükle`}
             </button>
           </div>
+          {newClasses.size > 0 && (
+            <p className="border-b border-rule/70 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              Yeni sınıf açılacak: {[...newClasses.entries()].map(([c, n]) => `${c} (${n} öğrenci)`).join(", ")}. Yazım hatasıysa dosyayı düzeltin; kurumdaki sınıflar:{" "}
+              {classNames.length ? classNames.join(", ") : "yok"}.
+            </p>
+          )}
           <div className="max-h-[480px] overflow-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-paper text-left text-xs text-lead">
@@ -229,6 +248,7 @@ export default function ImportStudents() {
                     {FIELDS.map((f) => (
                       <td key={f.key} className="px-3 py-1.5">
                         {f.key === "studentNo" && !r.studentNo ? <span className="text-xs text-lead/70">otomatik</span> : r[f.key]}
+                        {f.key === "className" && newClasses.has(normClass(r.className)) && <span className="badge ml-1 bg-amber-50 text-amber-800">yeni</span>}
                       </td>
                     ))}
                     <td className="px-3 py-1.5 text-xs">

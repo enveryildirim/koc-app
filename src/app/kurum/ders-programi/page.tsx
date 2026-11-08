@@ -78,7 +78,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         </span>
       </div>
       {tab === "ogretmen" && !teachers.length ? (
-        <Empty>Henüz öğretmen yok. <Link href="/kurum/ogretmenler" className="font-semibold text-brand-600">Öğretmenler</Link> sayfasından ekleyin.</Empty>
+        <Empty>Henüz öğretmen yok. <Link href="/kurum/ogretmenler?yeni=1" className="font-semibold text-brand-600">Öğretmenler</Link> sayfasından ekleyin.</Empty>
       ) : (
         <ScheduleBoard
           view={tab === "sinif" ? "sinif" : "ogretmen"}

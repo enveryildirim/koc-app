@@ -32,7 +32,7 @@ Sütunlar: **Oluşur** = kaydın doğduğu yer; **Düzenlenir**; **Kullanılır*
 | | |
 |---|---|
 | Oluşur | Yönetim → **Sınıflar** → "+ Yeni sınıf" (yan panel; "Kaydet ve yenisini ekle" ile arka arkaya) |
-| ⚠ Ayrıca oluşur | Öğrenciler → Excel'den yükle: dosyadaki sınıf adı yoksa sınıf kendiliğinden açılır (yazım hatası yeni sınıf açar) |
+| Ayrıca oluşur | Öğrenciler → Excel'den yükle: dosyadaki sınıf adı yoksa sınıf açılır; önizleme "Yeni sınıf açılacak: …" diye önceden uyarır |
 | Düzenlenir | Sınıf sayfası `/kurum/siniflar/[id]`: ad, düzey, etüt mesulü, ek üyeler |
 | Kullanılır | Öğrenci, Ders, Ders programı, Yoklama, Ödev, Yıllık plan, Takvim etkinliği, Takip, Analiz |
 | Kim | Yönetici, etüt mesulü |
@@ -43,19 +43,19 @@ Düzey serbest metindir (9, 10, Seviye-2…). Müfredat düzeyleri bu değerlerd
 ### Öğrenci (`Student`, `ClassMember`)
 | | |
 |---|---|
-| Oluşur | Yönetim → **Öğrenciler** → "Tek tek ekle" sekmesi ya da "Excel'den yükle" sekmesi |
+| Oluşur | Yönetim → **Öğrenciler** → "+ Öğrenci ekle" (yan panel, `?yeni=1`; "Kaydet ve yenisini ekle", Enter) ya da "Excel'den yükle" (listenin üstünde, `?yukle=1`). Eklenenler listede yeşil (`?eklendi=`) |
 | Düzenlenir | Öğrenci profili `/kurum/ogrenciler/[id]` |
 | Ek sınıf üyeliği | Sınıf sayfası → "+ Başka sınıftan ekle" (ör. SEVİYE-2) |
 | Kullanılır | Yoklama, Sözlü/yazılı, Ödev, Deneme sonuçları (öğrenci no ile eşleşir), Veli karnesi, Takip |
 | Kim | Yönetici, etüt mesulü |
 | Kod | `modules/enrollment/internal/students.ts` · `ui/StudentForm.tsx` · `ui/ImportStudents.tsx` |
 
-Öğrenci no 1–6 hanedir (optik formda 6 hane var) ve kurumda tektir. Formda sıradaki numara (en büyük + 1) yazılı gelir, değiştirilebilir; Excel'de Numara boşsa sırayla verilir. ⚠ Ekleme hâlâ sekmede; kayıttan sonra listeye dönülmüyor (U7, aşama 4).
+Öğrenci no 1–6 hanedir (optik formda 6 hane var) ve kurumda tektir. Formda sıradaki numara (en büyük + 1) yazılı gelir, değiştirilebilir; Excel'de Numara boşsa sırayla verilir.
 
 ### Öğretmen / etüt mesulü (`Teacher`) ve kişisel link (`AccessLink`)
 | | |
 |---|---|
-| Oluşur | Yönetim → **Öğretmenler** → Öğretmen ekle (ad, rol; öğretmende branş) |
+| Oluşur | Yönetim → **Öğretmenler** → "+ Öğretmen ekle" (yan panel, `?yeni=1`: ad, rol; öğretmende branş) |
 | Düzenlenir | Aynı sayfa → Düzenle (rol değişikliği linke yansır) |
 | Link | Aynı sayfa → "Giriş linki": oluştur, kopyala, yenile, kaldır |
 | Kullanılır | Ders sorumlusu, Ders programı, Sınıfın etüt mesulü, Takip → Öğretmenler |
@@ -176,7 +176,7 @@ Derse ad ile bağlı; formda ad sınıfın derslerinden seçilir (öğretmen ekr
 ### Yönetim paneli `/kurum` (yönetici, etüt mesulü)
 
 ```
-Özet                      /kurum                 Bugünün dersleri, son denemeler, dikkat isteyenler
+Özet                      /kurum                 Kurulum rehberi (eksik adım varken), bugünün dersleri, son denemeler, dikkat isteyenler
 Giriş
   Yoklama                 /kurum/yoklama         Günün dersleri, ek ders / etüt
   Sözlü ve yazılı         /kurum/degerlendirme   Liste, yeni, sonuç, kâğıt form, uç değerleri ayır
@@ -191,11 +191,11 @@ Araçlar
   Soru havuzu             /kurum/soru-havuzu
   Online testler          /panel
 Yönetim
-  Öğrenciler              /kurum/ogrenciler      Sekmeler: Liste · Tek tek ekle · Excel'den yükle   ⚠ U7
+  Öğrenciler              /kurum/ogrenciler      Liste; + Öğrenci ekle → yan panel; Excel'den yükle → listenin üstünde
   Sınıflar                /kurum/siniflar        Tablo (telefonda liste); + Yeni sınıf → yan panel
     └ Sınıf sayfası       /kurum/siniflar/[id]   Etüt mesulü, Dersler (salt okunur → Dersler), Öğrenciler
   Dersler                 /kurum/dersler         Bütün dersler tek tablo, sınıf süzgeci; + Ders ekle / düzenle → yan panel
-  Öğretmenler             /kurum/ogretmenler     Tablo (telefonda liste) + sağda Öğretmen ekle formu, giriş linki   ⚠ U12
+  Öğretmenler             /kurum/ogretmenler     Tablo (telefonda liste), giriş linki; + Öğretmen ekle → yan panel
   Ders programı           /kurum/ders-programi   Çakışma listesi; sınıfa / öğretmene göre hafta; + Saat ekle (ders listeden)
   Takvim ve planlar       /kurum/takvim          Takvim, yıllık ders planı, haftalık plan içe aktarma
   Müfredat                /kurum/mufredat        Ders × düzey konu listeleri, kullanan sınıflar, takip; + Müfredat ekle
@@ -203,6 +203,10 @@ Yönetim
 ```
 
 Arama: her sayfada ⌘K / Ctrl+K (öğrenci, sınıf, ders, öğretmen, sayfa).
+
+**Ortak ekleme kalıbı** (Sınıflar, Dersler, Öğrenciler, Öğretmenler): başlıkta "+ … ekle" → `?yeni=1` → yan panel (`shared/ui/Drawer.tsx`; masaüstünde sağdan, telefonda tam ekran; Esc kapatır; Enter kaydeder). "Kaydet" listeye döner ve eklenenleri yeşil vurgular; "Kaydet ve yenisini ekle" panelde kalır. Boş listede ne yapılacağını söyleyen bağlantı.
+
+**Kurulum sırası** (Özet'teki rehber, `reporting > setupSteps`): Sınıflar → Öğretmenler → Öğrenciler → Dersler → Ders programı → Takvim.
 
 ### Öğretmen ekranı `/ogretmen` (öğretmen, etüt mesulü; telefon öncelikli)
 

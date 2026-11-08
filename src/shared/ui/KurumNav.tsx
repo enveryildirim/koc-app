@@ -43,7 +43,7 @@ function useIsActive() {
 export default function KurumNav() {
   const { isActive } = useIsActive();
   return (
-    <nav aria-label="Kurum menüsü" className="no-print flex flex-col gap-2.5">
+    <nav aria-label="Kurum menüsü" className="no-print flex flex-col gap-2">
       {GROUPS.map((g) => (
         <div key={g.title} className="flex flex-col gap-0.5">
           {g.title !== "Bugün" && <div className="px-2 pb-0.5 text-xs text-lead">{g.title}</div>}
@@ -54,7 +54,7 @@ export default function KurumNav() {
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`group flex shrink-0 items-center gap-2.5 rounded-md px-2 py-[3px] text-[14px] ${
+                className={`group flex shrink-0 items-center gap-2.5 rounded-md px-2 py-[2px] text-[14px] ${
                   active ? "bg-surface font-semibold text-graphite ring-1 ring-rule" : "text-graphite/80 hover:bg-surface/60 hover:text-graphite"
                 }`}
               >

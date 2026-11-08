@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import Drawer from "@/shared/ui/Drawer";
+import Drawer, { enterSubmits } from "@/shared/ui/Drawer";
 import { COURSE_KINDS, COURSE_KIND_KEYS, guessCourseKind } from "../labels";
 import type { CourseRow } from "../types";
 
@@ -260,9 +260,8 @@ export default function CourseAdmin({
           </>
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); if (canAdd) add(false); }}>
+        <form onSubmit={(e) => e.preventDefault()} onKeyDown={enterSubmits(() => canAdd && add(false))}>
           {fields(draft, setDraft, true)}
-          <button type="submit" className="sr-only" tabIndex={-1}>Kaydet</button>
         </form>
       </Drawer>
 
@@ -279,12 +278,11 @@ export default function CourseAdmin({
         }
       >
         {edit && (
-          <form onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+          <form onSubmit={(e) => e.preventDefault()} onKeyDown={enterSubmits(() => edit?.name.trim() && saveEdit())}>
             {fields(edit, setEdit, false)}
             {editing && editing.slotCount > 0 && (
               <p className="mt-3 text-[12.5px] text-lead">Programda {editing.slotCount} saati var; ad değişirse programdaki satırlar da değişir. Silmek için önce programdan kaldırın.</p>
             )}
-            <button type="submit" className="sr-only" tabIndex={-1}>Kaydet</button>
           </form>
         )}
       </Drawer>

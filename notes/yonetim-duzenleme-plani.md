@@ -133,15 +133,15 @@ Kod: modules/schedule/internal/courses.ts · ui/CourseManager.tsx
 - [x] **Excel'den yükleme:** kurumda olmayan ders adı ya da düzey önizlemede uyarılır (aktarım engellenmez).
 - Not: soru havuzundaki düzey alanı ayrı; bu aşamada değişmedi.
 
-### Aşama 4: Ortak ekleme kalıbı ve kurulum rehberi
-- [ ] **Excel'den yükleme yeni sınıf açacaksa** önizlemede "Yeni sınıf açılacak: 11-A" uyarısı (yazım hatası sessizce sınıf açmasın).
-- [ ] **Öğrenciler:** sekmeler kalkar; sayfa doğrudan listedir. Başlıkta "+ Öğrenci ekle" (birincil) ve "Excel'den yükle" (ikincil).
-  - "+ Öğrenci ekle" → panel. **Kaydet** → panel kapanır, listede yeni satır vurgulanır, "Ali Kaya eklendi" bildirimi. **Kaydet ve yenisini ekle** → panel açık kalır, sınıf seçimi korunur, numara bir artar. Arka arkaya giriş için.
-  - Excel'den yükle → panel. Bitince listeye dönülür: "19 öğrenci eklendi, 2 güncellendi".
-  - Liste boşken iki büyük seçenek: "Tek tek ekle" / "Excel'den yükle".
-- [ ] **Aynı kalıp** Sınıflar, Personel ve Dersler sayfalarında. Sağdaki sabit formlar kalkar.
-- [ ] **Kurulum rehberi (Özet sayfası):** kurum yeniyken adımlar ve sayılar:
-  Sınıflar (3) ✓ → Personel (4) ✓ → Öğrenciler (0) → Dersler → Ders programı → Takvim. Her adımda bağlantı var. Hepsi tamamlanınca rehber kaybolur.
+### Aşama 4: Ortak ekleme kalıbı ve kurulum rehberi ✓
+- [x] **Excel'den yükleme yeni sınıf açacaksa** önizlemede "Yeni sınıf açılacak: 11-A (1 öğrenci), 9A (1 öğrenci)" uyarısı ve satırda "yeni" etiketi; kurumdaki sınıflar da yazılır ("9a" gibi yazım hataları yakalanır).
+- [x] **Öğrenciler:** sekmeler kalktı; sayfa listedir. Başlıkta "Excel'den yükle" (ikincil) ve "+ Öğrenci ekle" (birincil). Eski `?tab=` adresleri yönlenir.
+  - "+ Öğrenci ekle" → yan panel (`?yeni=1`; liste bir sınıfa süzülüyse o sınıf seçili). **Kaydet** → panel kapanır, eklenenler listede yeşil (`?eklendi=`), "N öğrenci eklendi · Vurguyu kaldır". **Kaydet ve yenisini ekle** (ve Enter) → panel açık, sınıf korunur, numara bir artar, "Eklendi: …" satırı.
+  - "Excel'den yükle" → listenin üstünde açılır (`?yukle=1`, önizleme tablosu panele sığmadığı için); bitince liste aynı sayfada yenilenir.
+  - Hiç öğrenci yokken iki büyük seçenek: "Tek tek ekle" / "Excel'den yükle".
+- [x] **Aynı kalıp:** Sınıflar (aşama 1), Dersler (aşama 2), Öğretmenler (sağdaki form kalktı, "+ Öğretmen ekle" → panel). Panellerde Enter kaydeder (gizli gönder düğmesi yok; ekran okuyucuda tek "Kaydet").
+- [x] **Kurulum rehberi (Özet):** "Kurulum · 5/6 adım" + "Sıradaki: …" düğmesi; adımlar sayılarıyla: Sınıflar → Öğretmenler → Öğrenciler → Dersler → Ders programı → Takvim. Her adım ilgili sayfaya (çoğunda ekleme paneline) gider; hepsi dolunca görünmez (`reporting > setupSteps`).
+- [x] **Menü (U6):** kenar çubuğu sıkılaştırıldı (madde ve grup aralıkları, alt bilgi tek satır "… · Çıkış"); 1280×800'de Yönetim'in bütün maddeleri görünüyor.
 
 ### Aşama 5: Kullanıcı yönetimi
 Öneri (PoC'ye uygun, en hafif yol):

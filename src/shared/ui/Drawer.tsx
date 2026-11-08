@@ -2,6 +2,17 @@
 import { useEffect, useRef } from "react";
 
 /**
+ * Panel formlarında Enter ile kaydetme (gizli gönder düğmesi yerine; ekran okuyucuda ikinci "Kaydet" görünmesin).
+ * Çok satırlı alanlarda ve seçim kutularında Enter kendi işini yapar.
+ */
+export const enterSubmits = (submit: () => void) => (e: React.KeyboardEvent<HTMLElement>) => {
+  const t = e.target as HTMLElement;
+  if (e.key !== "Enter" || e.shiftKey || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.tagName === "BUTTON") return;
+  e.preventDefault();
+  submit();
+};
+
+/**
  * Yan panel: listeden ayrılmadan kayıt ekleme / düzenleme.
  * Masaüstünde sağdan açılır (liste arkada görünür kalır), telefonda tam ekran.
  * Esc ya da arka plana tıklama kapatır; açılınca paneldeki ilk alana odaklanır.

@@ -27,7 +27,8 @@ Her maddenin başındaki kutuyu işaretleyin: `[x]` geçti, `[!]` sorun var. Sor
 - [ ] Çıkış yapıp yeniden giriş yapın; yanlış şifreyle de deneyin.
 
 **1.2 Boş durumlar** (veri yokken hiçbir sayfa hata vermemeli, ne yapılacağını söylemeli)
-- [ ] Özet (kokpit)
+- [ ] Özet (kokpit): üstte **Kurulum · 0/6 adım** ve "Sıradaki: Sınıf ekle" düğmesi. Adımlar: Sınıflar → Öğretmenler → Öğrenciler → Dersler → Ders programı → Takvim. Her adım tamamlandıkça yeşil ✓ ve sayı gelir; hepsi tamamlanınca rehber kaybolur (her bölümden sonra Özet'e dönüp bakın).
+- [ ] Menü: 1280×800 civarı bir pencerede Yönetim'in son maddesi (Puan cetvelleri) kaydırmadan görünüyor; altta "e-posta · Çıkış" tek satır.
 - [ ] Yoklama · Sözlü ve yazılı · Ödevler · Denemeler ve optik
 - [ ] Takip · Analiz (tüm sekmeler) · Veli karnesi · Haftalık veli raporu
 - [ ] Soru havuzu · Online testler
@@ -53,7 +54,7 @@ Her maddenin başındaki kutuyu işaretleyin: `[x]` geçti, `[!]` sorun var. Sor
 
 ## 3. Öğretmenler ve etüt mesulü
 
-Yönetim → Öğretmenler → **Öğretmen ekle**:
+Yönetim → Öğretmenler → sağ üstte **+ Öğretmen ekle** → yan panel ("Kaydet ve yenisini ekle" ya da Enter ile arka arkaya):
 
 | Ad Soyad | Branş | Rol |
 |---|---|---|
@@ -77,13 +78,15 @@ Yönetim → Öğretmenler → **Öğretmen ekle**:
 ## 4. Öğrenciler
 
 **4.1 Tek tek ekleme**
-- [ ] Öğrenciler → **Tek tek ekle** → "Öğrenci no" kutusunda sıradaki numara yazılı gelir (boş kurumda *1*). *9001* yapın: Ali Kaya, sınıf 9-A, veli adı / telefonu → ekle.
-- [ ] Kayıttan sonra form ikinci öğrenci için hazır: numara *9002*, sınıf 9-A dolu gelir. (Kaydetmeyin; 9002 aşağıdaki toplu yüklemede geliyor.)
+- [ ] Öğrenciler boşken sayfada iki büyük seçenek: "Tek tek ekle" / "Excel'den yükle".
+- [ ] **+ Öğrenci ekle** → yan panel; "Öğrenci no" kutusunda sıradaki numara yazılı (boş kurumda *1*). *9001* yapın: Ali Kaya, sınıf 9-A, veli adı / telefonu → **Kaydet ve yenisini ekle** (ya da Enter).
+- [ ] Panel açık kalır: numara *9002*, sınıf 9-A dolu, altta "Eklendi: Ali Kaya". (Kaydetmeyin; 9002 aşağıdaki toplu yüklemede geliyor.) **Vazgeç** → listede Ali Kaya yeşil, "1 öğrenci eklendi · Vurguyu kaldır".
+- [ ] Listeyi 9-A'ya süzüp **+ Öğrenci ekle** → sınıf 9-A seçili gelir.
 - [ ] Zorunlu alanlar (no, ad, soyad) boşken kaydetmeyi deneyin.
 - [ ] Aynı numarayla ikinci öğrenci eklemeyi deneyin.
 
 **4.2 Toplu yükleme (yapıştır)**
-- [ ] Öğrenciler → toplu yükleme → aşağıdaki tabloyu kopyalayıp yapıştırın (sekmeyle ayrılmış olmasına gerek yok; Excel'den de yapıştırabilirsiniz):
+- [ ] Öğrenciler → **Excel'den yükle** (listenin üstünde açılır) → aşağıdaki tabloyu kopyalayıp yapıştırın (sekmeyle ayrılmış olmasına gerek yok; Excel'den de yapıştırabilirsiniz):
 
 ```
 Numara	Ad	Soyad	Sınıf	Veli Adı	Veli Telefonu
@@ -110,7 +113,7 @@ Numara	Ad	Soyad	Sınıf	Veli Adı	Veli Telefonu
 
 - **Beklenen:** Önizlemede 19 satır; kaydedince 9-A'da 10, 10-A'da 10 öğrenci.
 - [ ] Aynı tabloyu tekrar yükleyin → öğrenciler **güncellenir**, kopya oluşmaz.
-- [ ] Tabloda bir satırın sınıfını *11-A* yapıp yükleyin → 11-A sınıfı kendiliğinden oluşur. (Sonra o öğrenciyi 10-A'ya geri alın, 11-A'yı silin.)
+- [ ] Tabloda bir satırın sınıfını *11-A*, bir başkasınınkini *9a* yapıp **Önizle** → üstte sarı "Yeni sınıf açılacak: 11-A (1 öğrenci), 9A (1 öğrenci)… kurumdaki sınıflar: …" ve satırlarda "yeni" etiketi. Yüklerseniz iki sınıf da açılır. (Sonra öğrencileri geri alın, sınıfları silin.)
 - [ ] "Ad" başlığını silip yükleyin → eksik sütun uyarısı.
 - [ ] **Numara sütunu olmadan** yükleyin (Numara sütununu silin, 2–3 yeni öğrenci yazın) → önizlemede numara "otomatik"; yükleyince "N öğrenciye sıradaki numara verildi", numaralar en büyük numaradan devam eder.
 - [ ] **Şablonu indir** → dosya açılıyor, başlıklar doğru.

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
-import { institutionDashboard, successScores } from "@/modules/reporting/server";
+import { institutionDashboard, setupSteps, successScores, type SetupStep } from "@/modules/reporting/server";
 import { SCORE_RULES } from "@/modules/reporting";
 import { DAYS } from "@/modules/schedule";
 import LessonDay from "@/modules/schedule/ui/LessonDay";
@@ -21,11 +21,12 @@ export default async function Page() {
   const d = await institutionDashboard(ownerId);
   const { today, dow, exams, attendance, homework } = d;
   const year = schoolYearOf(today);
-  const [week, holidays, plans, scores] = await Promise.all([
+  const [week, holidays, plans, scores, setup] = await Promise.all([
     calendarFeed(ownerId, { from: addDays(today, 1), to: addDays(today, 7) }),
     holidaysOn(ownerId, today),
     planOverview(ownerId, year, today),
     successScores(ownerId),
+    setupSteps(ownerId),
   ]);
   const lastExam = exams[0];
   const weekNo = Math.floor((Date.parse(today) - Date.parse(defaultPlanStart(year))) / (7 * 86400000)) + 1;
@@ -46,6 +47,8 @@ export default async function Page() {
               : `${schoolYearLabel(year)} eğitim yılı`
         }
       />
+
+      <SetupGuide steps={setup} />
 
       <div className="mb-6 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Kpi label="Öğrenci" value={d.studentCount} hint={`${d.classCount} sınıfta`} />
@@ -263,5 +266,43 @@ export default async function Page() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Kurulum rehberi: yeni kurumda tanımların sırası ve sayıları. Hepsi tamamlanınca görünmez.
+ * Sıradaki adım (ilk boş adım) öne çıkar; her adım ilgili sayfaya (çoğunda ekleme paneline) götürür.
+ */
+function SetupGuide({ steps }: { steps: SetupStep[] }) {
+  const done = steps.filter((s) => s.count > 0).length;
+  if (done === steps.length) return null;
+  const next = steps.find((s) => s.count === 0)!;
+  return (
+    <section className="card mb-5 px-4 py-3" aria-label="Kurulum">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">
+          Kurulum <span className="font-normal text-lead">· {done}/{steps.length} adım</span>
+        </h2>
+        <Link href={next.href} className="btn-primary py-1.5 text-sm">Sıradaki: {next.action}</Link>
+      </div>
+      <ol className="mt-2 flex flex-wrap gap-x-1 gap-y-1.5 text-[13.5px]">
+        {steps.map((s, i) => {
+          const ok = s.count > 0;
+          const isNext = s.key === next.key;
+          return (
+            <li key={s.key} className="flex items-center">
+              {i > 0 && <span aria-hidden="true" className="mx-1 text-lead/50">›</span>}
+              <Link
+                href={s.href}
+                className={`rounded-full px-2.5 py-0.5 ring-1 ${isNext ? "bg-graphite text-white ring-graphite" : ok ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : "text-lead ring-rule hover:text-graphite"}`}
+              >
+                {i + 1}. {s.label}
+                {ok && <span className="num"> · {s.count} {s.unit} ✓</span>}
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }

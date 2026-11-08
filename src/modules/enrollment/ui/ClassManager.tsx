@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import Drawer from "@/shared/ui/Drawer";
+import Drawer, { enterSubmits } from "@/shared/ui/Drawer";
 
 export type ClassRow = { id: string; name: string; level: string; students: number; members: number; courses: number; mentor: string | null };
 
@@ -128,10 +128,8 @@ export default function ClassManager({ classes, open }: { classes: ClassRow[]; o
       >
         <form
           className="space-y-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (name.trim()) add(false);
-          }}
+          onSubmit={(e) => e.preventDefault()}
+          onKeyDown={enterSubmits(() => name.trim() && add(false))}
         >
           <div>
             <label className="label" htmlFor="cls-name">Sınıf / şube adı</label>
@@ -144,7 +142,6 @@ export default function ClassManager({ classes, open }: { classes: ClassRow[]; o
           </div>
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
           {added.length > 0 && !err && <p className="text-sm text-emerald-700">{added.length} sınıf eklendi.</p>}
-          <button type="submit" className="sr-only" tabIndex={-1}>Kaydet</button>
         </form>
       </Drawer>
     </>

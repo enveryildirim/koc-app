@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Drawer, { enterSubmits } from "@/shared/ui/Drawer";
 import { TeacherRow } from "../types";
 import { TEACHER_ROLES, TEACHER_ROLE_KEYS } from "../labels";
 import AccessLinkPanel from "./AccessLinkPanel";
@@ -24,14 +25,20 @@ const RoleBadge = ({ role }: { role: string }) =>
 /** Etüt mesulünün branşı yoktur; tabloda "—". */
 const branchOf = (t: { branch: string; role: string }) => (t.role === "MENTOR" || !t.branch ? "—" : t.branch);
 
-export default function TeacherManager({ teachers }: { teachers: TeacherRow[] }) {
+/**
+ * Öğretmen ve etüt mesulleri: liste (masaüstünde tablo, telefonda iki satır), düzenleme satırda,
+ * ekleme yan panelde (`?yeni=1`, başlıktaki "+ Öğretmen ekle"). Eklenenler listede vurgulanır.
+ */
+export default function TeacherManager({ teachers, open = false }: { teachers: TeacherRow[]; open?: boolean }) {
   const router = useRouter();
+  const path = usePathname();
+  const [added, setAdded] = useState<string[]>([]);
   const [form, setForm] = useState<Form>({ name: "", branch: "", role: "TEACHER" });
   const [edit, setEdit] = useState<(Form & { id: string }) | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function send(url: string, method: string, body?: unknown) {
+  async function send(url: string, method: string, body?: unknown): Promise<false | { id?: string }> {
     setBusy(true);
     setError("");
     const res = await fetch(url, {
@@ -46,8 +53,23 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
       return false;
     }
     router.refresh();
-    return true;
+    return json;
   }
+
+  const closeAdd = () => {
+    setError("");
+    router.replace(path, { scroll: false });
+  };
+  /** Ekler; `again` ise panel açık kalır, rol korunur. */
+  async function add(again: boolean) {
+    const r = await send("/api/kurum/ogretmenler", "POST", form);
+    if (!r) return;
+    if (r.id) setAdded((a) => [...a, r.id!]);
+    setForm({ name: "", branch: "", role: form.role });
+    if (!again) closeAdd();
+  }
+  const canAdd = form.name.trim() && (form.role === "MENTOR" || form.branch.trim());
+  const isNew = (id: string) => added.includes(id);
 
   const startEdit = (t: TeacherRow) => {
     setError("");
@@ -73,12 +95,12 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
   );
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+    <>
       <div>
         {/* Telefon: iki satırlık liste; giriş linki ve işlemler satırın içinde */}
         <ul className="card divide-y divide-rule/70 sm:hidden">
           {teachers.map((t) => (
-            <li key={t.id} className="space-y-2 px-3.5 py-3">
+            <li key={t.id} className={`space-y-2 px-3.5 py-3 ${isNew(t.id) ? "bg-emerald-50" : ""}`}>
               {edit?.id === t.id ? (
                 <div className="space-y-2">
                   {editFields(edit)}
@@ -105,7 +127,11 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
               )}
             </li>
           ))}
-          {teachers.length === 0 && <li className="px-3.5 py-6 text-center text-lead">Henüz öğretmen yok.</li>}
+          {teachers.length === 0 && (
+            <li className="px-3.5 py-6 text-center text-lead">
+              Henüz öğretmen yok. <Link href="?yeni=1" scroll={false} className="font-semibold text-brand-600">İlk öğretmeni ekleyin</Link>.
+            </li>
+          )}
         </ul>
 
         <div className="card hidden overflow-x-auto sm:block">
@@ -141,9 +167,10 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
                     </td>
                   </tr>
                 ) : (
-                  <tr key={t.id} className="hover:bg-paper">
+                  <tr key={t.id} className={isNew(t.id) ? "bg-emerald-50" : "hover:bg-paper"}>
                     <td className="px-4 py-3 font-medium">
                       <Link href={`/kurum/ders-programi/ogretmen/${t.id}`} className="hover:text-brand-700 hover:underline">{t.name}</Link>
+                      {isNew(t.id) && <span className="ml-2 text-xs font-normal text-emerald-700">eklendi</span>}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3"><RoleBadge role={t.role} /></td>
                     <td className="px-4 py-3">{branchOf(t)}</td>
@@ -158,45 +185,57 @@ export default function TeacherManager({ teachers }: { teachers: TeacherRow[] })
               )}
               {teachers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-lead">Henüz öğretmen yok.</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-lead">
+                    Henüz öğretmen yok. <Link href="?yeni=1" scroll={false} className="font-semibold text-brand-600">İlk öğretmeni ekleyin</Link>.
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        {error && edit && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && !open && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </div>
 
-      <form
-        className="card space-y-3 self-start p-5"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (await send("/api/kurum/ogretmenler", "POST", form)) setForm({ name: "", branch: "", role: form.role });
-        }}
+      <Drawer
+        open={open}
+        title="Öğretmen ekle"
+        onClose={closeAdd}
+        footer={
+          <>
+            <button className="btn-primary" disabled={busy || !canAdd} onClick={() => add(false)}>Kaydet</button>
+            <button className="btn-secondary" disabled={busy || !canAdd} onClick={() => add(true)}>Kaydet ve yenisini ekle</button>
+            <button className="btn ml-auto text-lead" onClick={closeAdd}>Vazgeç</button>
+          </>
+        }
       >
-        <h3 className="font-semibold">Öğretmen ekle</h3>
-        <div>
-          <label className="label">Ad Soyad</label>
-          <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-        </div>
-        <div>
-          <label className="label">Rol</label>
-          <RoleSelect value={form.role} onChange={(role) => setForm({ ...form, role })} />
-          <p className="mt-1 text-[13px] text-lead">
-            {form.role === "MENTOR"
-              ? "Etüt mesulü sınıfların sorumlusudur; yönetici yetkisiyle öğretmenin yaptığı her şeyi yapabilir. Branşı yoktur."
-              : "Öğretmen telefondan kendi derslerinin yoklamasını, konusunu, sözlü / yazılısını ve ödevini girer."}
-          </p>
-        </div>
-        {form.role !== "MENTOR" && (
+        <form
+          className="space-y-3"
+          onSubmit={(e) => e.preventDefault()}
+          onKeyDown={enterSubmits(() => canAdd && add(true))}
+        >
           <div>
-            <label className="label">Branş</label>
-            <input className="input" placeholder="Matematik" value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} required />
+            <label className="label" htmlFor="t-name">Ad Soyad</label>
+            <input id="t-name" className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </div>
-        )}
-        {error && !edit && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        <button className="btn-primary w-full" disabled={busy}>Ekle</button>
-      </form>
-    </div>
+          <div>
+            <label className="label" htmlFor="t-role">Rol</label>
+            <RoleSelect value={form.role} onChange={(role) => setForm({ ...form, role })} />
+            <p className="mt-1 text-[13px] text-lead">
+              {form.role === "MENTOR"
+                ? "Etüt mesulü sınıfların sorumlusudur; yönetici yetkisiyle öğretmenin yaptığı her şeyi yapabilir. Branşı yoktur."
+                : "Öğretmen telefondan kendi derslerinin yoklamasını, konusunu, sözlü / yazılısını ve ödevini girer."}
+            </p>
+          </div>
+          {form.role !== "MENTOR" && (
+            <div>
+              <label className="label" htmlFor="t-branch">Branş</label>
+              <input id="t-branch" className="input" placeholder="Matematik" value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} required />
+            </div>
+          )}
+          {error && !edit && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          {added.length > 0 && !error && <p className="text-sm text-emerald-700">{added.length} kişi eklendi. Giriş linkini listeden oluşturun.</p>}
+        </form>
+      </Drawer>
+    </>
   );
 }
