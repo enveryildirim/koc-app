@@ -47,7 +47,7 @@ export type CourseFilter = { classroomId?: string; teacherId?: string };
 export async function listCourses(ownerId: string, f: CourseFilter = {}): Promise<(CourseRow & { classroomName: string })[]> {
   const list = await prisma.course.findMany({
     where: { ownerId, ...f },
-    include: { teacher: { select: { name: true } }, classroom: { select: { name: true } }, slots: { select: { startTime: true, endTime: true } } },
+    include: { teacher: { select: { name: true, role: true } }, classroom: { select: { name: true } }, slots: { select: { startTime: true, endTime: true } } },
   });
   // Türkçe sıralama (SQLite "İ", "Ş" gibi harfleri sona atar)
   list.sort((a, b) => a.classroom.name.localeCompare(b.classroom.name, "tr") || a.name.localeCompare(b.name, "tr"));
@@ -59,6 +59,7 @@ export async function listCourses(ownerId: string, f: CourseFilter = {}): Promis
     kind: c.kind,
     teacherId: c.teacherId,
     teacherName: c.teacher?.name ?? null,
+    teacherRole: c.teacher?.role ?? null,
     external: c.external,
     createdAt: c.createdAt.toISOString(),
     slotCount: c.slots.length,

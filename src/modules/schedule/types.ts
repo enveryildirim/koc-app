@@ -33,6 +33,8 @@ export type CourseRow = {
   kind: string;
   teacherId: string | null;
   teacherName: string | null;
+  /** Sorumlunun rolü (TEACHER | MENTOR); listelerde etüt mesulü belirtilir (`staffLabel`) */
+  teacherRole: string | null;
   external: boolean;
   /** ISO; yeni dersler için "henüz değerlendirme yok" uyarısı yumuşatılır */
   createdAt: string;

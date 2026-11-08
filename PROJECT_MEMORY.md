@@ -482,6 +482,7 @@ Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `pris
 - **Yönetici sekmesi** `getUser()` ile kurum hesabını gösterir; çoklu yönetici ve personel telefonu sonraya (veri modeli değişikliği).
 - Bağlantılar güncellendi: kurulum rehberi adımı "Personel", ders programı boş durumu, öğretmen ayrıntısının geri bağlantısı (rolüne göre sekme), aramadaki grup adı, sınıf sayfasındaki "etüt mesulü yok" notu (→ `?rol=mesul&yeni=1`).
 - **Doğrulama:** mesul + 2 sınıf → ikisi ona geçti; tek sınıfa indirince öbürü boşaldı; öğretmene çevirince sınıfları boşaldı; öğretmene sınıf 400; olmayan sınıf 400; sayfalar 200, eski adres 307. `tsc`, `eslint src` temiz.
+- **Sorumlunun rolü:** `CourseRow.teacherRole`; `staffLabel(name, role)` (schedule index) etüt mesulüne "(Etüt mesulü)" ekler. Dersler tablosu / telefon listesi, sorumlu seçimi, sınıf sayfasındaki ders listesi ve aramadaki ders sonucu bunu kullanır (aynı adlı öğretmen ve mesul ayırt edilir). Ders programı penceresindeki öğretmen listesi `teacherSub` ile zaten "(Etüt mesulü)" / "(branş)" gösteriyor.
 
 ## 5. Özellik durumu
 

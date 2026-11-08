@@ -19,6 +19,9 @@ export const TEACHER_ROLE_KEYS = Object.keys(TEACHER_ROLES);
 /** Öğretmenin kısa tanımı (listelerde adın yanında): branşı; etüt mesulünün branşı yoktur, "Etüt mesulü" yazılır. */
 export const teacherSub = (t: { branch: string; role: string }) => (t.role === "MENTOR" ? "Etüt mesulü" : t.branch);
 
+/** Ders sorumlusu gibi kişi adlarının yanında rol: etüt mesulüyse "Ad (Etüt mesulü)", öğretmense yalnızca ad. */
+export const staffLabel = (name: string, role: string | null | undefined) => (role === "MENTOR" ? `${name} (Etüt mesulü)` : name);
+
 /**
  * Ders türleri. Tür yalnızca varsayılanları belirler (ör. ölçme yöntemi); bütün türler aynı araçlarla
  * (yoklama, işlenen konu, değerlendirme, sınav, ödev) takip edilir.

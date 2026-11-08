@@ -7,7 +7,7 @@ import { PageHeader } from "@/shared/ui/kurum";
 import { classAssessmentSummary, fmtPercent } from "@/modules/assessment/server";
 import ClassMentor from "@/modules/enrollment/ui/ClassMentor";
 import ClassMembers from "@/modules/enrollment/ui/ClassMembers";
-import { COURSE_KINDS, type CourseRow } from "@/modules/schedule";
+import { COURSE_KINDS, staffLabel, type CourseRow } from "@/modules/schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +102,7 @@ function CourseList({ classroomId, courses, notes }: { classroomId: string; cour
                   <span className={`badge ${COURSE_KINDS[c.kind]?.cls ?? ""}`}>{COURSE_KINDS[c.kind]?.label ?? c.kind}</span>
                   {c.external && <span className="badge bg-zinc-100 text-zinc-700">Dışarıda</span>}
                 </span>
-                <span className="block text-[13px] text-lead">{c.teacherName ?? "Sorumlu yok"}</span>
+                <span className="block text-[13px] text-lead">{c.teacherName ? staffLabel(c.teacherName, c.teacherRole) : "Sorumlu yok"}</span>
                 {notes[c.id] && <span className={`block text-[12.5px] ${notes[c.id].warn ? "text-amber-700" : "text-lead"}`}>{notes[c.id].text}</span>}
               </span>
               <span className="shrink-0 text-right text-[13px] text-lead">

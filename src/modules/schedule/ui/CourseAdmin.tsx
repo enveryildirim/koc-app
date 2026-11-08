@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Drawer, { enterSubmits } from "@/shared/ui/Drawer";
-import { COURSE_KINDS, COURSE_KIND_KEYS, guessCourseKind } from "../labels";
+import { COURSE_KINDS, COURSE_KIND_KEYS, guessCourseKind, staffLabel } from "../labels";
 import type { CourseRow } from "../types";
 
 type Row = CourseRow & { classroomName: string };
@@ -177,7 +177,7 @@ export default function CourseAdmin({
         <label className="label" htmlFor="course-teacher">Sorumlu</label>
         <select id="course-teacher" className="input" value={d.teacherId} onChange={(e) => set({ ...d, teacherId: e.target.value })}>
           <option value="">—</option>
-          {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.role === "MENTOR" ? " (etüt mesulü)" : ""}</option>)}
+          {teachers.map((t) => <option key={t.id} value={t.id}>{staffLabel(t.name, t.role)}</option>)}
         </select>
         <p className="mt-1 text-[12.5px] text-lead">Ders programına eklerken öğretmen buradan gelir.</p>
       </div>
@@ -211,7 +211,7 @@ export default function CourseAdmin({
                     {kindBadge(c)}
                     <span className="ml-auto text-[13px] font-semibold">{c.classroomName}</span>
                   </span>
-                  <span className="block text-[13px] text-lead">{c.teacherName ?? "Sorumlu yok"} · {program(c)}</span>
+                  <span className="block text-[13px] text-lead">{c.teacherName ? staffLabel(c.teacherName, c.teacherRole) : "Sorumlu yok"} · {program(c)}</span>
                 </button>
               </li>
             ))}
@@ -238,7 +238,16 @@ export default function CourseAdmin({
                         {isNew(c.id) && <span className="text-xs text-emerald-700">eklendi</span>}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5">{c.teacherName ?? <span className="text-lead/70">yok</span>}</td>
+                    <td className="px-4 py-2.5">
+                      {c.teacherName ? (
+                        <>
+                          {c.teacherName}
+                          {c.teacherRole === "MENTOR" && <span className="text-lead"> (Etüt mesulü)</span>}
+                        </>
+                      ) : (
+                        <span className="text-lead/70">yok</span>
+                      )}
+                    </td>
                     <td className={`num px-4 py-2.5 ${c.slotCount ? "" : "text-lead"}`}>{program(c)}</td>
                   </tr>
                 ))}
