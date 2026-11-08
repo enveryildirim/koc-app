@@ -426,7 +426,9 @@ PoC 1. adımı (temel) yapıldı:
 - **Nerede:** deneme → Sınıf ortalamaları (her sınıf kendi içinde, kurum geneli kurum içinde), Sıralı liste (seçili grup; sıra ve yüzdelik dilim değişmez, satırda "uç ↓/↑"), Analiz → Sınıf gelişimi (her sınıf × deneme hücresi kendi içinde). Uygulanmayan yerler: öğrenci karnesi, veli karnesi, sıra, yüzdelik, yoklama.
 - **Arayüz:** `shared/ui/Outliers.tsx` (`OutlierToggle`, `OutlierBox`, `withOutliers`). `examReport` her gruba `trimmed`, `low`, `high`, `fences` ekler; `classProgress(…, trim)` hücreye `removed` ekler.
 - **Demo:** seed'de TYT Deneme 2'ye giren ilk öğrenci A kitapçığını çözüp B işaretlemiş (−7 net). Uç değer olarak yakalanır; Sınıf gelişiminde 12-A düğme kapalıyken ▼ 3,42, açıkken ▲ 1,73.
-- **Sonraki adımlar (onaylı sıra):** 2) Takip → Sınıflar / Dersler ve dikkat listesine "uç değer" gerekçesi; 3) sözlü / yazılı ortalamaları ve madde analizi.
+- **Takip (2. adım):** dikkat listesine `uc` gerekçesi (mavi "Uç değer"), düğmeden bağımsız: son 30 günde bir sözlü/yazılıda (değerlendirmenin kendi içinde) ya da denemede (deneme × sınıf içinde) çok düşük sonuç. Aynı derste zaten "Not" gerekçesi varsa ayrı satır açılmaz, o satıra "… ile grubun çok altında" eklenir. Sınıflar ve Dersler sekmelerinde düğme: `classComparison(…, trim)` / `courseAnalysis(…, trim)`; ayırma her değerlendirmenin kendi içinde, Derslerde kriter ortalamalarından da çıkarılır. Yardımcılar `outlierMarks`, `groupBy` (`followup.ts`).
+- **Demo (2):** 10-A "Fizik ara sınavı"nda son öğrenci kâğıdı neredeyse boş (p = 0,06). Seed rastgele: rakamlar her `db:seed`'de değişir, test senaryosunda kesin rakam yazılmaz.
+- **Sonraki adım (onaylı):** 3) sözlü / yazılı sayfası ortalamaları ve madde analizi.
 - **Not:** `npm run build`, çalışan `next dev`'in `.next` klasörünü bozar; derlemeden sonra dev sunucusu `.next` silinip yeniden başlatılmalı.
 
 ## 5. Özellik durumu

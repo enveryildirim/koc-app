@@ -6,13 +6,15 @@ import { attention, classComparison, courseAnalysis, teacherActivity, FOLLOW_RUL
 import { COURSE_KINDS } from "@/modules/schedule";
 import { fmtPercent, percentTone } from "@/modules/assessment";
 import { Empty, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
+import { OutlierToggle } from "@/shared/ui/Outliers";
+import { outliersOn } from "@/shared/stats";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ tab?: string; kapsam?: string; sinif?: string }>;
+type SP = Promise<{ tab?: string; kapsam?: string; sinif?: string; uc?: string }>;
 
-const KIND_LABEL = { devam: "Devam", not: "Not", odev: "Ödev" } as const;
-const KIND_CLS = { devam: "bg-red-50 text-red-700", not: "bg-amber-50 text-amber-800", odev: "bg-violet-50 text-violet-700" } as const;
+const KIND_LABEL = { devam: "Devam", not: "Not", odev: "Ödev", uc: "Uç değer" } as const;
+const KIND_CLS = { devam: "bg-red-50 text-red-700", not: "bg-amber-50 text-amber-800", odev: "bg-violet-50 text-violet-700", uc: "bg-sky-50 text-sky-800" } as const;
 const shortDate = (d: string | null) => (d ? new Date(d + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" }) : "—");
 
 /**
@@ -25,6 +27,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const tab = ["siniflar", "dersler", "ogretmenler"].includes(sp.tab ?? "") ? sp.tab! : "dikkat";
   const today = ymd();
+  const uc = outliersOn(sp.uc);
   const classes = await classroomsOf(ownerId);
   const mine = user.staff ? classes.filter((c) => c.mentorId === user.staff!.teacherId) : [];
   const wide = sp.kapsam === "kurum" || !mine.length;
@@ -33,7 +36,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
 
   const q = (p: Record<string, string | undefined>) => {
     const u = new URLSearchParams();
-    for (const [k, v] of Object.entries({ tab: tab === "dikkat" ? undefined : tab, kapsam: sp.kapsam, sinif: sp.sinif, ...p })) if (v) u.set(k, v);
+    for (const [k, v] of Object.entries({ tab: tab === "dikkat" ? undefined : tab, kapsam: sp.kapsam, sinif: sp.sinif, uc: uc ? "1" : undefined, ...p })) if (v) u.set(k, v);
     const s = u.toString();
     return `/kurum/takip${s ? `?${s}` : ""}`;
   };
@@ -54,6 +57,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       )}
       <form className="flex gap-2">
         {tab !== "dikkat" && <input type="hidden" name="tab" value={tab} />}
+        {uc && <input type="hidden" name="uc" value="1" />}
         <select name="sinif" defaultValue={sp.sinif ?? ""} className="input w-auto py-1">
           <option value="">{mine.length ? "Sınıf seç…" : "Tüm sınıflar"}</option>
           {classes.map((c) => (
@@ -63,12 +67,17 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         <button className="btn-secondary py-1">Göster</button>
       </form>
       <span className="text-[13px] text-lead">Kapsam: {scopeLabel}</span>
+      {(tab === "siniflar" || tab === "dersler") && (
+        <span className="ml-auto">
+          <OutlierToggle on={uc} href={q({ uc: uc ? "" : "1" })} />
+        </span>
+      )}
     </div>
   );
   const header = <PageHeader title="Takip" sub="Bu hafta kime, hangi derse, hangi hocaya bakmalı?" />;
 
   if (tab === "siniflar") {
-    const rows = await classComparison(ownerId, today, classIds);
+    const rows = await classComparison(ownerId, today, classIds, uc);
     return (
       <>
         {header}
@@ -95,20 +104,24 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                   <td className={`${td} num text-right`}>{r.students}</td>
                   <td className={`${td} num text-right ${r.attendance !== null && r.attendance < 90 ? "font-semibold text-red-700" : ""}`}>{fmtPercent(r.attendance)}</td>
                   <td className={`${td} num text-right ${r.homework !== null && r.homework < 70 ? "font-semibold text-amber-700" : ""}`}>{fmtPercent(r.homework)}</td>
-                  <td className={`${td} num text-right font-semibold ${percentTone(r.assessAvg)}`}>{fmtPercent(r.assessAvg)} <span className="font-normal text-lead">({r.assessCount})</span></td>
+                  <td className={`${td} num text-right font-semibold ${percentTone(r.assessAvg)}`}>
+                    {fmtPercent(r.assessAvg)} <span className="font-normal text-lead">({r.assessCount})</span>
+                    {r.removed > 0 && <div className="text-[11px] font-normal text-lead">{r.removed} uç değer ayrıldı</div>}
+                  </td>
                   <td className={`${td} num text-right ${r.behind ? "font-semibold text-amber-700" : "text-lead"}`}>{r.behind || "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[13px] text-lead">Son 30 gün. Devam %90, ödev %70 altı vurgulanır. Sözlü/yazılı ortalaması yüzdedir; parantezde puan sayısı.</p>
+        <p className="mt-2 text-[13px] text-lead">Son 30 gün. Devam %90, ödev %70 altı vurgulanır. Sözlü/yazılı ortalaması yüzdedir; parantezde puan sayısı.
+          {uc && " Uç değerler her değerlendirmenin kendi içinde ayrıldı (8 kişiden az değerlendirmede ayrılmaz); kim olduklarını “Dikkat isteyenler” gösterir."}</p>
       </>
     );
   }
 
   if (tab === "dersler") {
-    const groups = await courseAnalysis(ownerId, today, classIds);
+    const groups = await courseAnalysis(ownerId, today, classIds, uc);
     return (
       <>
         {header}
@@ -140,7 +153,10 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
                         plan %{r.plan.rate}{r.plan.behindWeeks ? ` · ${r.plan.behindWeeks} hafta geride` : ""}
                       </Link>
                     )}
-                    <span className={`num w-14 text-right font-semibold ${percentTone(r.avg)}`}>{fmtPercent(r.avg)}</span>
+                    <span className={`num w-14 text-right font-semibold ${percentTone(r.avg)}`}>
+                      {fmtPercent(r.avg)}
+                      {r.removed > 0 && <span className="block text-[11px] font-normal text-lead">{r.removed} ayrıldı</span>}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -148,7 +164,8 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
           ))}
           {groups.length === 0 && <Empty>Kapsamda ders yok.</Empty>}
         </div>
-        <p className="mt-2 text-[13px] text-lead">Son 60 gün. Aynı adlı ders sınıflar arasında karşılaştırılır; kriter ortalamaları bütün sınıfların birleşimidir.</p>
+        <p className="mt-2 text-[13px] text-lead">Son 60 gün. Aynı adlı ders sınıflar arasında karşılaştırılır; kriter ortalamaları bütün sınıfların birleşimidir.
+          {uc && " Uç değerler her değerlendirmenin kendi içinde ayrıldı; ortalamaya da kriterlere de katılmadı."}</p>
       </>
     );
   }
@@ -208,7 +225,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
           <div className="border-b border-rule/70 px-3.5 py-2.5">
             <h2 className="font-semibold">Öğrenciler <span className="font-normal text-lead">({a.students.length} / {a.scopeSize})</span></h2>
             <p className="text-[12.5px] text-lead">
-              Son {R.absentDays} günde derslerinin %{R.absentRate * 100}+ kadarına ({R.absentMin}+) gelmeme, aynı derste {R.dropPoints}+ puan düşüş ya da %{R.lowAvg} altı ortalama, {R.homeworkMissMin}+ yapılmayan ödev.
+              Son {R.absentDays} günde derslerinin %{R.absentRate * 100}+ kadarına ({R.absentMin}+) gelmeme, aynı derste {R.dropPoints}+ puan düşüş ya da %{R.lowAvg} altı ortalama, {R.homeworkMissMin}+ yapılmayan ödev, son {R.quietDays} günde grubunun çok altında kalan bir sonuç (uç değer).
             </p>
           </div>
           <ul className="divide-y divide-rule/70">

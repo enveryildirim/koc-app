@@ -304,26 +304,38 @@ Dal: `dahili-ders-takip`. Her senaryoda **adımlar** ve **beklenen sonuç** var.
 
 ## L. Uç değerleri ayır
 
-Demo veride TYT Deneme 2'de bir öğrenci (12-A) A kitapçığını çözüp formda B işaretlemiş; neti −7 çıkar.
+Demo veride iki bilerek konmuş örnek var (rakamlar her `db:seed`'de biraz değişir):
+- **TYT Deneme 2:** 12-A'dan bir öğrenci A kitapçığını çözüp formda B işaretlemiş; neti sınıfının çok altında çıkar.
+- **10-A Fizik ara sınavı:** bir öğrenci kâğıdı neredeyse boş vermiş (%10 civarı).
 
 **L1. Sınıf ortalamaları**
 - **Adımlar:** Denemeler ve optik → TYT Deneme 2 → Sınıf ortalamaları → **Uç değerleri ayır**.
 - **Beklenen:**
-  - 12-A: "17 · 1 ayrıldı", toplam net 80,56 (altında "hepsiyle 75,41").
-  - Kurum geneli 73,69 (hepsiyle 71,51).
-  - Altta "Uç değerler (1)": ↓ Çok düşük, −7,00 net, "Sonucu kontrol et" karneye götürür.
+  - 12-A satırında "1 ayrıldı"; toplam net yükselir, altında "hepsiyle …" eski rakam.
+  - Altta "Uç değerler (1)": ↓ Çok düşük, öğrencinin neti, "Sonucu kontrol et" karneye götürür; karnede kitapçık B, cevaplar A'ya göre.
   - Düğme kapatılınca eski rakamlar döner. Excel dosyasının adında "(uç değerler ayrıldı)" yazar.
 
 **L2. Sıralı liste**
 - **Adımlar:** Sıralı liste sekmesi (düğme sekmeler arasında açık kalır).
-- **Beklenen:** Sıra ve yüzdelik dilim değişmez; öğrenci 37. sırada "uç ↓" etiketiyle durur. "Ortalama net" 73,69, altında "1 ayrıldı · hepsiyle 71,51".
+- **Beklenen:** Sıra ve yüzdelik dilim değişmez; öğrenci son sıralarda "uç ↓" etiketiyle durur. "Ortalama net" altında "1 ayrıldı · hepsiyle …".
 
 **L3. Sınıf gelişimi**
 - **Adımlar:** Analiz ve uyarılar → Sınıf gelişimi → TYT → düğmeyi aç / kapat.
-- **Beklenen:** Kapalıyken 12-A düşüşte görünür (▼ 3,42); açıkken yükselişte (▲ 1,73). Hücredeki "1 ayrıldı" bağlantısı denemenin sınıf ortalamalarına gider.
+- **Beklenen:** 12-A'nın TYT Deneme 2 değeri düğme açıkken belirgin şekilde yükselir; ▲/▼ yönü değişebilir. Hücredeki "1 ayrıldı" bağlantısı denemenin sınıf ortalamalarına gider.
 
-**L4. Küçük grup**
-- **Beklenen:** 8 kişiden az grupta hiçbir şey ayrılmaz; sayfada "kişi sayısı az, ayrılmadı" yazar.
+**L4. Takip → Dikkat isteyenler**
+- **Adımlar:** Menü → Takip.
+- **Beklenen:**
+  - TYT'deki öğrenci mavi **"Uç değer"** etiketiyle: "TYT Deneme 2: … net, sınıfının çok altında … Kitapçık / okuma hatası olabilir."
+  - Fizik kâğıdını boş veren öğrencide not satırının sonunda "… ile grubun çok altında (ort. %…)". Aynı ders için ikinci satır açılmaz.
+  - Bu gerekçe düğmeden bağımsızdır, her zaman görünür.
+
+**L5. Takip → Sınıflar ve Dersler**
+- **Adımlar:** Sınıflar sekmesi → **Uç değerleri ayır**; sonra Dersler sekmesi.
+- **Beklenen:** 10-A'nın sözlü/yazılı ortalaması yükselir ve altında "N uç değer ayrıldı" yazar. Derslerde Fizik satırında "N ayrıldı"; kriter ortalamaları da uç değerler olmadan hesaplanır.
+
+**L6. Küçük grup**
+- **Beklenen:** 8 kişiden az grupta hiçbir şey ayrılmaz; deneme sayfasında "kişi sayısı az, ayrılmadı" yazar.
 
 ---
 

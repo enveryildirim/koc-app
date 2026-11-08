@@ -670,10 +670,12 @@ export async function seedKurum(prisma: PrismaClient, ownerId: string) {
       });
       const last = k === def.days.length - 1;
       const picked = cls.students.filter(() => Math.random() < def.share);
+      // Uç değer demosu: Fizik ara sınavında bir öğrenci kâğıdı neredeyse boş vermiş (Takip → "Uç değer")
+      const blank = def.title === "Fizik ara sınavı" ? picked[picked.length - 1]?.id : undefined;
       await prisma.assessmentScore.createMany({
         data: picked.map((st) => {
-          if (Math.random() < 0.05) return { assessmentId: a.id, studentId: st.id, scores: "[]", absent: true };
-          const p = Math.min(1, Math.max(0.1, skillOf(st.id) + (Math.random() - 0.5) * 0.2 - (dropping.has(st.id) && last ? 0.3 : 0)));
+          if (st.id !== blank && Math.random() < 0.05) return { assessmentId: a.id, studentId: st.id, scores: "[]", absent: true };
+          const p = st.id === blank ? 0.06 : Math.min(1, Math.max(0.1, skillOf(st.id) + (Math.random() - 0.5) * 0.2 - (dropping.has(st.id) && last ? 0.3 : 0)));
           const scores = rubric.criteria.map((c) => Math.round(c.max * Math.min(1, Math.max(0, p + (Math.random() - 0.5) * 0.15))));
           const total = scores.reduce((x, y) => x + y, 0);
           return { assessmentId: a.id, studentId: st.id, scores: JSON.stringify(scores), total, percent: Math.round((total * 1000) / maxTotalOf(rubric.criteria)) / 10, absent: false };

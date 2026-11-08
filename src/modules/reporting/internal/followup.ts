@@ -3,7 +3,8 @@ import { addDays } from "@/shared/date";
 import { lessonsOn } from "@/modules/schedule/server";
 import { holidaysOn, planOverview } from "@/modules/planning/server";
 import { schoolYearOf } from "@/modules/planning";
-import { parseCriteria } from "@/modules/assessment";
+import { ASSESSMENT_TYPES, parseCriteria } from "@/modules/assessment";
+import { splitOutliers } from "@/shared/stats";
 
 /*
  * Takibat (okuma modeli): "Dikkat isteyenler", sınıf karşılaştırması, ders analizi, öğretmen etkinliği.
@@ -24,10 +25,32 @@ export const FOLLOW_RULES = {
   homeworkMissMin: 2,
 };
 
-type Reason = { kind: "devam" | "not" | "odev"; text: string };
+type Reason = { kind: "devam" | "not" | "odev" | "uc"; text: string };
 export type AttentionStudent = { id: string; name: string; classroom: string; reasons: Reason[] };
 
 const pct = (n: number) => `%${Math.round(n)}`;
+const fmt2 = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const meanOf = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+
+/**
+ * Gruplar içinde (bir değerlendirme ya da bir deneme × sınıf) uç değerler: kayıt id → "low" | "high".
+ * Her grup kendi içinde değerlendirilir; 8 kişiden az grup atlanır (bkz. shared/stats).
+ */
+function outlierMarks<T>(groups: Iterable<T[]>, value: (t: T) => number, id: (t: T) => string) {
+  const marks = new Map<string, "low" | "high">();
+  for (const list of groups) {
+    const s = splitOutliers(list, value);
+    for (const x of s.low) marks.set(id(x), "low");
+    for (const x of s.high) marks.set(id(x), "high");
+  }
+  return marks;
+}
+
+const groupBy = <T>(list: T[], key: (t: T) => string) => {
+  const m = new Map<string, T[]>();
+  for (const x of list) m.set(key(x), [...(m.get(key(x)) ?? []), x]);
+  return m;
+};
 const shortDate = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
 
 /** Kapsamdaki öğrenciler (ana sınıf ya da ek üyelik), kurum dışı hariç. */
@@ -101,17 +124,24 @@ export async function attention(ownerId: string, today: string, classIds: string
     const k = `${s.studentId}|${s.assessment.course.id}`;
     byStudentCourse.set(k, [...(byStudentCourse.get(k) ?? []), s]);
   }
-  for (const list of byStudentCourse.values()) {
+  // Öğrenci × ders not gerekçesi: aynı derste uç değer de varsa ayrı satır açılmaz, bu satıra eklenir
+  const notReason = new Map<string, Reason>();
+  for (const [k, list] of byStudentCourse) {
     const st = byId.get(list[0].studentId);
     if (!st) continue;
     const course = list[0].assessment.course.name;
+    let r: Reason | null = null;
     if (list.length >= 2 && list[1].percent! - list[0].percent! >= R.dropPoints) {
-      st.reasons.push({ kind: "not", text: `${course}: ${pct(list[1].percent!)} → ${pct(list[0].percent!)}` });
-      continue;
+      r = { kind: "not", text: `${course}: ${pct(list[1].percent!)} → ${pct(list[0].percent!)}` };
+    } else {
+      const last30 = list.filter((x) => x.assessment.date >= quietFrom);
+      const avg = last30.length ? last30.reduce((a, x) => a + x.percent!, 0) / last30.length : null;
+      if (avg !== null && avg < R.lowAvg) r = { kind: "not", text: `${course} ortalaması ${pct(avg)}` };
     }
-    const last30 = list.filter((x) => x.assessment.date >= quietFrom);
-    const avg = last30.length ? last30.reduce((a, x) => a + x.percent!, 0) / last30.length : null;
-    if (avg !== null && avg < R.lowAvg) st.reasons.push({ kind: "not", text: `${course} ortalaması ${pct(avg)}` });
+    if (r) {
+      st.reasons.push(r);
+      notReason.set(k, r);
+    }
   }
 
   // Ödev: son 30 günde yapılmayanlar
@@ -122,6 +152,46 @@ export async function attention(ownerId: string, today: string, classIds: string
   });
   for (const h of hw) {
     if (h._count >= R.homeworkMissMin) byId.get(h.studentId)?.reasons.push({ kind: "odev", text: `Son ${R.homeworkDays} günde ${h._count} ödevi yapmadı` });
+  }
+
+  // Uç değer: son 30 günde bir sözlü / yazılıda ya da denemede kendi grubunun çok altında kalan sonuç.
+  // Ortalamalardan ayrılan öğrenci kaybolmasın diye düğmeden bağımsız olarak her zaman listelenir.
+  const assessScores = await prisma.assessmentScore.findMany({
+    where: { absent: false, percent: { not: null }, assessment: { ownerId, date: { gte: quietFrom }, ...(classIds ? { course: { classroomId: { in: classIds } } } : {}) } },
+    select: { id: true, studentId: true, percent: true, assessmentId: true, assessment: { select: { date: true, type: true, course: { select: { id: true, name: true } } } } },
+  });
+  const byAssessment = groupBy(assessScores, (x) => x.assessmentId);
+  const aMarks = outlierMarks(byAssessment.values(), (x) => x.percent!, (x) => x.id);
+  for (const x of assessScores) {
+    if (aMarks.get(x.id) !== "low") continue;
+    const avg = meanOf(byAssessment.get(x.assessmentId)!.map((y) => y.percent!))!;
+    const same = notReason.get(`${x.studentId}|${x.assessment.course.id}`);
+    if (same) {
+      if (!same.text.includes("grubun çok altında")) same.text += `; ${shortDate(x.assessment.date)} ${pct(x.percent!)} ile grubun çok altında (ort. ${pct(avg)})`;
+      continue;
+    }
+    byId.get(x.studentId)?.reasons.push({
+      kind: "uc",
+      text: `${x.assessment.course.name} ${ASSESSMENT_TYPES[x.assessment.type]?.short.toLocaleLowerCase("tr-TR") ?? ""} (${shortDate(x.assessment.date)}): ${pct(x.percent!)}, grubun çok altında (ort. ${pct(avg)})`,
+    });
+  }
+  const examRows = await prisma.examResult.findMany({
+    where: { studentId: { in: ids }, exam: { ownerId, date: { gte: new Date(quietFrom + "T00:00:00") } } },
+    select: { id: true, studentId: true, totalNet: true, examId: true, exam: { select: { name: true } }, student: { select: { classroomId: true } } },
+  });
+  // Deneme: sınıf içinde (sınıfın kapsam dışı öğrencileri de karşılaştırmaya girer)
+  const examPeers = examRows.length
+    ? await prisma.examResult.findMany({
+        where: { examId: { in: [...new Set(examRows.map((r) => r.examId))] }, student: { classroomId: { in: [...new Set(examRows.map((r) => r.student.classroomId).filter((c): c is string => !!c))] } } },
+        select: { id: true, totalNet: true, examId: true, student: { select: { classroomId: true } } },
+      })
+    : [];
+  const byExamClass = groupBy(examPeers, (r) => `${r.examId}|${r.student.classroomId}`);
+  const eMarks = outlierMarks(byExamClass.values(), (r) => r.totalNet, (r) => r.id);
+  for (const r of examRows) {
+    if (eMarks.get(r.id) !== "low") continue;
+    const avg = meanOf(byExamClass.get(`${r.examId}|${r.student.classroomId}`)!.map((y) => y.totalNet))!;
+    byId.get(r.studentId)?.reasons.push({ kind: "uc", text: `${r.exam.name}: ${fmt2(r.totalNet)} net, sınıfının çok altında (ort. ${fmt2(avg)}). Kitapçık / okuma hatası olabilir.` });
   }
 
   // Sessiz dersler: son 30 günde hiç sözlü / yazılı yapılmamış (etüt ve deneme ile ölçülen hazırlık dersleri hariç)
@@ -156,8 +226,11 @@ export async function attention(ownerId: string, today: string, classIds: string
   return { students: flagged, quiet, plans, entries: [...byTeacher.values()].sort((a, b) => b.count - a.count), scopeSize: students.length };
 }
 
-/** Sınıfların karşılaştırması (son 30 gün): devam, ödev, değerlendirme ortalaması, geride plan. */
-export async function classComparison(ownerId: string, today: string, classIds: string[] | null) {
+/**
+ * Sınıfların karşılaştırması (son 30 gün): devam, ödev, değerlendirme ortalaması, geride plan.
+ * `trim`: sözlü / yazılı ortalamasında uç değerler her değerlendirmenin kendi içinde ayrılır.
+ */
+export async function classComparison(ownerId: string, today: string, classIds: string[] | null, trim = false) {
   const from = addDays(today, -30);
   const classes = await prisma.classroom.findMany({
     where: { ownerId, ...(classIds ? { id: { in: classIds } } : {}) },
@@ -169,11 +242,13 @@ export async function classComparison(ownerId: string, today: string, classIds: 
     const [att, hw, sc] = await Promise.all([
       prisma.attendance.groupBy({ by: ["status"], where: { session: { classroomId: c.id, date: { gte: from, lt: today } } }, _count: true }),
       prisma.homeworkStatus.groupBy({ by: ["status"], where: { homework: { classroomId: c.id, dueDate: { gte: new Date(from + "T00:00:00"), lt: new Date(today + "T00:00:00") } } }, _count: true }),
-      prisma.assessmentScore.aggregate({ where: { absent: false, percent: { not: null }, assessment: { date: { gte: from }, course: { classroomId: c.id } } }, _avg: { percent: true }, _count: true }),
+      prisma.assessmentScore.findMany({ where: { absent: false, percent: { not: null }, assessment: { date: { gte: from }, course: { classroomId: c.id } } }, select: { id: true, percent: true, assessmentId: true } }),
     ]);
     const n = (l: { status: string; _count: number }[], k: string) => l.find((x) => x.status === k)?._count ?? 0;
     const attTotal = att.reduce((a, x) => a + x._count, 0);
     const hwDue = n(hw, "DONE") + n(hw, "PARTIAL") + n(hw, "NOT_DONE");
+    const marks = trim ? outlierMarks(groupBy(sc, (x) => x.assessmentId).values(), (x) => x.percent!, (x) => x.id) : new Map<string, "low" | "high">();
+    const kept = sc.filter((x) => !marks.has(x.id));
     rows.push({
       id: c.id,
       name: c.name,
@@ -181,8 +256,9 @@ export async function classComparison(ownerId: string, today: string, classIds: 
       students: c._count.students + c._count.members,
       attendance: attTotal ? ((n(att, "PRESENT") + n(att, "LATE")) / attTotal) * 100 : null,
       homework: hwDue ? ((n(hw, "DONE") + n(hw, "PARTIAL") * 0.5) / hwDue) * 100 : null,
-      assessAvg: sc._avg.percent,
-      assessCount: sc._count,
+      assessAvg: meanOf(kept.map((x) => x.percent!)),
+      assessCount: sc.length,
+      removed: marks.size,
       behind: plans.filter((p) => p.classroomId === c.id && p.plan && p.plan.progress.behindWeeks > 0).length,
     });
   }
@@ -193,7 +269,7 @@ export async function classComparison(ownerId: string, today: string, classIds: 
  * Ders analizi: aynı adlı dersin sınıflar arası durumu (son 60 gün). Kriter adına göre ortalamalar
  * birleştirilir; en zayıf kriter öne çıkar. Plan ilerlemesi de yanında.
  */
-export async function courseAnalysis(ownerId: string, today: string, classIds: string[] | null) {
+export async function courseAnalysis(ownerId: string, today: string, classIds: string[] | null, trim = false) {
   const from = addDays(today, -60);
   const [courses, plans] = await Promise.all([
     prisma.course.findMany({
@@ -201,13 +277,13 @@ export async function courseAnalysis(ownerId: string, today: string, classIds: s
       include: {
         classroom: { select: { name: true } },
         teacher: { select: { name: true } },
-        assessments: { where: { date: { gte: from } }, include: { scores: { where: { absent: false }, select: { scores: true, percent: true } } } },
+        assessments: { where: { date: { gte: from } }, include: { scores: { where: { absent: false }, select: { id: true, scores: true, percent: true } } } },
       },
     }),
     planOverview(ownerId, schoolYearOf(today), today),
   ]);
   type Row = {
-    courseId: string; classroomId: string; classroom: string; teacher: string | null; external: boolean; count: number; avg: number | null;
+    courseId: string; classroomId: string; classroom: string; teacher: string | null; external: boolean; count: number; avg: number | null; removed: number;
     weakest: { name: string; avg: number } | null; plan: { id: string; rate: number; behindWeeks: number } | null;
   };
   const groups = new Map<string, { name: string; kind: string; rows: Row[]; crit: Map<string, { sum: number; n: number }> }>();
@@ -215,9 +291,14 @@ export async function courseAnalysis(ownerId: string, today: string, classIds: s
     const g = groups.get(c.name) ?? { name: c.name, kind: c.kind, rows: [] as Row[], crit: new Map<string, { sum: number; n: number }>() };
     const percents: number[] = [];
     const crit = new Map<string, { sum: number; n: number }>();
+    // Uç değerler (düğme açıkken) her değerlendirmenin kendi içinde; hem ortalamadan hem kriterlerden ayrılır
+    const marks = trim
+      ? outlierMarks(c.assessments.map((a) => a.scores.filter((s) => s.percent !== null)), (s) => s.percent!, (s) => s.id)
+      : new Map<string, "low" | "high">();
     for (const a of c.assessments) {
       const cr = parseCriteria(a.criteria);
       for (const s of a.scores) {
+        if (marks.has(s.id)) continue;
         if (s.percent !== null) percents.push(s.percent);
         const v = JSON.parse(s.scores) as number[];
         cr.forEach((k, i) => {
@@ -235,7 +316,7 @@ export async function courseAnalysis(ownerId: string, today: string, classIds: s
     const weakest = [...crit].map(([name, x]) => ({ name, avg: x.sum / x.n })).sort((a, b) => a.avg - b.avg)[0] ?? null;
     g.rows.push({
       courseId: c.id, classroomId: c.classroomId, classroom: c.classroom.name, teacher: c.teacher?.name ?? null, external: c.external,
-      count: c.assessments.length, avg: percents.length ? percents.reduce((a, b) => a + b, 0) / percents.length : null,
+      count: c.assessments.length, avg: percents.length ? percents.reduce((a, b) => a + b, 0) / percents.length : null, removed: marks.size,
       weakest, plan: plan ? { id: plan.id, rate: plan.progress.rate, behindWeeks: plan.progress.behindWeeks } : null,
     });
     groups.set(c.name, g);
