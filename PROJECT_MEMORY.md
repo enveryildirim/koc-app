@@ -589,7 +589,7 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 ### Optik form üst kısmı ve kitapçık düzeni (2026-11-10)
 - **Form bilgi alanı** (`shared/omr/layout.ts > buildForm`, ikinci tasarım): resmî form dili; solda gri etiket hücresi, sağda yazma alanı. Öğrenci bilgileri üç sıra (Ad Soyad · Sınıf / Şube · İmza; kişiselde Ad Soyad · Sınıf / Numara · İmza; tarih yok), işaretleme örneği şeridi (doğru: tam dolu; yanlış: tik, çarpı, nokta; bilgi alanıyla kitapçık şeridi arasında ortalanır), kitapçık türü şeridi; öğrenci numarası / kişisel QR kutusunda aynı gri başlık bandı. Yalnızca okuyucunun bakmadığı alanlar değişti; baloncukların yeri (`computeLayout`) aynı, eski basılı formlar da okunur. Doğrulama: tarayıcıda 24 örnek form (genel + kişisel, 4/5 şık, 0/90/180/270°) üretilip okutuldu, 24/24 cevap, numara ve kitapçık doğru (betik: esbuild ile omr modülleri paketlenip Playwright'ta çalıştırıldı).
 - **Kitapçık başlığında tarih yok** (tür · soru sayısı).
-- **Kitapçık:** "Kaynak numaralarını ört" yalnızca kesilmiş (görsel) soru varsa görünür. İki sütunda şıklar daha erken ikili / alt alta dizilir (`QuestionView narrow`), sözcük ortadan bölünmez.
+- **Kitapçık:** "Kaynak numaralarını ört" seçeneği kaldırıldı (11-10). İki sütunda şıklar daha erken ikili / alt alta dizilir (`QuestionView narrow`), sözcük ortadan bölünmez.
 
 ### Optik form sürüm 2 — kompakt düzen (2026-11-10)
 - **Neden:** az bilgi alan form sayfanın üst yarısını kaplıyordu; cevap alanını yukarı almak baloncukların yerini değiştirir. Eski basılı formlar bozulmasın diye düzen sürümlendi (`layout.ts > FORM_VERSION = 2`, `FormSpec.version`).

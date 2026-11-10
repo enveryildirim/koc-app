@@ -12,7 +12,7 @@ import { Empty } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ k?: string; sutun?: string; ort?: string; cevap?: string; optik?: string }>;
+type SP = Promise<{ k?: string; sutun?: string; cevap?: string; optik?: string }>;
 
 /**
  * Havuzdan kurulan denemenin yazdırılabilir soru kitapçığı (A / B, bir ya da iki sütun). Kesilmiş sorular görsel, yazılanlar metin olarak basılır.
@@ -28,17 +28,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   const booklet = (exam.letters as string[]).includes(sp.k ?? "") ? sp.k! : "A";
   const cols = sp.sutun === "1" ? 1 : 2;
-  const cover = sp.ort === "1";
   const withKey = sp.cevap === "1";
   const worksheet = exam.purpose === "WORKSHEET";
   const withForm = sp.optik === "1" && !worksheet;
   const sections = await bookletOf(ownerId, exam.secs, booklet);
   const hasItems = exam.secs.some((s) => s.items?.length);
   const missing = sections.reduce((n, s) => n + s.questions.filter((q) => !q).length, 0);
-  // "Kaynak numaralarını ört" yalnızca PDF / fotoğraftan kesilmiş sorularda anlamlı
-  const hasCut = sections.some((s) => s.questions.some((q) => q && !q.content));
-  const link = (p: Partial<Record<"k" | "sutun" | "ort" | "cevap" | "optik", string>>) => {
-    const q = new URLSearchParams({ k: booklet, sutun: String(cols), ort: cover ? "1" : "0", cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", ...p });
+  const link = (p: Partial<Record<"k" | "sutun" | "cevap" | "optik", string>>) => {
+    const q = new URLSearchParams({ k: booklet, sutun: String(cols), cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", ...p });
     return `?${q}`;
   };
   const pill = (on: boolean) => `rounded-md px-2.5 py-1 text-[13px] ${on ? "bg-graphite font-semibold text-surface" : "text-lead ring-1 ring-rule hover:text-graphite"}`;
@@ -86,11 +83,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <Link href={link({ sutun: "2" })} className={pill(cols === 2)}>İki sütun</Link>
         <Link href={link({ sutun: "1" })} className={pill(cols === 1)}>Tek sütun</Link>
         <span className="mx-1 h-4 w-px bg-rule" />
-        {hasCut && (
-          <Link href={link({ ort: cover ? "0" : "1" })} className={pill(cover)} title="Kesilmiş sorularda kaynağın soru numarası varsa üstünü beyazla örter">
-            Kaynak numaralarını ört
-          </Link>
-        )}
         {!worksheet && (
           <Link href={link({ optik: withForm ? "0" : "1" })} className={pill(withForm)} title="Soruların arkasına optik formu ekler; tek seferde sorular ve form yazdırılır">
             Optik formu arkaya ekle
@@ -156,7 +148,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         <div className="relative min-w-0 flex-1">
                           {/* eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel */}
                           <img src={`/api/kurum/soru-havuzu/sorular/${q.id}/gorsel`} alt={`${n}. soru`} className="block h-auto" style={{ width: q.widthMm ? `min(100%, ${q.widthMm}mm)` : "100%" }} />
-                          {cover && <span aria-hidden="true" className="absolute top-0 left-0 bg-white [print-color-adjust:exact]" style={{ width: "7mm", height: "5.5mm" }} />}
                         </div>
                       ) : (
                         <div className="h-16 flex-1 border border-dashed border-black/40" />
