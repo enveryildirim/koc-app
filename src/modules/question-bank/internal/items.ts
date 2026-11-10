@@ -3,8 +3,9 @@ import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { getFile, putFile, removeFiles, sniff } from "@/shared/storage";
 import { normalizeLevel } from "@/shared/cognitive";
-import { matchOutcome, type OutcomeRow } from "@/modules/curriculum";
+import { matchOutcome, subjectKey, topicKey, type OutcomeRow } from "@/modules/curriculum";
 import { curriculumOutcomes } from "@/modules/curriculum/server";
+import { listCourses } from "@/modules/schedule/server";
 import {
   ANSWERS,
   countBlanks,
@@ -15,6 +16,7 @@ import {
   parseContent,
   plainText,
   QUESTION_TYPES,
+  searchKey,
   splitFill,
   TEXT_LIMITS,
   type Crop,
@@ -53,34 +55,62 @@ function cleanTags(m: { subject?: unknown; topic?: unknown; grade?: unknown; dif
   return { subject, topic: str(m.topic, 120), grade: str(m.grade, 20), difficulty: cleanDifficulty(m.difficulty), level: normalizeLevel(m.level) };
 }
 
+type Tags = { subject: string; grade: string; topic: string };
+
 /**
- * Müfredat satırına bağlayıcı: (ders, düzey, konu) → { curriculumTopicId, topic }. Bağlanınca konu adı müfredattaki
- * yazılışa çekilir ("önermeler…" → "Önermeler…"), konu süzgecinde aynı konu iki kez görünmesin. Bir istek boyunca tek sorgu.
+ * Yazılış birleştirici: (ders, düzey, konu) → { subject, topic, curriculumTopicId }. Bir istek boyunca tek sorgu takımı.
+ * - Ders adı: Dersler'deki yazılış, yoksa müfredattaki, yoksa havuzda en sık kullanılan ("ilmihal" → "İlmihal").
+ * - Konu: müfredat satırına bağlanırsa oradaki yazılış (kazanım bağı da kurulur); bağlanmazsa aynı derste havuzda
+ *   en sık kullanılan yazılış ("kesirler" → "Kesirler"). Karşılaştırma büyük/küçük harf, şapka ve noktalama gözetmez.
  */
-async function outcomeLinker(ownerId: string) {
-  const rows = await curriculumOutcomes(ownerId);
-  return (t: { subject: string; grade: string; topic: string }) => {
-    const r = matchOutcome(rows, t);
-    return { curriculumTopicId: r?.id ?? null, topic: r?.topic ?? t.topic };
+async function canonizer(ownerId: string) {
+  const [rows, courses, used] = await Promise.all([
+    curriculumOutcomes(ownerId),
+    listCourses(ownerId),
+    prisma.questionItem.groupBy({ by: ["subject", "topic"], where: { ownerId }, _count: { _all: true } }),
+  ]);
+  // Eşit sayıda kullanılan iki yazılıştan büyük harfle başlayan seçilir
+  const byUse = [...used].sort((x, y) => y._count._all - x._count._all || (/^\p{Lu}/u.test(y.topic) ? 1 : 0) - (/^\p{Lu}/u.test(x.topic) ? 1 : 0));
+  const subjects = new Map<string, string>();
+  const addSubject = (n: string) => {
+    if (n.trim() && !subjects.has(subjectKey(n))) subjects.set(subjectKey(n), n.trim());
+  };
+  courses.filter((c) => c.kind !== "STUDY").forEach((c) => addSubject(c.name));
+  rows.forEach((r) => addSubject(r.subject));
+  const subjectUse = new Map<string, number>();
+  for (const u of used) subjectUse.set(u.subject, (subjectUse.get(u.subject) ?? 0) + u._count._all);
+  [...subjectUse].sort((x, y) => y[1] - x[1]).forEach(([n]) => addSubject(n));
+  const topics = new Map<string, string>();
+  for (const u of byUse) {
+    const k = `${subjectKey(u.subject)}|${topicKey(u.topic)}`;
+    if (u.topic && !topics.has(k)) topics.set(k, u.topic);
+  }
+  return (t: Tags) => {
+    const subject = subjects.get(subjectKey(t.subject)) ?? t.subject;
+    const r = matchOutcome(rows, { subject, grade: t.grade, topic: t.topic });
+    const topic = r?.topic ?? (t.topic ? (topics.get(`${subjectKey(subject)}|${topicKey(t.topic)}`) ?? t.topic) : "");
+    return { subject, topic, curriculumTopicId: r?.id ?? null };
   };
 }
 
+/** Ders + konu + metinden arama anahtarı (searchText). */
+const searchOf = (c: { subject: string; topic: string }, text: string) => searchKey(`${c.subject}\n${c.topic}\n${text}`);
+
 /**
- * Bütün soruların kazanım bağını adlardan yeniden kurar: müfredat sonradan yüklendiyse bağlanır, satırı silinen
- * ya da konusu değişen sorunun bağı düzelir. Havuz açılırken çağrılır; değişen soru sayısını döndürür.
+ * Havuzu toparlar (havuz açılırken çağrılır): ders ve konu yazılışlarını birleştirir, kazanım bağını yeniler (müfredat sonradan
+ * yüklendiyse bağlanır, satırı silinirse boşalır), arama anahtarını günceller. Yalnızca değişen sorular yazılır; sayısını döndürür.
  */
-export async function linkOutcomes(ownerId: string) {
-  const [rows, items] = await Promise.all([
-    curriculumOutcomes(ownerId),
-    prisma.questionItem.findMany({ where: { ownerId }, select: { id: true, subject: true, grade: true, topic: true, curriculumTopicId: true } }),
+export async function tidyBank(ownerId: string) {
+  const [canon, items] = await Promise.all([
+    canonizer(ownerId),
+    prisma.questionItem.findMany({ where: { ownerId }, select: { id: true, subject: true, grade: true, topic: true, text: true, curriculumTopicId: true, searchText: true } }),
   ]);
   let changed = 0;
   for (const it of items) {
-    const r = matchOutcome(rows, it);
-    const id = r?.id ?? null;
-    const topic = r?.topic ?? it.topic;
-    if (id === it.curriculumTopicId && topic === it.topic) continue;
-    await prisma.questionItem.update({ where: { id: it.id }, data: { curriculumTopicId: id, topic } });
+    const c = canon(it);
+    const searchText = searchOf(c, it.text);
+    if (c.subject === it.subject && c.topic === it.topic && c.curriculumTopicId === it.curriculumTopicId && searchText === it.searchText) continue;
+    await prisma.questionItem.update({ where: { id: it.id }, data: { ...c, searchText } });
     changed++;
   }
   return changed;
@@ -141,14 +171,16 @@ export async function createItems(ownerId: string, sourceId: string | null, meta
     throw notFound("Kaynak bulunamadı.");
 
   checkImages(images);
-  const link = await outcomeLinker(ownerId);
+  const canon = await canonizer(ownerId);
   const rows = (metas as QuestionMeta[]).map((m) => {
     const crop = cleanCrop(m.crop);
     const page = Number.isInteger(m.page) && m.page! > 0 ? m.page! : null;
     const tags = cleanTags(m);
+    const c = canon(tags);
     return {
       ...tags,
-      ...link(tags),
+      ...c,
+      searchText: searchOf(c, ""),
       answer: cleanAnswer(m.answer),
       origin: ORIGINS.has(String(m.origin)) ? String(m.origin) : "MANUAL",
       page: sourceId ? page : null,
@@ -195,14 +227,15 @@ export async function createWrittenItems(ownerId: string, metas: unknown, images
   if (!Array.isArray(metas) || !metas.length) throw invalid("Kaydedilecek soru yok.");
   if (metas.length > LIMITS.batch) throw invalid(`Tek seferde en fazla ${LIMITS.batch} soru kaydedilebilir.`);
   checkImages(images);
-  const link = await outcomeLinker(ownerId);
+  const canon = await canonizer(ownerId);
   const many = metas.length > 1;
   const rows = (metas as WrittenMeta[]).map((m, i) => {
     const label = many ? `${i + 1}. soru` : "";
     try {
       const w = cleanWritten(m, !!images[i], label);
       const tags = cleanTags(m);
-      return { ...tags, ...link(tags), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, origin: "MANUAL" };
+      const c = canon(tags);
+      return { ...tags, ...c, searchText: searchOf(c, w.text), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, origin: "MANUAL" };
     } catch (e) {
       if (label && e instanceof Error && !e.message.startsWith(label)) throw invalid(`${label}: ${e.message}`);
       throw e;
@@ -232,12 +265,12 @@ export async function updateWrittenItem(ownerId: string, id: string, meta: unkno
   const m = meta as WrittenMeta;
   const w = cleanWritten(m, hasImage);
   const tags = cleanTags(m);
-  const linked = (await outcomeLinker(ownerId))(tags);
+  const linked = (await canonizer(ownerId))(tags);
   const [key] = img ? await storeImages(ownerId, [img]) : [image === "remove" ? "" : it.imageKey];
   try {
     await prisma.questionItem.update({
       where: { id: it.id },
-      data: { ...tags, ...linked, type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, imageKey: key },
+      data: { ...tags, ...linked, searchText: searchOf(linked, w.text), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, imageKey: key },
     });
   } catch (e) {
     if (img) await removeFiles(ownerId, [key]);
@@ -294,7 +327,8 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
   if (f.missing === "cevap") Object.assign(where, NO_ANSWER, f.type && isQuestionType(f.type) && f.type !== "OPEN" ? { type: f.type } : {});
   if (f.missing === "konu") where.topic = "";
   if (f.missing === "kazanim") where.curriculumTopicId = null;
-  if (f.q) where.OR = [{ topic: { contains: f.q } }, { text: { contains: f.q } }];
+  // Türkçe harflerde büyük/küçük harf ayırmadan: saklanan anahtar ve aranan sözcük aynı işlemden geçer
+  if (f.q && searchKey(f.q)) where.searchText = { contains: searchKey(f.q) };
   if (f.only || f.except) where.id = { ...(f.only ? { in: f.only } : {}), ...(f.except ? { notIn: f.except } : {}) };
 
   const select = {
@@ -372,9 +406,12 @@ export async function updateItems(ownerId: string, ids: unknown, patch: unknown)
   let updated = 0;
   if (Object.keys(data).length) updated = (await prisma.questionItem.updateMany({ where, data })).count;
   if ("subject" in data || "topic" in data || "grade" in data) {
-    const link = await outcomeLinker(ownerId);
-    const rows = await prisma.questionItem.findMany({ where, select: { id: true, subject: true, grade: true, topic: true } });
-    for (const r of rows) await prisma.questionItem.update({ where: { id: r.id }, data: link(r) });
+    const canon = await canonizer(ownerId);
+    const rows = await prisma.questionItem.findMany({ where, select: { id: true, subject: true, grade: true, topic: true, text: true } });
+    for (const r of rows) {
+      const c = canon(r);
+      await prisma.questionItem.update({ where: { id: r.id }, data: { ...c, searchText: searchOf(c, r.text) } });
+    }
   }
   if (!hasAnswer) return { updated, skipped: 0 };
 

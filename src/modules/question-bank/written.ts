@@ -36,6 +36,20 @@ export function parseContent(raw: string | null | undefined): QuestionContent | 
   }
 }
 
+/**
+ * Arama anahtarı: Türkçe küçük harf, şapka ve kesme işareti yok, ı = i, diğer noktalama boşluk.
+ * "İlmihal" ↔ "ilmihal", "Kur'ân" ↔ "kuran", "Sıfât" ↔ "sifat" aynı sonucu verir. Saklanan alan ve aranan sözcük aynı işlemden geçer.
+ */
+export const searchKey = (s: string) =>
+  s
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’‘`´]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
 /** Arama için düz metin: kök + şıklar. */
 export const plainText = (c: QuestionContent) => [c.stem, ...(c.options ?? [])].join("\n").trim();
 

@@ -18,7 +18,7 @@ const compat = new FlatCompat({
 const MODULES = {
   identity: [],
   enrollment: ["identity"],
-  "question-bank": ["identity", "curriculum"],
+  "question-bank": ["identity", "curriculum", "schedule"],
   curriculum: ["identity"],
   exams: ["identity", "enrollment", "question-bank", "schedule"],
   homework: ["identity", "enrollment", "schedule"],

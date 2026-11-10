@@ -382,6 +382,9 @@ model QuestionItem {
   answer     String          @default("")
   /// Sorunun metni (ileride OCR / yapay zekâ ile doldurulur; aramada kullanılır)
   text       String          @default("")
+  /// Arama anahtarı: ders + konu + metin, Türkçe küçük harf, şapkasız, ı = i (question-bank > searchKey). SQLite LIKE Türkçe harflerde
+  /// büyük/küçük harf ayırdığı için arama bu alanda yapılır
+  searchText String          @default("")
   /// Kutunun nasıl bulunduğu: MANUAL | AUTO (sezgisel) | AI
   origin     String          @default("MANUAL")
   createdAt  DateTime        @default(now())

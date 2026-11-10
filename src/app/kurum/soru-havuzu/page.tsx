@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
-import { bankSummary, linkOutcomes, listItems, listSources } from "@/modules/question-bank/server";
+import { bankSummary, listItems, listSources, tidyBank } from "@/modules/question-bank/server";
 import { mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
 import { listCourses } from "@/modules/schedule/server";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
@@ -32,8 +32,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const ownerId = await requireOwner();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.s) || 1);
-  // Müfredat sonradan yüklenmiş ya da değişmiş olabilir: kazanım bağları adlardan yenilenir
-  const [usage] = await Promise.all([bankUsage(ownerId), linkOutcomes(ownerId)]);
+  // Havuz toparlanır: ders / konu yazılışları birleşir, kazanım bağları ve arama anahtarı yenilenir (müfredat ya da Dersler değişmiş olabilir)
+  const [usage] = await Promise.all([bankUsage(ownerId), tidyBank(ownerId)]);
   const archive = sp.durum === "arsiv";
   const [summary, sources, list, curTopics, courses] = await Promise.all([
     bankSummary(ownerId, Object.keys(usage.usage)),
@@ -139,7 +139,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
                 <option value="arsiv">Arşiv ({summary.archived})</option>
               </select>
             )}
-            <input name="q" defaultValue={sp.q ?? ""} placeholder="Konu ya da metinde ara" className="input w-40" />
+            <input name="q" defaultValue={sp.q ?? ""} placeholder="Ders, konu ya da metinde ara" className="input w-40" />
             <button className="btn-secondary">Filtrele</button>
             {filtered && <Link href="/kurum/soru-havuzu" className="text-[13px] text-lead hover:text-graphite">Temizle</Link>}
             <span className="ml-auto text-[13px] text-lead">{list.total} soru</span>

@@ -21,13 +21,13 @@ src/
 | `exams` | Exam, ExamResult | identity, enrollment, question-bank, schedule | `/kurum/denemeler/*`, `/api/kurum/denemeler/*` |
 | `homework` | Homework, HomeworkStatus | identity, enrollment, schedule | `/kurum/odevler/*`, `/api/kurum/odevler/*` |
 | `schedule` | Teacher, Course, ScheduleSlot, LessonSession, Attendance | identity, enrollment | `/kurum/ders-programi`, `/kurum/yoklama/*`, `/api/kurum/{ogretmenler,dersler,program,yoklama}` |
-| `question-bank` | QuestionSource, QuestionItem | identity | `/kurum/soru-havuzu/*`, `/api/kurum/soru-havuzu/*` |
+| `question-bank` | QuestionSource, QuestionItem | identity, curriculum, schedule | `/kurum/soru-havuzu/*`, `/api/kurum/soru-havuzu/*` |
 | `curriculum` | CurriculumTopic | identity | `/kurum/mufredat`, `/api/kurum/mufredat/*` |
 | `planning` | CalendarEvent, LessonPlan, PlanItem | identity, enrollment, exams, homework, schedule | `/kurum/takvim/*` (haftalık plan içe aktarma dahil), `/api/kurum/{takvim,plan}/*` |
 | `assessment` | Rubric, Assessment, AssessmentScore | identity, enrollment, schedule, planning | `/kurum/degerlendirme/*`, `/ogretmen/degerlendirme/*`, `/api/kurum/{degerlendirme,puan-cetvelleri}/*` |
 | `reporting` | Student.parent* (veli paylaşım alanları), Setting, ParentDispatch | hepsi (question-bank hariç; assessment dahil) | `/kurum` (özet), `/kurum/takip`, `/kurum/raporlar`, `/kurum/analiz`, `/kurum/veli-karnesi/*`, `/veli/[token]` |
 
-Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← schedule ← {exams, homework} ← planning ← assessment ← reporting` (planning ayrıca curriculum'u okur); `question-bank` yalnızca `identity`'ye bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
+Bağımlılık yönü tektir ve döngü yoktur: `identity ← enrollment ← schedule ← {exams, homework} ← planning ← assessment ← reporting` (planning ayrıca curriculum'u okur); `question-bank` `identity`, `curriculum` (kazanım bağı) ve `schedule`'a (ders adlarının yazılışı) bağlıdır; `exams` havuzdan deneme kurarken onu okur (`question-bank/internal/for-exams.ts`). Bu yön `eslint.config.mjs` dosyasındaki `MODULES` tablosunda tanımlıdır. Yeni bir bağımlılık gerekiyorsa önce o tabloyu güncelleyin.
 
 ## Bir modülün içi
 

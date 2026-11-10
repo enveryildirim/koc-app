@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ANSWERS, answerLabel, DIFFICULTY, isOptical, opticalLetter, OPTION_LETTERS, QUESTION_TYPES, type QuestionContent, type QuestionType } from "@/modules/question-bank";
 import QuestionView from "@/modules/question-bank/ui/QuestionView";
@@ -69,6 +70,8 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
   const [shown, setShown] = useState(PAGE);
   const [mix, setMix] = useState({ 1: 0, 2: 0, 3: 0 } as Record<number, number>);
   const [busy, setBusy] = useState(false);
+  /** Oluşturulan sınav: yönlendirme gecikirse (ör. geliştirme sunucusu sayfayı derlerken) bağlantı da gösterilir */
+  const [created, setCreated] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const sec = secs[active] ?? secs[0];
@@ -173,6 +176,8 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
       setBusy(false);
       return setMsg({ ok: false, text: json.error ?? "Oluşturulamadı." });
     }
+    setCreated(json.id);
+    setMsg({ ok: true, text: worksheet ? "Çalışma kağıdı oluşturuldu; kitapçık açılıyor…" : "Sınav oluşturuldu; kitapçık açılıyor…" });
     router.push(`/kurum/denemeler/${json.id}/kitapcik`);
   }
 
@@ -390,10 +395,20 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={busy} onClick={create}>{busy ? "Oluşturuluyor…" : `Denemeyi oluştur (${total} soru)`}</button>
+            <button className="btn-primary" disabled={busy} onClick={create}>{created ? "Oluşturuldu" : busy ? "Oluşturuluyor…" : `Denemeyi oluştur (${total} soru)`}</button>
             {problems.length > 0 && <span className="text-xs text-red-700">{problems.length} soruda cevap sorunu var</span>}
           </div>
-          {msg && <p className={`mt-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
+          {msg && (
+            <p className={`mt-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`} role="status">
+              {msg.text}
+              {created && (
+                <>
+                  {" "}
+                  <Link href={`/kurum/denemeler/${created}/kitapcik`} className="font-semibold underline">Kitapçığı aç</Link>
+                </>
+              )}
+            </p>
+          )}
           <p className="mt-2 text-xs text-lead">Cevap anahtarı ve konular seçilen sorulardan kendiliğinden doldurulur; sonra soru kitapçığını yazdırabilirsiniz.</p>
         </section>
       </div>

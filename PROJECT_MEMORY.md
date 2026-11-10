@@ -579,3 +579,10 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 - Kitapçık sayfasında "Optik formu arkaya ekle" (`?optik=1`, çalışma kağıdında yok): tek yazdırmada sorular + optik form. Sıra: sorular → optik form → (açıksa) cevap anahtarı.
 - Form okunabilsin diye kendi sayfası kenar boşluksuz basılır: CSS adlandırılmış sayfa (`@page omr { margin: 0 }`, `.omr-sheet { page: omr }`); soru sayfaları 12 mm kenar boşluğunu korur. `print-page` sınıfı kullanılmaz (yazdırmada `position: fixed`, her sayfada tekrarlanırdı). Basılan form ayrı "Optik formu yazdır" sayfasıyla aynı ölçüde (210×297 mm, aynı viewBox; PDF'le karşılaştırıldı).
 
+### Soru havuzu — yazılış birleştirme ve Türkçe arama (2026-11-10)
+- **Ders adı** kayıtta tek yazılışa çekilir: Dersler (`schedule > listCourses`) → müfredat → havuzda en sık kullanılan ("ilmihal", "İLMİHAL" → "İlmihal"). Karşılaştırma `curriculum > subjectKey` (büyük/küçük harf, şapka, kesme işareti, boşluk önemsiz). Öneri listeleri de aynı kuralla birleşir (`mergeSubjectNames`), Dersler'deki adlar önce gelir; düzey listesine sınıf düzeyleri (Seviye-2) eklendi. Önceden öneriler Dersler'e bakmıyordu (İlmihal listede çıkmıyordu).
+- **Konu:** müfredata bağlanırsa müfredattaki yazılış; bağlanmazsa aynı derste havuzda en sık kullanılan yazılış (eşitlikte büyük harfle başlayan).
+- **Arama:** `QuestionItem.searchText` = `searchKey(ders + konu + metin)`: Türkçe küçük harf, şapkasız, kesme işaretsiz, ı = i. SQLite LIKE Türkçe harflerde büyük/küçük harf ayırdığı için arama bu alanda yapılır.
+- **`tidyBank`** (havuz açılırken; eski `linkOutcomes`'un yerine): yazılışları birleştirir, kazanım bağını ve arama anahtarını yeniler; yalnızca değişen soruları yazar. question-bank artık schedule'a da bağımlı.
+- **Havuzdan sınav:** oluşturulduktan sonra "Sınav oluşturuldu; kitapçık açılıyor…" ve "Kitapçığı aç" bağlantısı (yönlendirme gecikirse düğme sessizce "Oluşturuluyor…" kalıyordu).
+
