@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, GRADES } from "@/modules/question-bank";
 import { bankSummary, findWrittenItem } from "@/modules/question-bank/server";
-import { gradeSortKey, mergeTopicSuggestions } from "@/modules/curriculum";
+import { gradeSortKey, mergeSubjectNames, mergeTopicSuggestions, normGrade } from "@/modules/curriculum";
+import { listCourses } from "@/modules/schedule/server";
+import { classroomsOf } from "@/modules/enrollment/server";
 import { curriculumOutcomes, curriculumTopicNames } from "@/modules/curriculum/server";
 import QuestionWriter from "@/modules/question-bank/ui/QuestionWriter";
 import { PageHeader } from "@/shared/ui/kurum";
@@ -13,15 +15,19 @@ export const dynamic = "force-dynamic";
 export default async function Page({ searchParams }: { searchParams: Promise<{ id?: string; mod?: string }> }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
-  const [summary, curTopics, cur, edit] = await Promise.all([
+  const [summary, curTopics, cur, courses, rooms, edit] = await Promise.all([
     bankSummary(ownerId),
     curriculumTopicNames(ownerId),
     curriculumOutcomes(ownerId),
+    listCourses(ownerId),
+    classroomsOf(ownerId),
     sp.id ? findWrittenItem(ownerId, sp.id) : Promise.resolve(null),
   ]);
   if (sp.id && !edit) notFound();
-  const subjects = [...new Set([...Object.keys(curTopics), ...summary.subjects, ...DEFAULT_SUBJECTS])].sort((a, b) => a.localeCompare(b, "tr"));
-  const grades = [...new Set([...cur.map((r) => r.grade), ...GRADES])].sort((a, b) => gradeSortKey(a).localeCompare(gradeSortKey(b)));
+  // Ders adları önce Dersler'den (kayıt tek yerden), sonra müfredat, havuz ve varsayılan liste; aynı ders bir kez
+  const subjects = mergeSubjectNames(courses.filter((c) => c.kind !== "STUDY").map((c) => c.name), Object.keys(curTopics), summary.subjects, DEFAULT_SUBJECTS);
+  // Düzeyler: sınıfların düzeyi (ör. Seviye-2), müfredat ve varsayılanlar
+  const grades = [...new Set([...rooms.map((r) => normGrade(r.level)).filter(Boolean), ...cur.map((r) => r.grade), ...GRADES])].sort((a, b) => gradeSortKey(a).localeCompare(gradeSortKey(b)));
 
   return (
     <div>

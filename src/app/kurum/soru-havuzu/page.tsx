@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
 import { bankSummary, linkOutcomes, listItems, listSources } from "@/modules/question-bank/server";
-import { mergeTopicSuggestions } from "@/modules/curriculum";
+import { mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
+import { listCourses } from "@/modules/schedule/server";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
 import { bankUsage } from "@/modules/exams/server";
 import QuestionGrid from "@/modules/question-bank/ui/QuestionGrid";
@@ -34,17 +35,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   // Müfredat sonradan yüklenmiş ya da değişmiş olabilir: kazanım bağları adlardan yenilenir
   const [usage] = await Promise.all([bankUsage(ownerId), linkOutcomes(ownerId)]);
   const archive = sp.durum === "arsiv";
-  const [summary, sources, list, curTopics] = await Promise.all([
+  const [summary, sources, list, curTopics, courses] = await Promise.all([
     bankSummary(ownerId, Object.keys(usage.usage)),
     listSources(ownerId),
     listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, archived: archive, ...usageFilter(usage.usage, sp) }, page),
     curriculumTopicNames(ownerId),
+    listCourses(ownerId),
   ]);
   const unused = summary.unused ?? 0;
   const pageUsage = Object.fromEntries(list.items.flatMap((i) => (usage.usage[i.id] ? [[i.id, usage.usage[i.id]]] : [])));
   // Düzenleme önerileri: müfredat konuları önce (havuzda olmasa da seçilebilsin)
   const suggestions = mergeTopicSuggestions(curTopics, summary.topics);
-  const subjects = [...new Set([...summary.subjects, ...Object.keys(curTopics), ...DEFAULT_SUBJECTS])].sort((a, b) => a.localeCompare(b, "tr"));
+  const subjects = mergeSubjectNames(courses.filter((c) => c.kind !== "STUDY").map((c) => c.name), summary.subjects, Object.keys(curTopics), DEFAULT_SUBJECTS);
   const topicChoices = sp.ders ? summary.topics[sp.ders] ?? [] : [...new Set(Object.values(summary.topics).flat())].sort((a, b) => a.localeCompare(b, "tr"));
   const pages = Math.ceil(list.total / list.pageSize);
   const filtered = Object.entries(sp).some(([k, v]) => k !== "s" && v);

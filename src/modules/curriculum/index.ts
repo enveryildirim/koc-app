@@ -76,19 +76,32 @@ export const topicKey = (s: string) =>
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 
+/**
+ * Ders adı karşılaştırma anahtarı: büyük/küçük harf, şapka, kesme işareti ve boşluk önemsiz.
+ * Dersler'deki "Kur'ân-ı Kerîm" ile müfredattaki "Kuranı Kerim" aynı ders sayılır.
+ */
+export const subjectKey = (s: string) => topicKey(s).replace(/\s+/g, "");
+
+/** Ders adı listelerini birleştirir: aynı ders bir kez, ilk geçen yazılışla (öncelikli liste önce verilir); Türkçe sıralı. */
+export function mergeSubjectNames(...lists: string[][]) {
+  const seen = new Map<string, string>();
+  for (const l of lists) for (const s of l) if (s.trim() && !seen.has(subjectKey(s))) seen.set(subjectKey(s), s.trim());
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, "tr"));
+}
+
 /** Müfredat satırının kazanım alanları (soru havuzu gösterir). */
 export type OutcomeRow = { id: string; subject: string; grade: string; unit: string; topic: string; code: string; outcome: string };
 
 /**
  * Sorunun (ders, düzey, konu) adlarına uyan müfredat satırı; yoksa null.
- * Ders ve konu ad olarak karşılaştırılır (büyük/küçük harf, noktalama önemsiz). Düzey girilmişse o düzeyin satırı;
+ * Ders ve konu ad olarak karşılaştırılır (büyük/küçük harf, şapka, noktalama önemsiz; ders adında boşluk da). Düzey girilmişse o düzeyin satırı;
  * girilmemişse yalnızca tek düzeyde geçen konu bağlanır (hangi sınıfın kazanımı olduğu belirsiz kalmasın).
  */
 export function matchOutcome(rows: OutcomeRow[], q: { subject: string; grade: string; topic: string }): OutcomeRow | null {
   if (!q.topic.trim()) return null;
-  const s = topicKey(q.subject);
+  const s = subjectKey(q.subject);
   const t = topicKey(q.topic);
-  const same = rows.filter((r) => topicKey(r.subject) === s && topicKey(r.topic) === t);
+  const same = rows.filter((r) => subjectKey(r.subject) === s && topicKey(r.topic) === t);
   if (!same.length) return null;
   if (q.grade) return same.find((r) => r.grade === normGrade(q.grade)) ?? null;
   return new Set(same.map((r) => r.grade)).size === 1 ? same[0] : null;

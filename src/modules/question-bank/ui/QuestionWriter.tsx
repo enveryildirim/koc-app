@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
-import { matchOutcome, normGrade, type OutcomeRow } from "@/modules/curriculum";
+import { matchOutcome, normGrade, subjectKey, type OutcomeRow } from "@/modules/curriculum";
 import {
   answerLabel,
   countBlanks,
@@ -117,10 +117,13 @@ export default function QuestionWriter({ subjects, topics, grades, outcomes = []
     });
   const [mode, setMode] = useState<"tek" | "yapistir">(edit ? "tek" : initialMode);
   // Ders ve düzey seçiliyse önce o setin müfredat konuları (sırasıyla), sonra havuzdaki diğer adlar
-  const setTopics = outcomes.filter((o) => o.subject === common.subject && (!common.grade || o.grade === normGrade(common.grade))).map((o) => o.topic);
-  const topicList = [...new Set([...setTopics, ...((common.subject && topics[common.subject]) || Object.values(topics).flat())])];
+  // Ders adları yazılışça farklı olabilir ("Kur'ân-ı Kerîm" / "Kuranı Kerim"): anahtarla karşılaştırılır
+  const sk = subjectKey(common.subject);
+  const setTopics = outcomes.filter((o) => subjectKey(o.subject) === sk && (!common.grade || o.grade === normGrade(common.grade))).map((o) => o.topic);
+  const known = Object.entries(topics).filter(([s]) => subjectKey(s) === sk).flatMap(([, l]) => l);
+  const topicList = [...new Set([...setTopics, ...(common.subject ? known : Object.values(topics).flat())])];
   const linked = matchOutcome(outcomes, common);
-  const hasSet = outcomes.some((o) => o.subject === common.subject);
+  const hasSet = !!sk && outcomes.some((o) => subjectKey(o.subject) === sk);
 
   return (
     <div>
