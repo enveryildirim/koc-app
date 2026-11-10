@@ -602,4 +602,5 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 - **Numarasız form:** numara ızgarası basılmaz; sol blokta büyük işaretleme örneği. Kitapçık baloncukları ve cevap alanı yerinde kalır (ayar sonradan değişse de okuma bozulmaz). Kişisel formda numara her durumda kimlik şeridinden okunur.
 - **Okuyucu:** her form kartında "Öğrenci" seçim listesi (kayıtlı öğrenciler, ada göre); numara okunduysa eşleşen öğrenci seçili gelir, numarasız formda ya da yanlış okumada listeden seçilir. Örnek formlarda numarasız ayarda öğrenci önceden seçilir.
 - **Doğrulama:** sürüm 1 / 2 × numaralı / numarasız, her biri 30 örnek form: 120/120 doğru. Uygulamada ayar düğmesi, örnek form + öğrenci listesi ve kitapçıktaki düğme denendi.
+- **İşaretleme örneği kaldırıldı** (kullanıcı isteği, sürüm 2): ne büyük kutu (numarasız form) ne küçük satır; nasıl işaretleneceği alt kenardaki notta. Numarasız formda numara bloğunun yeri boş kalır (baloncuk yerleri sabit olduğu için cevap alanı yukarı alınmadı).
 

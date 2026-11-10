@@ -382,8 +382,8 @@ function headerV1(p: Prim[], spec: FormSpec, L: Layout) {
 }
 
 /**
- * Sürüm 2 üst kısmı: bilgiler kutusuz tek satır; solda yatay öğrenci numarası, sağında kitapçık türü ve
- * küçük işaretleme örneği; kişisel formda en sağda QR.
+ * Sürüm 2 üst kısmı: bilgiler kutusuz tek satır; solda yatay öğrenci numarası (sınav ayarıyla kaldırılabilir),
+ * sağında kitapçık türü; kişisel formda numara basılı kutuda ve en sağda QR.
  */
 function headerV2(p: Prim[], spec: FormSpec, L: Layout) {
   const { ink, rule, labelInk, note } = TONES;
@@ -426,47 +426,14 @@ function headerV2(p: Prim[], spec: FormSpec, L: Layout) {
     p.push({ kind: "text", x: B.x + B.w / 2, y: B.y + 30, text: "Numara basılıdır, kodlamayın", size: 2.2, fill: note, anchor: "middle" });
   }
 
-  // Sağ sütun: kitapçık türü ve işaretleme örneği (kişisel formda en sağda QR)
+  // Sağ sütun: kitapçık türü (kişisel formda en sağda QR)
   const RX = 92;
   if (L.booklet.length) {
     sec(RX, 53, "KİTAPÇIK TÜRÜ");
     for (const b of L.booklet) bubble(p, b, 2.2);
   }
 
-  // Numara alanı yoksa (sınav ayarı) sol blokta büyük işaretleme örneği; sağ sütunda yalnızca kitapçık türü
-  if (!per && !L.student.length) {
-    const B = L.studentBox;
-    p.push({ kind: "rect", ...B, stroke: rule, sw: 0.3 });
-    sec(B.x + 2, B.y + 3.6, "İŞARETLEME");
-    const y = B.y + 15;
-    const xs = [B.x + 9, B.x + 25, B.x + 41, B.x + 57];
-    ["Doğru", "Yanlış", "Yanlış", "Yanlış"].forEach((caption, i) => {
-      const ok = i === 0;
-      p.push({ kind: "circle", x: xs[i], y, r: 2.4, stroke: ok ? ink : rule, sw: 0.3, ...(ok ? { fill: ink } : {}) });
-      p.push({ kind: "text", x: xs[i], y: y + 6.5, text: caption, size: 2.3, fill: ok ? ink : note, anchor: "middle", bold: ok });
-    });
-    p.push({ kind: "line", x1: xs[1] - 1.2, y1: y + 0.1, x2: xs[1] - 0.2, y2: y + 1.2, stroke: note, sw: 0.35 });
-    p.push({ kind: "line", x1: xs[1] - 0.2, y1: y + 1.2, x2: xs[1] + 1.4, y2: y - 1.2, stroke: note, sw: 0.35 });
-    p.push({ kind: "line", x1: xs[2] - 1.2, y1: y - 1.2, x2: xs[2] + 1.2, y2: y + 1.2, stroke: note, sw: 0.35 });
-    p.push({ kind: "line", x1: xs[2] - 1.2, y1: y + 1.2, x2: xs[2] + 1.2, y2: y - 1.2, stroke: note, sw: 0.35 });
-    p.push({ kind: "circle", x: xs[3], y, r: 0.6, fill: note });
-    p.push({ kind: "text", x: B.x + B.w / 2, y: B.y + B.h - 4, text: "Koyu kurşun kalem kullanın; silerken iz bırakmayın.", size: 2.1, fill: note, anchor: "middle" });
-    return;
-  }
-  const gy = 76;
-  sec(RX, gy - 5, "İŞARETLEME");
-  const ex = [RX + 2.5, RX + 16, RX + 26, RX + 36];
-  ex.forEach((x, i) => {
-    const ok = i === 0;
-    p.push({ kind: "circle", x, y: gy, r: 1.8, stroke: ok ? ink : rule, sw: 0.3, ...(ok ? { fill: ink } : {}) });
-  });
-  p.push({ kind: "text", x: ex[0] + 3, y: gy + 0.8, text: "doğru", size: 2.1, fill: ink, bold: true });
-  p.push({ kind: "line", x1: ex[1] - 0.9, y1: gy + 0.1, x2: ex[1] - 0.15, y2: gy + 0.9, stroke: note, sw: 0.3 });
-  p.push({ kind: "line", x1: ex[1] - 0.15, y1: gy + 0.9, x2: ex[1] + 1.05, y2: gy - 0.9, stroke: note, sw: 0.3 });
-  p.push({ kind: "line", x1: ex[2] - 0.9, y1: gy - 0.9, x2: ex[2] + 0.9, y2: gy + 0.9, stroke: note, sw: 0.3 });
-  p.push({ kind: "line", x1: ex[2] - 0.9, y1: gy + 0.9, x2: ex[2] + 0.9, y2: gy - 0.9, stroke: note, sw: 0.3 });
-  p.push({ kind: "circle", x: ex[3], y: gy, r: 0.45, fill: note });
-  p.push({ kind: "text", x: ex[3] + 3, y: gy + 0.8, text: "yanlış", size: 2.1, fill: note });
+  // İşaretleme örneği kullanıcı isteğiyle kaldırıldı; nasıl işaretleneceği alt kenardaki notta yazar.
 
   if (per?.qr) {
     const side = 26;
