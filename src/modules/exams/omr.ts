@@ -5,11 +5,13 @@ import type { FormSpec } from "@/shared/omr/layout";
 export type ExamKeyItem = { points: number; correct: number[]; number: number; section?: string };
 
 /** letters: denemenin kitapçıkları (["A"] ise formda kitapçık alanı çıkmaz). */
-export function examFormSpec(name: string, type: string, secs: ExamSection[], letters: readonly string[], brand = "SınavKur"): FormSpec {
+/** studentNumber: false ise formda öğrenci numarası alanı basılmaz (Exam.omrStudentNo). */
+export function examFormSpec(name: string, type: string, secs: ExamSection[], letters: readonly string[], opts: { studentNumber?: boolean; brand?: string } = {}): FormSpec {
   const c = choicesFor(type);
   return {
     title: name,
-    brand,
+    brand: opts.brand ?? "SınavKur",
+    ...(opts.studentNumber === false ? { studentNumber: false } : {}),
     booklets: letters.length > 1 ? [...letters] : undefined,
     sections: secs.map((s) => ({ name: s.name, count: s.count })),
     questions: secs.flatMap((s) => Array.from({ length: s.count }, () => ({ choiceCount: c }))),

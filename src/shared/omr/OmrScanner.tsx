@@ -55,7 +55,8 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
 
   const patch = (key: string, p: Partial<Sheet>) => setSheets((s) => s.map((x) => (x.key === key ? { ...x, ...p } : x)));
 
-  async function addImage(fileName: string, imageUrl: string) {
+  /** hintNo: örnek formlarda numara alanı yoksa öğrencinin önceden seçilmesi için (gerçek taramada yok) */
+  async function addImage(fileName: string, imageUrl: string, hintNo = "") {
     const key = `${Date.now()}-${Math.random()}`;
     setSaved(null);
     setSheets((s) => [...s, { key, fileName, imageUrl, status: "processing", name: "", studentNo: "", booklet: "A", answers: [] }]);
@@ -73,7 +74,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
         status: "done",
         scan,
         overlay: drawOverlay(canvas, scan),
-        studentNo: scan.studentNo,
+        studentNo: scan.studentNo || hintNo,
         booklet: scan.booklet || "A",
         answers: scan.questions.map((q) => q.marked),
       });
@@ -123,7 +124,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
         : spec;
       const url = renderSampleScan(sheetSpec, { answers, studentNo, name, booklet: multi ? booklet : undefined, rotation });
       const tags = [name, multi ? booklet : "", personal ? "kişisel" : "", rotation ? `${rotation}°` : ""].filter(Boolean).join(" · ");
-      await addImage(`örnek-${norm(studentNo)}.jpg (${tags})`, url);
+      await addImage(`örnek-${norm(studentNo)}.jpg (${tags})`, url, spec.studentNumber === false && !personal ? studentNo : "");
     }
   }
 
@@ -207,6 +208,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
           mode={mode}
           wrongPer={wrongPer}
           matched={students[norm(s.studentNo)]}
+          students={students}
           onPatch={(p) => patch(s.key, p)}
           onToggle={(q, c) => toggle(s.key, q, c)}
           onRemove={() => setSheets((x) => x.filter((y) => y.key !== s.key))}
@@ -217,7 +219,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
         <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-graphite p-4 text-white shadow-lg">
           <span className="text-sm">
             {ready.length} form kaydedilmeye hazır
-            {unmatched > 0 && <span className="ml-2 text-amber-300">· {unmatched} formun numarası kayıtlı öğrenciyle eşleşmiyor (atlanacak)</span>}
+            {unmatched > 0 && <span className="ml-2 text-amber-300">· {unmatched} formda öğrenci seçilmedi ya da numara kayıtlı öğrenciyle eşleşmiyor (atlanacak)</span>}
           </span>
           <button className="btn bg-surface text-graphite hover:bg-mist" disabled={saving} onClick={saveAll}>
             {saving ? "Kaydediliyor…" : "Tümünü sonuçlara kaydet"}
@@ -235,6 +237,7 @@ function SheetCard({
   mode,
   wrongPer,
   matched,
+  students,
   onPatch,
   onToggle,
   onRemove,
@@ -245,6 +248,7 @@ function SheetCard({
   mode: "test" | "exam";
   wrongPer: number;
   matched?: string;
+  students: Record<string, string>;
   onPatch: (p: Partial<Sheet>) => void;
   onToggle: (q: number, c: number) => void;
   onRemove: () => void;
@@ -294,14 +298,22 @@ function SheetCard({
                 </div>
               ) : (
                 <div className="sm:col-span-2">
-                  <label className="label">Öğrenci (numaradan eşleşen)</label>
-                  <div className={`input ${matched ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
-                    {matched ?? "Kayıtlı öğrenci bulunamadı – numarayı düzeltin"}
-                  </div>
+                  <label className="label">{spec.studentNumber === false && !s.scan?.studentNo ? "Öğrenci (listeden seçin)" : "Öğrenci"}</label>
+                  {/* Numara okunduysa eşleşen öğrenci seçili gelir; numarasız formda ya da yanlış okumada listeden seçilir */}
+                  <select
+                    className={`input ${matched ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}
+                    value={matched ? norm(s.studentNo) : ""}
+                    onChange={(e) => onPatch({ studentNo: e.target.value })}
+                  >
+                    <option value="">{s.studentNo ? `Kayıtlı öğrenci yok (${s.studentNo}) — seçin` : "— Öğrenci seçin —"}</option>
+                    {studentOptions(students).map(([no, label]) => (
+                      <option key={no} value={no}>{label} · {no}</option>
+                    ))}
+                  </select>
                 </div>
               )}
               <div>
-                <label className="label">Öğrenci no (okunan)</label>
+                <label className="label">Öğrenci no {spec.studentNumber === false ? "" : "(okunan)"}</label>
                 <input className="input num" value={s.studentNo} onChange={(e) => onPatch({ studentNo: e.target.value })} />
               </div>
             </div>
@@ -310,7 +322,9 @@ function SheetCard({
                 ? "Numara kişisel formun kimlik şeridinden okundu."
                 : s.scan.studentSource === "invalid"
                   ? <span className="text-red-700">Kimlik şeridi okunamadı (kirli ya da katlanmış olabilir); numarayı elle girin.</span>
-                  : "Numara kodlama alanından okundu."}
+                  : spec.studentNumber === false
+                    ? "Bu formda numara alanı yok; öğrenciyi listeden seçin."
+                    : "Numara kodlama alanından okundu."}
               {s.scan.rotation !== 0 && ` Form ${s.scan.rotation}° dönük çekilmiş; düzeltilerek okundu.`}
               {!s.scan.oriented && " Formda yön işareti yok (eski form); düz çekildiği varsayıldı."}
             </p>
@@ -423,4 +437,9 @@ function drawOverlay(src: HTMLCanvasElement, scan: ScanResult) {
     ctx.stroke();
   }
   return c.toDataURL("image/jpeg", 0.85);
+}
+
+/** Öğrenci seçim listesi: ada göre (Türkçe), görünen ad "Ad Soyad (Sınıf)". */
+function studentOptions(students: Record<string, string>) {
+  return Object.entries(students).sort((a, b) => a[1].localeCompare(b[1], "tr"));
 }

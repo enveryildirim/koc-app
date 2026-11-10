@@ -17,6 +17,7 @@ import ExamCourse from "@/modules/exams/ui/ExamCourse";
 import { listCourses } from "@/modules/schedule/server";
 import DeleteResult from "@/modules/exams/ui/DeleteResult";
 import OmrScanner from "@/shared/omr/OmrScanner";
+import FormStudentNo from "@/modules/exams/ui/FormStudentNo";
 import FormSvg from "@/shared/omr/FormSvg";
 import PrintButton from "@/shared/ui/PrintButton";
 import ExportButton from "@/shared/ui/ExportButton";
@@ -106,7 +107,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     const map = Object.fromEntries(
       students.map((s) => [normNo(s.studentNo), `${s.firstName} ${s.lastName} (${s.classroom?.name ?? (s.external ? "Kurum dışı" : "—")})`]),
     );
-    const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.letters);
+    const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.letters, { studentNumber: exam.omrStudentNo });
     if (tab === "txt") {
       return (
         <>
@@ -136,8 +137,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             <div className="card p-4">
               <h2 className="font-semibold">Optik form</h2>
               <p className="mt-1 text-sm text-lead">
-                Bu sınava özel form: bölüm başlıkları{multi ? `, kitapçık türü (${exam.letters.join(", ")})` : ""} ve 6 haneli öğrenci numarası alanı.
+                Bu sınava özel form: bölüm başlıkları{multi ? `, kitapçık türü (${exam.letters.join(", ")})` : ""}
+                {exam.omrStudentNo ? " ve 6 haneli öğrenci numarası alanı." : "; öğrenci numarası alanı yok."}
               </p>
+              <div className="mt-3">
+                <FormStudentNo examId={id} on={exam.omrStudentNo} />
+              </div>
               <FormSvg info={spec} className="mt-3 w-full rounded ring-1 ring-rule" />
               <Link href={`${base}/form`} target="_blank" className="btn-primary mt-3 w-full">Formu yazdır</Link>
               <Link href={`${base}/form?kisisel=1`} target="_blank" className="btn-secondary mt-2 w-full">Kişisel formları yazdır</Link>
@@ -147,7 +152,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </p>
             </div>
             <div className="card p-4 text-sm text-lead">
-              Okunan öğrenci numarası kayıtlı öğrencilerle eşleştirilir (baştaki sıfırlar önemsizdir). Aynı öğrenci tekrar okutulursa sonucu güncellenir.
+              {exam.omrStudentNo
+                ? "Okunan öğrenci numarası kayıtlı öğrencilerle eşleştirilir (baştaki sıfırlar önemsizdir); yanlış okunan numarayı listeden düzeltebilirsiniz."
+                : "Formda numara alanı yok: her formun öğrencisini listeden seçin. Kişisel formlarda numara şeritten okunur."}{" "}
+              Aynı öğrenci tekrar okutulursa sonucu güncellenir.
             </div>
           </aside>
           <OmrScanner

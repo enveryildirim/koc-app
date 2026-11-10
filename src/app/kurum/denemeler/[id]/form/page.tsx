@@ -8,6 +8,7 @@ import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import FormSvg from "@/shared/omr/FormSvg";
 import { qrMatrix } from "@/shared/omr/qr";
 import PrintButton from "@/shared/ui/PrintButton";
+import FormStudentNo from "@/modules/exams/ui/FormStudentNo";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +24,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const sp = await searchParams;
   const exam = await findExam(ownerId, id);
   if (!exam) notFound();
-  const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.letters);
+  const spec = examFormSpec(exam.name, exam.type, exam.secs, exam.letters, { studentNumber: exam.omrStudentNo });
   const page = { width: "210mm", height: "297mm" };
 
   if (!sp.kisisel) {
     return (
       <div>
-        <div className="no-print mb-4 flex items-center gap-3">
+        <div className="no-print mb-4 flex flex-wrap items-center gap-3">
           <PrintButton />
+          <FormStudentNo examId={id} on={exam.omrStudentNo} compact />
           <span className="text-sm text-lead">A4, kenar boşluğu “yok” ve ölçek %100 olarak yazdırın. Gerekli sayıda fotokopi çekebilirsiniz.</span>
         </div>
         <div className="print-page mx-auto bg-white shadow-lg print:shadow-none" style={page}>

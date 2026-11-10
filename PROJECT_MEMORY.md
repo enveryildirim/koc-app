@@ -593,7 +593,13 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 
 ### Optik form sürüm 2 — kompakt düzen (2026-11-10)
 - **Neden:** az bilgi alan form sayfanın üst yarısını kaplıyordu; cevap alanını yukarı almak baloncukların yerini değiştirir. Eski basılı formlar bozulmasın diye düzen sürümlendi (`layout.ts > FORM_VERSION = 2`, `FormSpec.version`).
-- **Sürüm işareti:** sürüm 2 formlarda yön karesinin altında (14, 40) küçük dolu kare (`VERSION_MARK`). Okuyucu (`scanForm(img, layoutFor)`) köşe ve yönü bulduktan sonra bu noktaya bakar: doluysa sürüm 2, değilse sürüm 1 düzeniyle okur; `ScanResult.version` döner. `OmrScanner` `layoutFor = (v) => computeLayout({ ...spec, version: v })` verir. Tek `Layout` verilirse işarete bakılmaz.
+- **Sürüm işareti:** sürüm 2 formlarda sol kenarda (14, 67) küçük dolu kare (`VERSION_MARK`; önce 14, 40'taydı, "Ad Soyad" yanında işaretleme kutusu gibi göründüğü için indirildi — o konumda basılmış form yoktu). Okuyucu (`scanForm(img, layoutFor)`) köşe ve yönü bulduktan sonra bu noktaya bakar: doluysa sürüm 2, değilse sürüm 1 düzeniyle okur; `ScanResult.version` döner. `OmrScanner` `layoutFor = (v) => computeLayout({ ...spec, version: v })` verir. Tek `Layout` verilirse işarete bakılmaz.
 - **Sürüm 2 düzeni:** bilgiler kutusuz tek satır (Ad Soyad · Sınıf / Şube · İmza, alt çizgili); öğrenci numarası solda yatay ızgara (her satır bir hane, 0–9); sağında kitapçık türü ve küçük işaretleme örneği; kişisel formda numara basılı kutuda (kodlanmaz, kimlik şeridinden okunur) ve en sağda QR; cevaplar 98 mm'den (sürüm 1'de 128). Sürüm 1 çizimi (`headerV1`) eski formları yeniden üretmek / sınamak için duruyor.
 - **Doğrulama:** tarayıcıda (esbuild + Playwright) her sürümde 30 örnek form (genel + kişisel, 4/5 şık, 0/90/180/270°) üretilip `layoutFor` ile okutuldu: sürüm 2 30/30, sürüm 1 30/30; sürüm her seferinde doğru tanındı.
+
+### Optik form — öğrenci numarası alanı seçimi (2026-11-10)
+- **Ayar:** `Exam.omrStudentNo` (varsayılan true). Optik okuma sekmesi, optik form sayfası ve kitapçık ("Optik formu arkaya ekle" açıkken) "Öğrenci numarası alanı: Var / Yok" (`exams/ui/FormStudentNo.tsx`, `PUT /api/kurum/denemeler/[id]/form-ayar`). `examFormSpec(..., { studentNumber })` → `FormSpec.studentNumber: false`.
+- **Numarasız form:** numara ızgarası basılmaz; sol blokta büyük işaretleme örneği. Kitapçık baloncukları ve cevap alanı yerinde kalır (ayar sonradan değişse de okuma bozulmaz). Kişisel formda numara her durumda kimlik şeridinden okunur.
+- **Okuyucu:** her form kartında "Öğrenci" seçim listesi (kayıtlı öğrenciler, ada göre); numara okunduysa eşleşen öğrenci seçili gelir, numarasız formda ya da yanlış okumada listeden seçilir. Örnek formlarda numarasız ayarda öğrenci önceden seçilir.
+- **Doğrulama:** sürüm 1 / 2 × numaralı / numarasız, her biri 30 örnek form: 120/120 doğru. Uygulamada ayar düğmesi, örnek form + öğrenci listesi ve kitapçıktaki düğme denendi.
 

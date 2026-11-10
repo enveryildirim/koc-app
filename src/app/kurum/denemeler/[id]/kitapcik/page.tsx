@@ -6,6 +6,7 @@ import { bookletOf, findExam } from "@/modules/exams/server";
 import { answerLabel } from "@/modules/question-bank";
 import QuestionView from "@/modules/question-bank/ui/QuestionView";
 import FormSvg from "@/shared/omr/FormSvg";
+import FormStudentNo from "@/modules/exams/ui/FormStudentNo";
 import PrintButton from "@/shared/ui/PrintButton";
 import { Empty } from "@/shared/ui/kurum";
 
@@ -95,6 +96,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             Optik formu arkaya ekle
           </Link>
         )}
+        {withForm && (
+          <span className="ml-1">
+            <FormStudentNo examId={id} on={exam.omrStudentNo} compact />
+          </span>
+        )}
         <Link href={link({ cevap: withKey ? "0" : "1" })} className={pill(withKey)} title={withForm ? "Optik formdan sonra, en son sayfaya cevap anahtarı ekler" : "Son sayfaya cevap anahtarı ekler"}>
           Cevap anahtarı sayfası
         </Link>
@@ -168,7 +174,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <>
           {/* Optik form: kenar boşluksuz kendi sayfası (@page omr), okuyucu ölçüleri bozulmasın */}
           <div className="omr-sheet mx-auto mt-8 bg-white shadow-lg ring-1 ring-rule" style={{ width: "210mm", height: "297mm" }}>
-            <FormSvg info={examFormSpec(exam.name, exam.type, exam.secs, exam.letters)} style={{ width: "210mm", height: "297mm", display: "block" }} />
+            <FormSvg info={examFormSpec(exam.name, exam.type, exam.secs, exam.letters, { studentNumber: exam.omrStudentNo })} style={{ width: "210mm", height: "297mm", display: "block" }} />
           </div>
           {withKey && (
             <article className="booklet mx-auto mt-8 bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule print:mt-0" style={{ width: "210mm", breakBefore: "page" }}>

@@ -94,6 +94,13 @@ export async function setExamCourse(ownerId: string, id: string, courseId: unkno
   await prisma.exam.update({ where: { id: exam.id }, data: { courseId: await examCourse(ownerId, courseId) } });
 }
 
+/** Optik formda öğrenci numarası alanı olsun mu (kitapçık, form ve okuyucu aynı ayarı kullanır). */
+export async function setOmrStudentNo(ownerId: string, id: string, on: unknown) {
+  const exam = await prisma.exam.findFirst({ where: { id, ownerId }, select: { id: true } });
+  if (!exam) throw notFound();
+  await prisma.exam.update({ where: { id: exam.id }, data: { omrStudentNo: on !== false } });
+}
+
 /**
  * Optik okuyucu (FMT) TXT biçimini kaydeder. `format: null` varsayılana döndürür.
  * Bölüm başlangıçları sınavın bölümleriyle doğrulanır (çakışma, sınır).

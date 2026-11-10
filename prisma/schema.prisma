@@ -126,6 +126,8 @@ model Exam {
   scoring   String       @default("")
   /// Optik okuyucu (FMT) TXT biçimi JSON: { nameStart, nameLen, noStart, noLen, bookletStart, sectionStarts[] }. Boş = varsayılan
   readerFormat String    @default("")
+  /// Optik formda öğrenci numarası alanı. false: alan basılmaz, okuturken öğrenci listeden seçilir (kişisel form her durumda şeritten okunur)
+  omrStudentNo Boolean   @default(true)
   /// EXAM | WORKSHEET (çalışma kağıdı: puanlanmaz, yalnızca yazdırılır)
   purpose   String       @default("EXAM")
   /// Hocanın kendi sınavıysa bağlı ders (Course); kurum denemesinde boş

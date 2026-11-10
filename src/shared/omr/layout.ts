@@ -33,10 +33,11 @@ export const ORIENT_SIZE = 4;
 export const FORM_VERSION = 2;
 export type FormVersion = 1 | 2;
 /**
- * Sürüm işareti (sürüm 2+): yön karesinin altında küçük dolu kare. Sürüm 1'de bu nokta boştur.
+ * Sürüm işareti (sürüm 2+): sol kenarda, yön karesinin altında küçük dolu kare. Sürüm 1'de bu nokta boştur.
  * Köşe karesi sayılmaması için küçüktür; yön denetiminin baktığı noktalardan hiçbirine denk gelmez.
+ * Bilgi satırının hizasında durursa işaretleme kutusu gibi görünüyordu; numara alanının ortasına indirildi.
  */
-export const VERSION_MARK: [number, number] = [14, 40];
+export const VERSION_MARK: [number, number] = [14, 67];
 export const VERSION_SIZE = 4;
 
 /** Kişisel formun kimlik şeridi (alt kenar, köşe kareleri arasında). Bkz. idcode.ts */
@@ -84,6 +85,8 @@ export type FormSpec = {
   personal?: { studentNo: string; name: string; className: string; qr?: { size: number; data: number[] } };
   /** Düzen sürümü; verilmezse FORM_VERSION (yeni basım). Okuyucu kâğıttaki işarete göre seçer. */
   version?: FormVersion;
+  /** false: öğrenci numarası alanı basılmaz (okuturken öğrenci listeden seçilir). Kitapçık baloncukları yerinde kalır. */
+  studentNumber?: boolean;
 };
 /** Geriye dönük uyumluluk için. */
 export type FormInfo = FormSpec;
@@ -171,7 +174,7 @@ export function computeLayout(spec: FormSpec): Layout {
 
   // Kişisel formda numara alanı basılmaz (yerinde QR olur); okuyucu numarayı kimlik şeridinden okur.
   const v1 = version === 1;
-  const student = spec.personal ? [] : Array.from({ length: STUDENT_DIGITS }, (_, c) =>
+  const student = spec.personal || spec.studentNumber === false ? [] : Array.from({ length: STUDENT_DIGITS }, (_, c) =>
     Array.from({ length: 10 }, (_, d) =>
       v1
         ? { x: STUDENT_X + c * STUDENT_DX, y: STUDENT_Y + 8 + d * STUDENT_DY, label: String(d) }
@@ -406,7 +409,7 @@ function headerV2(p: Prim[], spec: FormSpec, L: Layout) {
     const B = L.studentBox;
     p.push({ kind: "rect", ...B, stroke: rule, sw: 0.3 });
     sec(B.x + 2, B.y + 3.6, "ÖĞRENCİ NUMARASI");
-    p.push({ kind: "text", x: B.x + B.w - 2, y: B.y + 3.6, text: "her satıra bir rakam", size: 2, fill: note, anchor: "end" });
+    p.push({ kind: "text", x: B.x + B.w - 2, y: B.y + 3.6, text: "üstten başlayın, her satıra bir rakam", size: 2, fill: note, anchor: "end" });
     L.student.forEach((row, c) => {
       const w = L.studentWrite[c];
       p.push({ kind: "rect", x: w.x - 2.4, y: w.y - 2, w: 4.8, h: 4, stroke: "#9ca3af", sw: 0.25 });
@@ -428,6 +431,27 @@ function headerV2(p: Prim[], spec: FormSpec, L: Layout) {
   if (L.booklet.length) {
     sec(RX, 53, "KİTAPÇIK TÜRÜ");
     for (const b of L.booklet) bubble(p, b, 2.2);
+  }
+
+  // Numara alanı yoksa (sınav ayarı) sol blokta büyük işaretleme örneği; sağ sütunda yalnızca kitapçık türü
+  if (!per && !L.student.length) {
+    const B = L.studentBox;
+    p.push({ kind: "rect", ...B, stroke: rule, sw: 0.3 });
+    sec(B.x + 2, B.y + 3.6, "İŞARETLEME");
+    const y = B.y + 15;
+    const xs = [B.x + 9, B.x + 25, B.x + 41, B.x + 57];
+    ["Doğru", "Yanlış", "Yanlış", "Yanlış"].forEach((caption, i) => {
+      const ok = i === 0;
+      p.push({ kind: "circle", x: xs[i], y, r: 2.4, stroke: ok ? ink : rule, sw: 0.3, ...(ok ? { fill: ink } : {}) });
+      p.push({ kind: "text", x: xs[i], y: y + 6.5, text: caption, size: 2.3, fill: ok ? ink : note, anchor: "middle", bold: ok });
+    });
+    p.push({ kind: "line", x1: xs[1] - 1.2, y1: y + 0.1, x2: xs[1] - 0.2, y2: y + 1.2, stroke: note, sw: 0.35 });
+    p.push({ kind: "line", x1: xs[1] - 0.2, y1: y + 1.2, x2: xs[1] + 1.4, y2: y - 1.2, stroke: note, sw: 0.35 });
+    p.push({ kind: "line", x1: xs[2] - 1.2, y1: y - 1.2, x2: xs[2] + 1.2, y2: y + 1.2, stroke: note, sw: 0.35 });
+    p.push({ kind: "line", x1: xs[2] - 1.2, y1: y + 1.2, x2: xs[2] + 1.2, y2: y - 1.2, stroke: note, sw: 0.35 });
+    p.push({ kind: "circle", x: xs[3], y, r: 0.6, fill: note });
+    p.push({ kind: "text", x: B.x + B.w / 2, y: B.y + B.h - 4, text: "Koyu kurşun kalem kullanın; silerken iz bırakmayın.", size: 2.1, fill: note, anchor: "middle" });
+    return;
   }
   const gy = 76;
   sec(RX, gy - 5, "İŞARETLEME");
