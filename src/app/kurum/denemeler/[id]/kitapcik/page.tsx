@@ -1,18 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
-import { EXAM_TYPES, fmtDate, keyFor } from "@/modules/exams";
+import { EXAM_TYPES, examFormSpec, fmtDate, keyFor } from "@/modules/exams";
 import { bookletOf, findExam } from "@/modules/exams/server";
 import { answerLabel } from "@/modules/question-bank";
 import QuestionView from "@/modules/question-bank/ui/QuestionView";
+import FormSvg from "@/shared/omr/FormSvg";
 import PrintButton from "@/shared/ui/PrintButton";
 import { Empty } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ k?: string; sutun?: string; ort?: string; cevap?: string }>;
+type SP = Promise<{ k?: string; sutun?: string; ort?: string; cevap?: string; optik?: string }>;
 
-/** Havuzdan kurulan denemenin yazdırılabilir soru kitapçığı (A / B, bir ya da iki sütun). Kesilmiş sorular görsel, yazılanlar metin olarak basılır. */
+/**
+ * Havuzdan kurulan denemenin yazdırılabilir soru kitapçığı (A / B, bir ya da iki sütun). Kesilmiş sorular görsel, yazılanlar metin olarak basılır.
+ * `optik=1`: optik form soruların arkasına eklenir (tek yazdırmada sorular + form). Form okunabilsin diye kendi sayfası kenar boşluksuz
+ * basılır (CSS adlandırılmış sayfa `@page omr`); soru sayfaları kitapçığın kenar boşluğunu korur. Cevap anahtarı açıksa en sondadır.
+ */
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const ownerId = await requireOwner();
   const { id } = await params;
@@ -25,19 +30,45 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const cover = sp.ort === "1";
   const withKey = sp.cevap === "1";
   const worksheet = exam.purpose === "WORKSHEET";
+  const withForm = sp.optik === "1" && !worksheet;
   const sections = await bookletOf(ownerId, exam.secs, booklet);
   const hasItems = exam.secs.some((s) => s.items?.length);
   const missing = sections.reduce((n, s) => n + s.questions.filter((q) => !q).length, 0);
-  const link = (p: Partial<Record<"k" | "sutun" | "ort" | "cevap", string>>) => {
-    const q = new URLSearchParams({ k: booklet, sutun: String(cols), ort: cover ? "1" : "0", cevap: withKey ? "1" : "0", ...p });
+  const link = (p: Partial<Record<"k" | "sutun" | "ort" | "cevap" | "optik", string>>) => {
+    const q = new URLSearchParams({ k: booklet, sutun: String(cols), ort: cover ? "1" : "0", cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", ...p });
     return `?${q}`;
   };
   const pill = (on: boolean) => `rounded-md px-2.5 py-1 text-[13px] ${on ? "bg-graphite font-semibold text-surface" : "text-lead ring-1 ring-rule hover:text-graphite"}`;
   let n = 0;
+  // Cevap anahtarı: optik form eklenmişse formdan sonra, en son sayfada
+  const keySection = (
+    <section style={{ breakBefore: "page" }} className="mt-8 print:mt-0">
+      <h2 className="mb-3 bg-black px-2 py-1 text-sm font-bold text-white [print-color-adjust:exact]">Cevap anahtarı{exam.letters.length > 1 ? ` (${booklet} kitapçığı)` : ""}</h2>
+      {worksheet ? (
+        <WorksheetKey sections={sections} />
+      ) : (() => {
+        let k = 0;
+        return exam.secs.map((sec, si) => {
+          const key = keyFor(sec, booklet);
+          return (
+            <div key={si} className="mb-3">
+              {exam.secs.length > 1 && <h3 className="mb-1 text-sm font-bold">{sec.name}</h3>}
+              <div className="grid grid-cols-10 gap-x-3 gap-y-1 text-sm">
+                {Array.from({ length: sec.count }, (_, i) => {
+                  k++;
+                  return <span key={i}><b>{k}.</b> {key[i]?.trim() || "—"}</span>;
+                })}
+              </div>
+            </div>
+          );
+                });
+              })()}
+            </section>
+  );
 
   return (
     <div>
-      <style>{`@page { size: A4; margin: 12mm 12mm 14mm; } @media print { .booklet { width: auto !important; box-shadow: none !important; padding: 0 !important; } }`}</style>
+      <style>{`@page { size: A4; margin: 12mm 12mm 14mm; } @page omr { size: A4; margin: 0; } .omr-sheet { page: omr; } @media print { .booklet { width: auto !important; box-shadow: none !important; padding: 0 !important; } .omr-sheet { margin: 0 !important; box-shadow: none !important; break-before: page; } }`}</style>
 
       <div className="no-print mb-4 flex flex-wrap items-center gap-2 border-b border-rule pb-3">
         <Link href={`/kurum/denemeler/${id}`} className="mr-2 text-[13px] text-lead hover:text-graphite">‹ {exam.name}</Link>
@@ -55,13 +86,18 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <Link href={link({ ort: cover ? "0" : "1" })} className={pill(cover)} title="Kesimde kaynağın soru numarası varsa üstünü beyazla örter">
           Kaynak numaralarını ört
         </Link>
-        <Link href={link({ cevap: withKey ? "0" : "1" })} className={pill(withKey)} title="Son sayfaya cevap anahtarı ekler">
+        {!worksheet && (
+          <Link href={link({ optik: withForm ? "0" : "1" })} className={pill(withForm)} title="Soruların arkasına optik formu ekler; tek seferde sorular ve form yazdırılır">
+            Optik formu arkaya ekle
+          </Link>
+        )}
+        <Link href={link({ cevap: withKey ? "0" : "1" })} className={pill(withKey)} title={withForm ? "Optik formdan sonra, en son sayfaya cevap anahtarı ekler" : "Son sayfaya cevap anahtarı ekler"}>
           Cevap anahtarı sayfası
         </Link>
         <span className="ml-auto flex items-center gap-2">
           <Link href={`/kurum/denemeler/${id}?tab=anahtar`} className="text-[13px] text-lead hover:text-graphite">Cevap anahtarı</Link>
-          {!worksheet && <Link href={`/kurum/denemeler/${id}/form`} target="_blank" className="btn-secondary">Optik formu yazdır</Link>}
-          <PrintButton label={worksheet ? "Çalışma kağıdını yazdır" : "Kitapçığı yazdır"} />
+          {!worksheet && !withForm && <Link href={`/kurum/denemeler/${id}/form`} target="_blank" className="btn-secondary">Optik formu yazdır</Link>}
+          <PrintButton label={worksheet ? "Çalışma kağıdını yazdır" : withForm ? "Kitapçık + optik formu yazdır" : "Kitapçığı yazdır"} />
         </span>
       </div>
 
@@ -121,31 +157,21 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </div>
             </section>
           ))}
-          {withKey && (
-            <section style={{ breakBefore: "page" }} className="mt-8 print:mt-0">
-              <h2 className="mb-3 bg-black px-2 py-1 text-sm font-bold text-white [print-color-adjust:exact]">Cevap anahtarı{exam.letters.length > 1 ? ` (${booklet} kitapçığı)` : ""}</h2>
-              {worksheet ? (
-                <WorksheetKey sections={sections} />
-              ) : (() => {
-                let k = 0;
-                return exam.secs.map((sec, si) => {
-                  const key = keyFor(sec, booklet);
-                  return (
-                    <div key={si} className="mb-3">
-                      {exam.secs.length > 1 && <h3 className="mb-1 text-sm font-bold">{sec.name}</h3>}
-                      <div className="grid grid-cols-10 gap-x-3 gap-y-1 text-sm">
-                        {Array.from({ length: sec.count }, (_, i) => {
-                          k++;
-                          return <span key={i}><b>{k}.</b> {key[i]?.trim() || "—"}</span>;
-                        })}
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </section>
-          )}
+          {withKey && !withForm && keySection}
         </article>
+      )}
+      {hasItems && withForm && (
+        <>
+          {/* Optik form: kenar boşluksuz kendi sayfası (@page omr), okuyucu ölçüleri bozulmasın */}
+          <div className="omr-sheet mx-auto mt-8 bg-white shadow-lg ring-1 ring-rule" style={{ width: "210mm", height: "297mm" }}>
+            <FormSvg info={examFormSpec(exam.name, exam.type, exam.secs, exam.letters)} style={{ width: "210mm", height: "297mm", display: "block" }} />
+          </div>
+          {withKey && (
+            <article className="booklet mx-auto mt-8 bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule print:mt-0" style={{ width: "210mm", breakBefore: "page" }}>
+              {keySection}
+            </article>
+          )}
+        </>
       )}
     </div>
   );
