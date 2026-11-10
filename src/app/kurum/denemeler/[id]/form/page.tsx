@@ -32,7 +32,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <div>
         <div className="no-print mb-4 flex flex-wrap items-center gap-3">
           <PrintButton />
-          <FormStudentNo examId={id} on={exam.omrStudentNo} compact />
+          <FormStudentNo examId={id} on={exam.omrStudentNo !== false} compact />
           <span className="text-sm text-lead">A4, kenar boşluğu “yok” ve ölçek %100 olarak yazdırın. Gerekli sayıda fotokopi çekebilirsiniz.</span>
         </div>
         <div className="print-page mx-auto bg-white shadow-lg print:shadow-none" style={page}>

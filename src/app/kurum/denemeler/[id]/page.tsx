@@ -138,10 +138,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <h2 className="font-semibold">Optik form</h2>
               <p className="mt-1 text-sm text-lead">
                 Bu sınava özel form: bölüm başlıkları{multi ? `, kitapçık türü (${exam.letters.join(", ")})` : ""}
-                {exam.omrStudentNo ? " ve 6 haneli öğrenci numarası alanı." : "; öğrenci numarası alanı yok."}
+                {exam.omrStudentNo !== false ? " ve 6 haneli öğrenci numarası alanı." : "; öğrenci numarası alanı yok."}
               </p>
               <div className="mt-3">
-                <FormStudentNo examId={id} on={exam.omrStudentNo} />
+                <FormStudentNo examId={id} on={exam.omrStudentNo !== false} />
               </div>
               <FormSvg info={spec} className="mt-3 w-full rounded ring-1 ring-rule" />
               <Link href={`${base}/form`} target="_blank" className="btn-primary mt-3 w-full">Formu yazdır</Link>
@@ -152,7 +152,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </p>
             </div>
             <div className="card p-4 text-sm text-lead">
-              {exam.omrStudentNo
+              {exam.omrStudentNo !== false
                 ? "Okunan öğrenci numarası kayıtlı öğrencilerle eşleştirilir (baştaki sıfırlar önemsizdir); yanlış okunan numarayı listeden düzeltebilirsiniz."
                 : "Formda numara alanı yok: her formun öğrencisini listeden seçin. Kişisel formlarda numara şeritten okunur."}{" "}
               Aynı öğrenci tekrar okutulursa sonucu güncellenir.

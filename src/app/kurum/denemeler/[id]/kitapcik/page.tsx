@@ -98,7 +98,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         )}
         {withForm && (
           <span className="ml-1">
-            <FormStudentNo examId={id} on={exam.omrStudentNo} compact />
+            <FormStudentNo examId={id} on={exam.omrStudentNo !== false} compact />
           </span>
         )}
         <Link href={link({ cevap: withKey ? "0" : "1" })} className={pill(withKey)} title={withForm ? "Optik formdan sonra, en son sayfaya cevap anahtarı ekler" : "Son sayfaya cevap anahtarı ekler"}>
