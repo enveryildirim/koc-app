@@ -51,7 +51,7 @@ npm run dev        # http://localhost:3000
 
 ## 3. Mimari
 
-**Modüler monolit.** Ayrıntılı kurallar için **[ARCHITECTURE.md](ARCHITECTURE.md)** dosyasını okuyun. Kod `src/modules/<modül>/` altında, iş alanına göre bölünmüştür: identity, enrollment, exams, homework, schedule, online-test, reporting. `src/app/` ince bir katmandır ve veritabanına doğrudan erişemez. Modül sınırlarını `npm run lint` denetler.
+**Modüler monolit.** Ayrıntılı kurallar için **[ARCHITECTURE.md](ARCHITECTURE.md)** dosyasını okuyun. Kod `src/modules/<modül>/` altında, iş alanına göre bölünmüştür: identity, enrollment, exams, homework, schedule, question-bank, curriculum, planning, assessment, reporting. `src/app/` ince bir katmandır ve veritabanına doğrudan erişemez. Modül sınırlarını `npm run lint` denetler.
 
 ### Çok kiracılık (multi-tenant)
 - **Kurum = kullanıcı.** Kurum tablolarında `ownerId` alanı var (User'a ilişki tanımlı değil).
@@ -75,7 +75,6 @@ src/modules/
   exams/                 # domain.ts (EXAM_TYPES, gradeExam, net/puan), omr.ts, topics.ts; server: findExam, updateExam (+regrade), importResults, examReport…
   homework/              # ödevler + durumlar; labels.ts (STATUS, doneRate)
   schedule/              # öğretmen, program, yoklama: listSlots, takeAttendance, attendanceSheet…
-  online-test/           # testler, public akış (publicTestByCode, submitPublicAttempt), OMR kaydetme
   planning/              # yıllık takvim: CalendarEvent, calendarFeed (etkinlik + deneme + ödev), holidaysOn, addNationalHolidays
   reporting/             # institutionDashboard, analiz (riskList…), devam raporları, veli karnesi, studentOverview
 src/app/                 # sayfa + route dosyaları (ince katman)
@@ -435,7 +434,7 @@ PoC 1. adımı (temel) yapıldı:
 
 ## 4q. Menü ve arama (8 Kasım 2026)
 
-- **Menü** (`shared/ui/KurumNav.tsx`): Özet · Giriş (Yoklama, Sözlü ve yazılı, Ödevler, Denemeler ve optik) · Takibat (Takip, Analiz, Veli karnesi, Haftalık veli raporu) · Araçlar (Soru havuzu, Online testler) · Yönetim (Öğrenciler, Sınıflar, Dersler, Öğretmenler, Ders programı, Takvim ve planlar, Müfredat, Puan cetvelleri). Kullanıcının iki ana hususu (bilgi girişi, takibat) üstte; yılda birkaç kez yapılan tanımlar en altta "Yönetim"de. `ALIASES`: /sinav → Online testler, /kurum/raporlar → Analiz, öğretmen ayrıntısı → Öğretmenler.
+- **Menü** (`shared/ui/KurumNav.tsx`): Özet · Giriş (Yoklama, Sözlü ve yazılı, Ödevler, Denemeler ve optik) · Takibat (Takip, Analiz, Veli karnesi, Haftalık veli raporu) · Araçlar (Soru havuzu) · Yönetim (Öğrenciler, Sınıflar, Dersler, Öğretmenler, Ders programı, Takvim ve planlar, Müfredat, Puan cetvelleri). Kullanıcının iki ana hususu (bilgi girişi, takibat) üstte; yılda birkaç kez yapılan tanımlar en altta "Yönetim"de. `ALIASES`: /kurum/raporlar → Analiz, öğretmen ayrıntısı → Öğretmenler.
 - **Yeni sayfalar:** `/kurum/siniflar`, `/kurum/ogretmenler`, `/kurum/puan-cetvelleri` (eskiden sekmeydi). Eski adresler `redirect` ile yönlenir. Devam raporları (`/kurum/raporlar`) Analiz'in sekmesi (`app/kurum/analiz/tabs.ts`), rapor türü küçük düğmelerle.
 - **Dersler sayfası** (`/kurum/dersler?sinif=`): Yönetim'de; sınıf düğmeleri (ders sayısıyla) + o sınıfın `CourseManager`'ı. Kullanıcı ders eklemeyi sınıf sayfasının içinde bulamadı; "+ Ders ekle" artık birincil düğme. Aramada ders sonucu buraya gider.
 - **+ Ekle kaldırıldı** (kullanıcı kararı, 8 Kasım): sınıf / öğretmen / ders nadiren eklenir, en üstte düğmeyi hak etmiyor. "Kurum" grubu "Yönetim" adıyla menünün en altına taşındı. Kod geri gerekirse commit `2dc619c` (`app/kurum/_ui/QuickAdd.tsx`, `GET /api/kurum/secenekler`). Kalan kısayollar: `/kurum/odevler?yeni=1` (ödev formu açık), `/kurum/denemeler#yeni-deneme`.
@@ -500,7 +499,8 @@ Kaynak: kullanıcının sıfırdan kurulum testi (`npm run dev:test`, boş `pris
 
 ## 5. Özellik durumu
 
-### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`)
+### Aşama 1 — Online test (`/panel`, `/sinav/[id]`, `/s/[code]`) — **kaldırıldı (2026-11-10)**
+Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Option/Attempt/Answer tabloları silindi. Optik form kütüphanesi (`shared/omr`) denemelerde kullanılmaya devam ediyor.
 - [x] Soru tipleri: tek/çok cevap, doğru/yanlış, kısa cevap.
 - [x] Süre sınırı, karıştırma, geçme notu, taslak/yayın.
 - [x] Kod/link ile paylaşım, sonuç sayfası, cevap anahtarı ve açıklama.

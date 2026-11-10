@@ -16,7 +16,6 @@ Son güncelleme: 8 Kasım 2026.
 | **Etüt mesulü** | Kişisel link `/o/<anahtar>` | `/ogretmen` + `/kurum` | Yöneticinin yaptığı her şey + öğretmen ekranı. Takip'te varsayılan kapsamı kendi sınıflarıdır |
 | **Öğretmen** | Kişisel link `/o/<anahtar>` | Yalnızca `/ogretmen` | Kendi derslerinin yoklaması, işlenen konu, sözlü/yazılı, ödev |
 | **Veli** | Öğrenciye özel link `/veli/<anahtar>` | Veli karnesi (salt okunur) | Görüntüleme |
-| **Öğrenci** | Giriş yok | — | Online testi kodla çözer (`/s/<KOD>`) |
 
 - Kurumda tek yönetici hesabı vardır (Personel → Yönetici sekmesinde görünür). Etüt mesulü ve öğretmen, Personel sayfasındaki kayıtlardır (`Teacher.role`). Öğrenciler ayrı sayfadadır.
 - Kişisel link yenilenir ya da kaldırılırsa açık oturumlar kapanır.
@@ -169,7 +168,6 @@ Derse ad ile bağlı; formda ad sınıfın derslerinden seçilir (öğretmen ekr
 | Kayıt | Oluşur | Kod |
 |---|---|---|
 | Soru havuzu (`QuestionSource`, `QuestionItem`) | Araçlar → Soru havuzu → kaynak yükle → soru kes | `modules/question-bank/` |
-| Online test (`Test`…) | Araçlar → Online testler (`/panel`) | `modules/online-test/` |
 | Veli linki (`Student.parentToken`) | Takibat → Veli karnesi → "Yeni bağlantı üret" | `modules/reporting/` |
 | Haftalık veli raporu (`ParentDispatch`) | Takibat → Haftalık veli raporu | `modules/reporting/` |
 | Başarı Skoru ayarları (`Setting`) | Analiz → Başarı Skoru → Ayarlar | `modules/reporting/` |
@@ -194,7 +192,6 @@ Takibat
   Haftalık veli raporu    /kurum/veli-bulteni    Mesaj önizleme, öğretmen notu, gönderim
 Araçlar
   Soru havuzu             /kurum/soru-havuzu
-  Online testler          /panel
 Yönetim
   Öğrenciler              /kurum/ogrenciler      Liste; + Öğrenci ekle → yan panel; Excel'den yükle → listenin üstünde
   Personel                /kurum/personel        Sekmeler: Öğretmenler · Etüt mesulleri · Yönetici; + ekle / Düzenle → yan panel; giriş linki
@@ -229,7 +226,6 @@ Takip (yalnızca etüt mesulü) → /kurum/takip
 /giris, /kayit            Kurum hesabı
 /o/<anahtar>              Öğretmen / etüt mesulü girişi
 /veli/<anahtar>           Veli karnesi
-/s/<KOD>                  Online test çözme
 ```
 
 ---

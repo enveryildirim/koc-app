@@ -101,8 +101,7 @@ export default function Home() {
             ))}
           </ol>
           <p className="mt-8 max-w-[68ch] text-[15px] text-lead">
-            Öğretmenler için ayrıca online test hazırlama var: soruları ekleyin, bağlantıyı paylaşın, katılımcılar üye olmadan çözsün; kâğıt sınavlar için optik form yazdırıp telefonla okutun.{" "}
-            <Link href="/s/GENEL1" className="font-semibold text-graphite underline decoration-ink/40 underline-offset-4">Örnek testi çözün</Link>.
+            Öğretmenler soru havuzundan sınav ve çalışma kâğıdı hazırlar; kâğıt sınavlar için optik form yazdırıp telefonla okutur.
           </p>
         </div>
       </section>

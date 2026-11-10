@@ -4,7 +4,7 @@ import Logo from "./Logo";
 
 /**
  * Kurum panelinin çerçevesi: solda gruplu kenar çubuğu (telefonda üst çubuk), sağda sayfa.
- * /kurum, /panel ve /sinav/[id] düzenleri kullanır; kullanıcıyı çağıran düzen verir.
+ * /kurum düzeni kullanır; kullanıcıyı çağıran düzen verir.
  */
 type ShellUser = { name: string; email: string; staff?: { name: string } | null };
 

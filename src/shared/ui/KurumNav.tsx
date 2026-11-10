@@ -13,7 +13,7 @@ export const GROUPS: { title: string; links: [string, string][] }[] = [
   { title: "Bugün", links: [["/kurum", "Özet"]] },
   { title: "Giriş", links: [["/kurum/yoklama", "Yoklama"], ["/kurum/degerlendirme", "Sözlü ve yazılı"], ["/kurum/odevler", "Ödevler"], ["/kurum/denemeler", "Denemeler ve optik"]] },
   { title: "Takibat", links: [["/kurum/takip", "Takip"], ["/kurum/analiz", "Analiz"], ["/kurum/veli-karnesi", "Veli karnesi"], ["/kurum/veli-bulteni", "Haftalık veli raporu"]] },
-  { title: "Araçlar", links: [["/kurum/soru-havuzu", "Soru havuzu"], ["/panel", "Online testler"]] },
+  { title: "Araçlar", links: [["/kurum/soru-havuzu", "Soru havuzu"]] },
   {
     title: "Yönetim",
     links: [
@@ -25,7 +25,6 @@ export const GROUPS: { title: string; links: [string, string][] }[] = [
 
 /** Menüde ayrı maddesi olmayan sayfalar: hangi maddenin altında sayılır. */
 const ALIASES: Record<string, string[]> = {
-  "/panel": ["/sinav/"], // online test düzenleme
   "/kurum/analiz": ["/kurum/raporlar"], // devam raporları Analiz'in sekmesi
   "/kurum/personel": ["/kurum/ders-programi/ogretmen/", "/kurum/ogretmenler"], // öğretmen ayrıntısı, eski adres
 };

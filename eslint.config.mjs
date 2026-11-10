@@ -23,7 +23,6 @@ const MODULES = {
   exams: ["identity", "enrollment", "question-bank", "schedule"],
   homework: ["identity", "enrollment", "schedule"],
   schedule: ["identity", "enrollment"],
-  "online-test": ["identity"],
   planning: ["identity", "enrollment", "exams", "homework", "schedule", "curriculum"],
   assessment: ["identity", "enrollment", "schedule", "planning"],
   reporting: ["identity", "enrollment", "exams", "homework", "schedule", "planning", "curriculum", "assessment"],

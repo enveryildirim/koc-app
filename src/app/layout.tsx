@@ -8,14 +8,14 @@ const body = Lexend({ subsets: ["latin", "latin-ext"], variable: "--font-body", 
 const head = Instrument_Sans({ subsets: ["latin", "latin-ext"], axes: ["wdth"], variable: "--font-head", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "SınavKur – Online sınav ve test oluşturma",
-  description: "Dakikalar içinde online sınav hazırlayın, paylaşın, otomatik puanlayın ve optik formları tarayın.",
+  title: "SınavKur – Kurum için deneme, takip ve soru havuzu",
+  description: "Deneme sınavları, optik okuma, karneler, soru havuzu, ödev ve yoklama takibi tek yerde.",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const path = (await headers()).get("x-pathname") ?? "";
-  // Veli sayfası kurum markasıyla, site menüsü olmadan; kurum paneli (online testler dahil) kendi kenar çubuğuyla gösterilir.
-  const bare = path.startsWith("/veli/") || path === "/kurum" || path.startsWith("/kurum/") || path === "/panel" || path.startsWith("/sinav/") || path === "/ogretmen" || path.startsWith("/ogretmen/");
+  // Veli sayfası kurum markasıyla, site menüsü olmadan; kurum paneli kendi kenar çubuğuyla gösterilir.
+  const bare = path.startsWith("/veli/") || path === "/kurum" || path.startsWith("/kurum/") || path === "/ogretmen" || path.startsWith("/ogretmen/");
   return (
     <html lang="tr" className={`${body.variable} ${head.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">
