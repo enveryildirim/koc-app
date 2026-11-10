@@ -1,6 +1,7 @@
 import { prisma } from "@/shared/db";
 import { invalid } from "@/shared/errors";
 import { bankItemsByIds, markBankItemsUsed } from "@/modules/question-bank/server";
+import { isOptical, opticalLetter, QUESTION_TYPES, type QuestionType } from "@/modules/question-bank";
 import { bookletLetters, choicesFor, EXAM_TYPES, LETTERS, makeBooklet, orderFor, setBooklet, type AltBooklet, type ExamSection } from "../domain";
 import { bookletFields } from "./exams";
 import { findCourse } from "@/modules/schedule/server";
@@ -8,7 +9,8 @@ import { findCourse } from "@/modules/schedule/server";
 /**
  * Soru havuzundan deneme: her bölüm için seçilen soruların cevapları A anahtarını, konuları konu listesini oluşturur.
  * A dışındaki her kitapçıkta (B, C, D) sorular bölüm içinde ayrı ayrı karıştırılır (anahtar + eşleme).
- * Kullanılan soruların sayacı artar.
+ * D/Y soruları optikte A = Doğru, B = Yanlış olarak okunur. Açık uçlu ve boşluk doldurma optikle okunamadığı için
+ * yalnızca çalışma kağıdına girer. Kullanılan soruların sayacı artar.
  *
  * body: { name, type, date, booklets (1–4), sections: [{ name, items: string[] }] }
  */
@@ -45,12 +47,20 @@ export async function createExamFromBank(ownerId: string, body: Record<string, u
 
   const sections: ExamSection[] = filled.map((s) => {
     const qs = s.ids.map((id) => found.get(id)!);
+    if (purpose === "EXAM") {
+      const open = qs.findIndex((q) => !isOptical(q.type));
+      if (open >= 0)
+        throw invalid(`${s.name}: ${open + 1}. soru ${QUESTION_TYPES[qs[open].type as QuestionType]?.label.toLocaleLowerCase("tr") ?? "optikle okunamayan türde"}; sınavda yalnızca çoktan seçmeli ve doğru / yanlış sorular olabilir. Çalışma kağıdı seçebilirsiniz.`);
+      const wide = qs.findIndex((q) => (q.content?.options?.length ?? 0) > allowed.length);
+      if (wide >= 0) throw invalid(`${s.name}: ${wide + 1}. soruda ${qs[wide].content!.options!.length} şık var; bu sınav türünde en fazla ${allowed.length} şık olur.`);
+    }
+    const keys = qs.map((q) => opticalLetter(q.type, q.answer));
     // Çalışma kağıdında cevap zorunlu değil; eksik cevap anahtarda boşluk olarak kalır
-    const missing = qs.findIndex((q) => !q.answer);
+    const missing = keys.findIndex((k) => !k);
     if (missing >= 0 && purpose === "EXAM") throw invalid(`${s.name}: ${missing + 1}. sorunun cevabı girilmemiş.`);
-    const bad = qs.findIndex((q) => q.answer && !allowed.includes(q.answer));
-    if (bad >= 0) throw invalid(`${s.name}: ${bad + 1}. sorunun cevabı (${qs[bad].answer}) bu sınav türünde yok (${allowed}).`);
-    const keyA = qs.map((q) => q.answer || " ").join("");
+    const bad = keys.findIndex((k) => k && !allowed.includes(k));
+    if (bad >= 0) throw invalid(`${s.name}: ${bad + 1}. sorunun cevabı (${keys[bad]}) bu sınav türünde yok (${allowed}).`);
+    const keyA = keys.map((k) => k || " ").join("");
     const topics = qs.map((q) => q.topic.slice(0, 80));
     const levels = qs.map((q) => q.level);
     let sec: ExamSection = {
@@ -92,7 +102,8 @@ const PAGE_MM = 210;
 
 /**
  * Kitapçık sırasıyla bölümlerin soruları. X kitapçığında j. soru = A'daki orderFor(X)[j].
- * widthMm: sorunun kaynaktaki genişliği (biliniyorsa); havuzdan silinmiş sorular null döner.
+ * widthMm: kesilmiş sorunun kaynaktaki genişliği (biliniyorsa); yazılan soruda content dolu gelir.
+ * Havuzdan silinmiş sorular null döner.
  */
 export async function bookletOf(ownerId: string, secs: ExamSection[], booklet: string) {
   const ids = secs.flatMap((s) => s.items ?? []);
@@ -112,7 +123,7 @@ export async function bookletOf(ownerId: string, secs: ExamSection[], booklet: s
       name: s.name,
       questions: order.map((i) => {
         const q = found.get(items[i]);
-        return q ? { id: q.id, widthMm: widthOf(q.crop) } : null;
+        return q ? { id: q.id, widthMm: widthOf(q.crop), type: q.type, content: q.content, hasImage: q.hasImage, answer: q.answer } : null;
       }),
     };
   });

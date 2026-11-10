@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
-import { DEFAULT_SUBJECTS, DIFFICULTY } from "@/modules/question-bank";
+import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
 import { bankSummary, listItems, listSources } from "@/modules/question-bank/server";
 import { mergeTopicSuggestions } from "@/modules/curriculum";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
@@ -10,7 +10,7 @@ import { Empty, Kpi, PageHeader, Tabs } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
-type Search = { ders?: string; konu?: string; zorluk?: string; kaynak?: string; eksik?: string; q?: string; s?: string };
+type Search = { ders?: string; konu?: string; zorluk?: string; tur?: string; kaynak?: string; eksik?: string; q?: string; s?: string };
 
 export default async function Page({ searchParams }: { searchParams: Promise<Search> }) {
   const ownerId = await requireOwner();
@@ -19,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const [summary, sources, list, curTopics] = await Promise.all([
     bankSummary(ownerId),
     listSources(ownerId),
-    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q }, page),
+    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q }, page),
     curriculumTopicNames(ownerId),
   ]);
   // Düzenleme önerileri: müfredat konuları önce (havuzda olmasa da seçilebilsin)
@@ -34,25 +34,32 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
     <div>
       <PageHeader
         title="Soru havuzu"
-        sub="PDF ya da fotoğraftan kestiğiniz sorular; ders, konu ve zorluğa göre."
+        sub="Yazdığınız, yapıştırdığınız ya da PDF ve fotoğraftan kestiğiniz sorular."
         actions={
           <>
-            <Link href="/kurum/denemeler/havuzdan" className="btn-secondary">Havuzdan deneme</Link>
-            <Link href="/kurum/soru-havuzu/kaynaklar" className="btn-primary">+ Kaynaktan soru kes</Link>
+            <Link href="/kurum/denemeler/havuzdan" className="btn-secondary">Havuzdan sınav</Link>
+            <Link href="/kurum/soru-havuzu/kaynaklar" className="btn-secondary">Kaynaktan soru kes</Link>
+            <Link href="/kurum/soru-havuzu/yaz" className="btn-primary">+ Soru yaz</Link>
           </>
         }
       />
       <Tabs tabs={HAVUZ_TABS} active="items" />
 
       <div className="mb-4 grid grid-cols-3 gap-2">
-        <Kpi label="Soru" value={summary.total} hint={`${summary.subjects.length} ders`} />
+        <Kpi
+          label="Soru"
+          value={summary.total}
+          hint={TYPE_ORDER.filter((t) => summary.byType[t]).map((t) => `${QUESTION_TYPES[t].short} ${summary.byType[t]}`).join(" · ") || `${summary.subjects.length} ders`}
+        />
         <Kpi label="Cevabı girilmemiş" value={summary.noAnswer} hint={summary.noAnswer ? <Link href="?eksik=cevap" className="underline">Listele</Link> : "Hepsi tamam"} />
         <Kpi label="Kaynak" value={sources.length} />
       </div>
 
       {summary.total === 0 ? (
         <Empty>
-          Havuz boş. <Link href="/kurum/soru-havuzu/kaynaklar" className="font-semibold text-graphite underline">Bir PDF ya da sayfa fotoğrafı yükleyin</Link>, sorular otomatik bulunsun.
+          Havuz boş. <Link href="/kurum/soru-havuzu/yaz" className="font-semibold text-graphite underline">Soru yazın</Link>,{" "}
+          <Link href="/kurum/soru-havuzu/yaz?mod=yapistir" className="font-semibold text-graphite underline">Word&apos;deki soruları yapıştırın</Link> ya da{" "}
+          <Link href="/kurum/soru-havuzu/kaynaklar" className="font-semibold text-graphite underline">bir PDF / sayfa fotoğrafı yükleyin</Link>, sorular otomatik bulunsun.
         </Empty>
       ) : (
         <>
@@ -69,6 +76,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
               <option value="">Her zorluk</option>
               {Object.entries(DIFFICULTY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
+            <select name="tur" defaultValue={sp.tur ?? ""} className="input w-auto" aria-label="Soru türü">
+              <option value="">Her tür</option>
+              {TYPE_ORDER.map((t) => <option key={t} value={t}>{QUESTION_TYPES[t].label}</option>)}
+            </select>
             <select name="kaynak" defaultValue={sp.kaynak ?? ""} className="input w-auto max-w-56" aria-label="Kaynak">
               <option value="">Tüm kaynaklar</option>
               {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -78,7 +89,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
               <option value="cevap">Cevabı girilmemiş</option>
               <option value="konu">Konusu girilmemiş</option>
             </select>
-            <input name="q" defaultValue={sp.q ?? ""} placeholder="Konuda ara" className="input w-40" />
+            <input name="q" defaultValue={sp.q ?? ""} placeholder="Konu ya da metinde ara" className="input w-40" />
             <button className="btn-secondary">Filtrele</button>
             {filtered && <Link href="/kurum/soru-havuzu" className="text-[13px] text-lead hover:text-graphite">Temizle</Link>}
             <span className="ml-auto text-[13px] text-lead">{list.total} soru</span>

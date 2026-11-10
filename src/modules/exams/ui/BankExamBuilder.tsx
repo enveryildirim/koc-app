@@ -1,16 +1,29 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ANSWERS, DIFFICULTY } from "@/modules/question-bank";
+import { ANSWERS, answerLabel, DIFFICULTY, isOptical, opticalLetter, OPTION_LETTERS, QUESTION_TYPES, type QuestionContent, type QuestionType } from "@/modules/question-bank";
+import QuestionView from "@/modules/question-bank/ui/QuestionView";
 import { subjectMatches } from "@/shared/subjects";
 import { toInputDate } from "@/shared/date";
 import { choicesFor, EXAM_TYPES, LETTERS } from "../domain";
 
-type Item = { id: string; subject: string; topic: string; grade: string; difficulty: number; answer: string; usedCount: number };
+type Item = { id: string; subject: string; topic: string; grade: string; difficulty: number; answer: string; usedCount: number; type: string; content: QuestionContent | null; hasImage: boolean };
 type Sec = { name: string; target: number; items: string[] };
 
 const IMG = (id: string) => `/api/kurum/soru-havuzu/sorular/${id}/gorsel`;
 const PAGE = 40;
+
+/** Soru önizlemesi: kesilmiş soruda görsel, yazılanda küçük metin görünümü. */
+function Thumb({ q, className }: { q: Item; className: string }) {
+  if (q.content)
+    return (
+      <div className={`overflow-hidden text-left text-black ${className}`}>
+        <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? IMG(q.id) : null} compact />
+      </div>
+    );
+  // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
+  return <img src={IMG(q.id)} alt="" loading="lazy" className={`object-contain ${className}`} />;
+}
 
 const templateOf = (type: string): Sec[] => EXAM_TYPES[type].sections.map((s) => ({ name: s.name, target: type === "SERBEST" ? 0 : s.count, items: [] }));
 
@@ -50,12 +63,15 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
   const pool = useMemo(() => {
     const fits = (q: Item) =>
       !chosen.has(q.id) &&
+      (worksheet || isOptical(q.type)) &&
       (!f.topic || q.topic === f.topic) &&
       (!f.difficulty || q.difficulty === Number(f.difficulty)) &&
       (!f.unused || q.usedCount === 0);
     const bySubject = f.subject ? items.filter((q) => q.subject === f.subject) : items.filter((q) => subjectMatches(sec.name, q.subject));
     return (f.subject || bySubject.length ? bySubject : items).filter(fits);
-  }, [items, f, chosen, sec.name]);
+  }, [items, f, chosen, sec.name, worksheet]);
+  // Sınavda optikle okunamayan sorular havuzda gösterilmez; kaç tane olduğu söylenir
+  const hiddenOpen = worksheet ? 0 : items.filter((q) => !isOptical(q.type)).length;
   const topicChoices = useMemo(
     () => [...new Set(items.filter((q) => !f.subject || q.subject === f.subject).map((q) => q.topic).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
     [items, f.subject],
@@ -104,11 +120,21 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
     if (res.ok) setItems((l) => l.map((q) => (q.id === id ? { ...q, answer } : q)));
   }
 
+  /** Sorunun sorunu (yoksa ""). Çalışma kağıdında cevap zorunlu değil; anahtar isteğe bağlı yazdırılır. */
+  const issueOf = (q: Item | undefined) => {
+    if (!q) return "";
+    if (worksheet) return "";
+    if (!isOptical(q.type)) return `${QUESTION_TYPES[q.type as QuestionType]?.label ?? q.type} optikle okunamaz`;
+    if ((q.content?.options?.length ?? 0) > allowed.length) return `${q.content!.options!.length} şık var, bu türde ${allowed.length}`;
+    const k = opticalLetter(q.type, q.answer);
+    if (!k) return "cevap yok";
+    if (!allowed.includes(k)) return `${k} şıkkı ${EXAM_TYPES[meta.type].label} türünde yok`;
+    return "";
+  };
   const problems = secs.flatMap((s) =>
     s.items.flatMap((id, i) => {
-      const a = byId.get(id)?.answer ?? "";
-      // Çalışma kağıdında cevap zorunlu değil (anahtar isteğe bağlı yazdırılır)
-      return !a ? (worksheet ? [] : [`${s.name} ${i + 1}: cevap yok`]) : !allowed.includes(a) ? [`${s.name} ${i + 1}: ${a} şıkkı ${EXAM_TYPES[meta.type].label} türünde yok`] : [];
+      const p = issueOf(byId.get(id));
+      return p ? [`${s.name} ${i + 1}: ${p}`] : [];
     }),
   );
   const total = chosen.size;
@@ -215,6 +241,7 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
         <section className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <h2 className="mr-auto font-semibold">Havuz <span className="font-normal text-lead">({pool.length})</span></h2>
+            {hiddenOpen > 0 && <span className="w-full text-xs text-lead order-last">{hiddenOpen} açık uçlu / boşluk doldurma soru optikle okunamadığı için gösterilmiyor; çalışma kağıdında kullanılabilir.</span>}
             <select className="input w-auto" value={f.subject} onChange={(e) => { setF({ ...f, subject: e.target.value, topic: "" }); setShown(PAGE); }} aria-label="Ders">
               <option value="">Bölüme uyan dersler</option>
               {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -251,15 +278,17 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
               {pool.slice(0, shown).map((q) => (
                 <li key={q.id} className="card flex flex-col overflow-hidden">
                   <button onClick={() => add([q.id])} className="group relative block bg-white p-1.5 text-left" title={`“${sec.name}” bölümüne ekle`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel */}
-                    <img src={IMG(q.id)} alt="" loading="lazy" className="mx-auto max-h-44 w-auto object-contain" />
+                    <Thumb q={q} className={q.content ? "max-h-44 px-1" : "mx-auto max-h-44 w-auto"} />
                     <span className="absolute inset-0 hidden items-center justify-center bg-graphite/10 text-sm font-semibold group-hover:flex">+ Ekle</span>
                   </button>
                   <div className="flex items-center gap-1.5 border-t border-rule px-2 py-1 text-xs text-lead">
                     <span className="min-w-0 truncate">{q.topic || q.subject}</span>
                     <span className="ml-auto shrink-0">{DIFFICULTY[q.difficulty]}</span>
                     {q.usedCount > 0 && <span className="shrink-0 text-amber-700" title="Daha önce denemede kullanıldı">· {q.usedCount}×</span>}
-                    <span className={`shrink-0 font-semibold ${q.answer ? "text-graphite" : "text-red-700"}`}>{q.answer || "?"}</span>
+                    {q.type !== "MC" && <span className="shrink-0">· {QUESTION_TYPES[q.type as QuestionType]?.short}</span>}
+                    {q.type === "MC" || q.type === "TF" ? (
+                      <span className={`shrink-0 font-semibold ${q.answer ? "text-graphite" : "text-red-700"}`}>{q.answer || "?"}</span>
+                    ) : null}
                   </div>
                 </li>
               ))}
@@ -294,25 +323,32 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
             <ol className="card max-h-[70vh] divide-y divide-rule/70 overflow-y-auto">
               {sec.items.map((id, i) => {
                 const q = byId.get(id);
-                const bad = !q?.answer || !allowed.includes(q.answer);
+                const issue = issueOf(q);
+                const bad = !!issue;
+                const letters = q?.type === "TF" ? ["D", "Y"] : q?.type === "MC" ? (q.content?.options ? OPTION_LETTERS.slice(0, q.content.options.length) : ANSWERS.slice(0, allowed.length)) : [];
                 return (
                   <li key={id} className="flex items-start gap-2 px-2 py-1.5">
                     <span className="num w-6 pt-1 text-right text-sm font-semibold">{i + 1}</span>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel */}
-                    <img src={IMG(id)} alt="" loading="lazy" className="max-h-24 min-w-0 flex-1 object-contain object-left" />
+                    {q ? <Thumb q={q} className={`min-w-0 flex-1 ${q.content ? "max-h-24" : "max-h-24 object-left"}`} /> : <span className="flex-1" />}
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      <div className="flex gap-0.5" role="group" aria-label={`${i + 1}. soru cevabı`}>
-                        {ANSWERS.slice(0, allowed.length).map((a) => (
-                          <button
-                            key={a}
-                            aria-pressed={q?.answer === a}
-                            onClick={() => setAnswer(id, a)}
-                            className={`size-5 rounded-full border text-[10px] font-semibold ${q?.answer === a ? "border-graphite bg-graphite text-white" : bad ? "border-red-300 text-red-700" : "border-ink/40 text-lead"}`}
-                          >
-                            {a}
-                          </button>
-                        ))}
-                      </div>
+                      {letters.length > 0 ? (
+                        <div className="flex gap-0.5" role="group" aria-label={`${i + 1}. soru cevabı`}>
+                          {letters.map((a) => (
+                            <button
+                              key={a}
+                              aria-pressed={q?.answer === a}
+                              onClick={() => setAnswer(id, a)}
+                              title={q?.type === "TF" ? answerLabel("TF", a) : undefined}
+                              className={`size-5 rounded-full border text-[10px] font-semibold ${q?.answer === a ? "border-graphite bg-graphite text-white" : bad ? "border-red-300 text-red-700" : "border-ink/40 text-lead"}`}
+                            >
+                              {a}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="max-w-32 truncate text-[11px] text-lead">{QUESTION_TYPES[q?.type as QuestionType]?.label}</span>
+                      )}
+                      {issue && issue !== "cevap yok" && <span className="max-w-40 text-right text-[11px] text-red-700">{issue}</span>}
                       <div className="flex gap-1 text-xs text-lead">
                         <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Yukarı" className="px-1 disabled:opacity-30">↑</button>
                         <button onClick={() => move(i, 1)} disabled={i === sec.items.length - 1} aria-label="Aşağı" className="px-1 disabled:opacity-30">↓</button>

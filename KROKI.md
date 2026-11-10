@@ -167,7 +167,7 @@ Derse ad ile bağlı; formda ad sınıfın derslerinden seçilir (öğretmen ekr
 ### Diğerleri
 | Kayıt | Oluşur | Kod |
 |---|---|---|
-| Soru havuzu (`QuestionSource`, `QuestionItem`) | Araçlar → Soru havuzu → kaynak yükle → soru kes | `modules/question-bank/` |
+| Soru havuzu (`QuestionSource`, `QuestionItem`) | Araçlar → Soru havuzu → **+ Soru yaz** (tek tek ya da yapıştır ve böl) veya **Kaynaktan soru kes** | `modules/question-bank/` |
 | Veli linki (`Student.parentToken`) | Takibat → Veli karnesi → "Yeni bağlantı üret" | `modules/reporting/` |
 | Haftalık veli raporu (`ParentDispatch`) | Takibat → Haftalık veli raporu | `modules/reporting/` |
 | Başarı Skoru ayarları (`Setting`) | Analiz → Başarı Skoru → Ayarlar | `modules/reporting/` |
@@ -191,7 +191,8 @@ Takibat
   Veli karnesi            /kurum/veli-karnesi    Veli linki üret
   Haftalık veli raporu    /kurum/veli-bulteni    Mesaj önizleme, öğretmen notu, gönderim
 Araçlar
-  Soru havuzu             /kurum/soru-havuzu
+  Soru havuzu             /kurum/soru-havuzu     Sorular (tür filtresi, kartta cevap, yazılanda Düzenle) · Kaynaklar ve kesme
+    └ Soru yaz            /kurum/soru-havuzu/yaz Tek tek yaz (önizlemeli) · Yapıştır ve böl (?mod=yapistir) · düzenleme (?id=)
 Yönetim
   Öğrenciler              /kurum/ogrenciler      Liste; + Öğrenci ekle → yan panel; Excel'den yükle → listenin üstünde
   Personel                /kurum/personel        Sekmeler: Öğretmenler · Etüt mesulleri · Yönetici; + ekle / Düzenle → yan panel; giriş linki

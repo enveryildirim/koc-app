@@ -55,5 +55,5 @@ export async function getFile(ownerId: string, key: string) {
 }
 
 export async function removeFiles(ownerId: string, keys: string[]) {
-  await Promise.all(keys.map((k) => rm(fileOf(ownerId, k), { force: true }).catch(() => {})));
+  await Promise.all(keys.filter(Boolean).map((k) => rm(fileOf(ownerId, k), { force: true }).catch(() => {})));
 }

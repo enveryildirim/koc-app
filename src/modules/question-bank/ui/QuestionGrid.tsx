@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ANSWERS, DIFFICULTY, GRADES, type QuestionPatch } from "../index";
+import { ANSWERS, answerLabel, DIFFICULTY, GRADES, OPTION_LETTERS, QUESTION_TYPES, type QuestionContent, type QuestionPatch, type QuestionType } from "../index";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
+import QuestionView from "./QuestionView";
 
 export type GridItem = {
   id: string;
@@ -16,11 +18,15 @@ export type GridItem = {
   usedCount: number;
   page: number | null;
   source: { name: string } | null;
+  type: string;
+  /** Yazılan soruda içerik; kesilmiş soruda null (içerik görseldedir) */
+  content: QuestionContent | null;
+  hasImage: boolean;
 };
 
 const API = "/api/kurum/soru-havuzu/sorular";
 
-/** Havuzdaki sorular: kart ızgarası, karttan cevap işaretleme, seçili sorularda toplu düzenleme / silme. */
+/** Havuzdaki sorular: kart ızgarası, karttan cevap işaretleme (türüne göre), seçili sorularda toplu düzenleme / silme. */
 export default function QuestionGrid({ items, subjects, topics }: { items: GridItem[]; subjects: string[]; topics: Record<string, string[]> }) {
   const router = useRouter();
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -39,7 +45,7 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
       return false;
     }
     router.refresh();
-    return true;
+    return json as { updated?: number; skipped?: number };
   }
 
   async function applyBulk() {
@@ -51,8 +57,9 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
     if (bulk.level) set.level = bulk.level;
     if (bulk.answer) set.answer = bulk.answer;
     if (!Object.keys(set).length) return setMsg({ ok: false, text: "Değiştirmek istediğiniz alanı doldurun." });
-    if (await send("PATCH", [...sel], set)) {
-      setMsg({ ok: true, text: `${sel.size} soru güncellendi.` });
+    const r = await send("PATCH", [...sel], set);
+    if (r) {
+      setMsg({ ok: true, text: r.skipped ? `${r.updated} soru güncellendi; ${r.skipped} sorunun türü bu cevaba uymadığı için cevabı değişmedi.` : `${r.updated} soru güncellendi.` });
       setBulk({ subject: "", topic: "", grade: "", difficulty: "", level: "", answer: "" });
     }
   }
@@ -113,7 +120,7 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
             </select>
           </label>
           <label>
-            <span className="text-xs text-lead">Cevap</span>
+            <span className="text-xs text-lead" title="Yalnızca çoktan seçmeli sorulara uygulanır">Cevap (test)</span>
             <select className="input" value={bulk.answer} onChange={(e) => setBulk({ ...bulk, answer: e.target.value })}>
               <option value="">—</option>
               {ANSWERS.map((a) => <option key={a} value={a}>{a}</option>)}
@@ -135,6 +142,7 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
             <li key={q.id} className={`card flex flex-col overflow-hidden ${on ? "ring-2 ring-ink" : ""}`}>
               <div className="flex items-center gap-2 border-b border-rule px-2.5 py-1.5 text-[13px]">
                 <input type="checkbox" checked={on} onChange={() => toggle(q.id)} aria-label="Soruyu seç" />
+                {q.type !== "MC" && <span className="badge shrink-0 bg-mist text-graphite" title={QUESTION_TYPES[q.type as QuestionType]?.label}>{QUESTION_TYPES[q.type as QuestionType]?.short ?? q.type}</span>}
                 <span className="min-w-0 truncate">
                   <b className="font-semibold">{q.subject}</b>
                   {q.topic ? <span className="text-lead"> · {q.topic}</span> : <span className="text-lead/70"> · konu yok</span>}
@@ -142,34 +150,61 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
                 {q.level && <span className="badge badge-plain ml-auto bg-mist text-lead" title="Bilişsel düzey">{q.level}</span>}
                 <span className={`badge bg-mist text-graphite ${q.level ? "" : "ml-auto"}`}>{DIFFICULTY[q.difficulty]}</span>
               </div>
-              <a href={`${API}/${q.id}/gorsel`} target="_blank" rel="noreferrer" className="block flex-1 bg-white p-2" title="Büyük aç">
-                {/* eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı route, next/image optimizasyonu kullanılmaz */}
-                <img src={`${API}/${q.id}/gorsel`} alt={`${q.subject} sorusu`} loading="lazy" className="mx-auto max-h-72 w-auto object-contain" />
-              </a>
-              <div className="flex items-center gap-2 border-t border-rule px-2.5 py-1.5">
-                <div className="flex gap-0.5" role="group" aria-label="Doğru cevap">
-                  {ANSWERS.map((a) => (
-                    <button
-                      key={a}
-                      type="button"
-                      disabled={busy}
-                      aria-pressed={q.answer === a}
-                      onClick={() => send("PATCH", [q.id], { answer: q.answer === a ? "" : a })}
-                      className={`size-6 rounded-full border text-[11px] font-semibold ${q.answer === a ? "border-graphite bg-graphite text-white" : "border-ink/40 text-lead hover:border-graphite"}`}
-                    >
-                      {a}
-                    </button>
-                  ))}
+              {q.content ? (
+                <div className="relative max-h-80 flex-1 overflow-hidden bg-white p-3 text-black">
+                  <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `${API}/${q.id}/gorsel` : null} answer={q.answer} />
                 </div>
-                <span className="ml-auto truncate text-xs text-lead" title={q.source?.name}>
-                  {q.grade && <>{q.grade} · </>}
-                  {q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : "Kaynak silinmiş"}
+              ) : (
+                <a href={`${API}/${q.id}/gorsel`} target="_blank" rel="noreferrer" className="block flex-1 bg-white p-2" title="Büyük aç">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı route, next/image optimizasyonu kullanılmaz */}
+                  <img src={`${API}/${q.id}/gorsel`} alt={`${q.subject} sorusu`} loading="lazy" className="mx-auto max-h-72 w-auto object-contain" />
+                </a>
+              )}
+              <div className="flex items-center gap-2 border-t border-rule px-2.5 py-1.5">
+                <AnswerControl q={q} busy={busy} onSet={(answer) => send("PATCH", [q.id], { answer })} />
+                <span className="ml-auto flex min-w-0 items-center gap-2 text-xs text-lead">
+                  <span className="truncate" title={q.source?.name}>
+                    {q.grade && <>{/^\d+$/.test(q.grade) ? `${q.grade}. sınıf` : q.grade}{q.content ? "" : " · "}</>}
+                    {q.content ? "" : q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : "Kaynak silinmiş"}
+                  </span>
+                  {q.content && <Link href={`/kurum/soru-havuzu/yaz?id=${q.id}`} className="shrink-0 font-semibold text-graphite hover:underline">Düzenle</Link>}
                 </span>
               </div>
             </li>
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+/** Kart altındaki cevap: test ve D/Y'de tıklanır; boşluk doldurma ve açık uçluda yazılan cevap gösterilir (Düzenle ile değişir). */
+function AnswerControl({ q, busy, onSet }: { q: GridItem; busy: boolean; onSet: (a: string) => void }) {
+  const pill = (on: boolean) => `rounded-full border text-[11px] font-semibold ${on ? "border-graphite bg-graphite text-white" : "border-ink/40 text-lead hover:border-graphite"}`;
+  if (q.type === "TF")
+    return (
+      <div className="flex gap-0.5" role="group" aria-label="Doğru cevap">
+        {(["D", "Y"] as const).map((v) => (
+          <button key={v} type="button" disabled={busy} aria-pressed={q.answer === v} onClick={() => onSet(q.answer === v ? "" : v)} className={`h-6 px-2 ${pill(q.answer === v)}`}>
+            {answerLabel("TF", v)}
+          </button>
+        ))}
+      </div>
+    );
+  if (q.type === "FILL" || q.type === "OPEN")
+    return q.answer ? (
+      <span dir="auto" className="min-w-0 truncate text-xs" title={answerLabel(q.type, q.answer)}>Cevap: {answerLabel(q.type, q.answer)}</span>
+    ) : (
+      <span className={`text-xs ${q.type === "FILL" ? "text-red-700" : "text-lead"}`}>{q.type === "FILL" ? "Cevap yok" : "Örnek cevap yok"}</span>
+    );
+  const letters = q.content?.options ? OPTION_LETTERS.slice(0, q.content.options.length) : ANSWERS;
+  return (
+    <div className="flex gap-0.5" role="group" aria-label="Doğru cevap">
+      {letters.map((a) => (
+        <button key={a} type="button" disabled={busy} aria-pressed={q.answer === a} onClick={() => onSet(q.answer === a ? "" : a)} className={`size-6 ${pill(q.answer === a)}`}>
+          {a}
+        </button>
+      ))}
     </div>
   );
 }

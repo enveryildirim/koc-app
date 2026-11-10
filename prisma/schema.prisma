@@ -350,7 +350,7 @@ model QuestionSource {
   @@index([ownerId])
 }
 
-/// Kaynaktan kesilmiş tek soru (görsel olarak saklanır).
+/// Havuzdaki tek soru: kaynaktan kesilmiş (görsel) ya da elle yazılmış / yapıştırılmış (content dolu, görsel isteğe bağlı).
 model QuestionItem {
   id         String          @id @default(cuid())
   ownerId    String
@@ -359,7 +359,12 @@ model QuestionItem {
   /// Kaynaktaki sayfa (1 tabanlı) ve kesim kutusu (sayfaya göre 0–1 oranlı JSON {x,y,w,h})
   page       Int?
   crop       String          @default("")
-  imageKey   String
+  /// Kesilmiş soruda sorunun görseli; yazılan soruda isteğe bağlı şekil/resim; boş = görsel yok
+  imageKey   String          @default("")
+  /// MC (çoktan seçmeli) | TF (doğru/yanlış) | OPEN (açık uçlu) | FILL (boşluk doldurma). Tanımlar: question-bank > QUESTION_TYPES
+  type       String          @default("MC")
+  /// Yazılan sorunun içeriği JSON: { stem, options? }. Boş = kesilmiş soru (içerik görseldedir)
+  content    String          @default("")
   subject    String
   topic      String          @default("")
   /// Sınıf / sınav düzeyi: 5–12, LGS, TYT, AYT…
@@ -368,7 +373,7 @@ model QuestionItem {
   difficulty Int             @default(2)
   /// Bilişsel düzey: Bilgi | Kavrama | Uygulama | Analiz; boş = girilmemiş (shared/cognitive.ts)
   level      String          @default("")
-  /// Doğru cevap (A–E); boş = girilmemiş
+  /// Doğru cevap; biçimi türe göre: MC "A"–"E", TF "D" | "Y", FILL boşlukların cevapları " | " ile, OPEN örnek cevap / puanlama notu. Boş = girilmemiş
   answer     String          @default("")
   /// Sorunun metni (ileride OCR / yapay zekâ ile doldurulur; aramada kullanılır)
   text       String          @default("")

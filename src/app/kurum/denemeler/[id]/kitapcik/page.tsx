@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
 import { EXAM_TYPES, fmtDate, keyFor } from "@/modules/exams";
 import { bookletOf, findExam } from "@/modules/exams/server";
+import { answerLabel } from "@/modules/question-bank";
+import QuestionView from "@/modules/question-bank/ui/QuestionView";
 import PrintButton from "@/shared/ui/PrintButton";
 import { Empty } from "@/shared/ui/kurum";
 
@@ -10,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 type SP = Promise<{ k?: string; sutun?: string; ort?: string; cevap?: string }>;
 
-/** Havuzdan kurulan denemenin yazdırılabilir soru kitapçığı (A / B, bir ya da iki sütun). */
+/** Havuzdan kurulan denemenin yazdırılabilir soru kitapçığı (A / B, bir ya da iki sütun). Kesilmiş sorular görsel, yazılanlar metin olarak basılır. */
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const ownerId = await requireOwner();
   const { id } = await params;
@@ -100,7 +102,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   return (
                     <div key={qi} className="mb-5 flex gap-1.5" style={{ breakInside: "avoid" }}>
                       <b className="w-6 shrink-0 pt-0.5 text-right text-[13px]">{n}.</b>
-                      {q ? (
+                      {q?.content ? (
+                        <div className="min-w-0 flex-1 text-[13px]">
+                          <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `/api/kurum/soru-havuzu/sorular/${q.id}/gorsel` : null} print optical={!worksheet} />
+                        </div>
+                      ) : q ? (
                         <div className="relative min-w-0 flex-1">
                           {/* eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel */}
                           <img src={`/api/kurum/soru-havuzu/sorular/${q.id}/gorsel`} alt={`${n}. soru`} className="block h-auto" style={{ width: q.widthMm ? `min(100%, ${q.widthMm}mm)` : "100%" }} />
@@ -118,7 +124,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           {withKey && (
             <section style={{ breakBefore: "page" }} className="mt-8 print:mt-0">
               <h2 className="mb-3 bg-black px-2 py-1 text-sm font-bold text-white [print-color-adjust:exact]">Cevap anahtarı{exam.letters.length > 1 ? ` (${booklet} kitapçığı)` : ""}</h2>
-              {(() => {
+              {worksheet ? (
+                <WorksheetKey sections={sections} />
+              ) : (() => {
                 let k = 0;
                 return exam.secs.map((sec, si) => {
                   const key = keyFor(sec, booklet);
@@ -140,5 +148,35 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </article>
       )}
     </div>
+  );
+}
+
+type KeySection = { name: string; questions: ({ type: string; answer: string } | null)[] };
+
+/** Çalışma kağıdının anahtarı: her sorunun kendi cevabı (şık, Doğru/Yanlış, boşluklar, örnek cevap). */
+function WorksheetKey({ sections }: { sections: KeySection[] }) {
+  let k = 0;
+  const all = sections.flatMap((s) => s.questions);
+  const short = all.every((q) => !q || answerLabel(q.type, q.answer).length <= 8);
+  return (
+    <>
+      {sections.map((s, si) => (
+        <div key={si} className="mb-3">
+          {sections.length > 1 && <h3 className="mb-1 text-sm font-bold">{s.name}</h3>}
+          <ol className={short ? "grid grid-cols-6 gap-x-3 gap-y-1 text-sm" : "space-y-1 text-sm"}>
+            {s.questions.map((q, i) => {
+              k++;
+              const a = q ? answerLabel(q.type, q.answer) : "";
+              return (
+                <li key={i} className="flex gap-1.5">
+                  <b className="shrink-0">{k}.</b>
+                  <span dir="auto" className="whitespace-pre-wrap">{a || "—"}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      ))}
+    </>
   );
 }

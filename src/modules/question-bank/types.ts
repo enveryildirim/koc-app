@@ -26,5 +26,19 @@ export type QuestionMeta = {
   origin?: QuestionOrigin;
 };
 
+/** Elle yazılan ya da yapıştırılan bir soru (görsel ayrıca gönderilir). */
+export type WrittenMeta = {
+  type: string;
+  stem: string;
+  options?: string[];
+  /** Türüne göre: MC harf, TF "D"/"Y", FILL boşluk cevapları (dizi ya da " | " ile), OPEN örnek cevap */
+  answer?: string | string[];
+  subject: string;
+  topic?: string;
+  grade?: string;
+  difficulty?: number;
+  level?: string;
+};
+
 /** Havuz listesinde toplu düzenlenebilen alanlar. */
 export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "level" | "answer">>;

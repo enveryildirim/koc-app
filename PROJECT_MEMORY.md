@@ -552,3 +552,14 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 - **Seed ID'leri:** Seed her çalıştığında kurum kayıtlarının ID'leri değişir. ID'leri sabit kodlamayın, veritabanından sorgulayın.
 - **Demo hesabı ve soru havuzu:** Seed demo hesabını silmez, e-postayla bulup günceller (upsert); hesap kimliği sabit kalır. Soru havuzu (QuestionSource / QuestionItem ve `storage/<ownerId>/`) seed'e dahil değildir ve korunur. Eskiden seed bütün kullanıcıları silip demo hesabını yeniden oluşturuyordu; elle yüklenen havuz soruları eski kimliğe bağlı kalıp görünmez oluyordu (5 Kasım 2026'da düzeltildi, kopan 10 soru geri bağlandı). Seed kurum tablolarını (öğrenci, deneme, ödev…) hâlâ tamamen sıfırlar.
 - **Tarih işleme:** Yerel tarih için `shared/date.ts > ymd()` kullanılmalı. Ders oturumu tarihleri string olarak tutulur.
+
+### Soru havuzu — soru türleri ve soru yazma (2026-11-10)
+- **Türler** (`QuestionItem.type`, tanımlar `question-bank/written.ts`): MC çoktan seçmeli, TF doğru/yanlış, FILL boşluk doldurma, OPEN açık uçlu. Kesilmiş sorular MC'dir; içerikleri görseldedir (`content` boş).
+- **Yazılan soru:** `content` = JSON `{ stem, options? }`, `text` = arama için düz metin, `imageKey` isteğe bağlı şekil (boş olabilir). Cevap biçimi türe göre: MC harf, TF "D"/"Y", FILL boşluk cevapları " | " ile, OPEN örnek cevap (isteğe bağlı; "cevabı girilmemiş" sayısına girmez).
+- **Giriş yolları** (`/kurum/soru-havuzu/yaz`, `ui/QuestionWriter.tsx`): tek tek yaz (tür seç, Enter ile sonraki şık, harfe tıklayıp doğru şık, Ctrl+V ile ekran görüntüsü, “+ Boşluk ekle”, canlı kâğıt önizlemesi, Ctrl+Enter kaydet ve yenisi) ve yapıştır ve böl (`paste.ts > splitPasted`: numara, A) şıklar yan yana / alt alta, *C, “Cevap:”, sondaki “Cevap anahtarı: 1-C…”, “( )” → D/Y, ___ → boşluk; yapay zekâ yok). Ders, düzey, konu, zorluk, bilişsel düzey ve şık sayısı tarayıcıda hatırlanır.
+- **Yazı yönü:** `textDir` satır satır harf çoğunluğuna bakar (Arapça ağırlıklı satır sağdan sola). Tarayıcının `dir="auto"`su ilk harfe baktığı için Türkçe ağırlıklı satırları yanlış yaslıyordu.
+- **Sınava giriş:** optikle okunan türler (MC, TF) sınava/denemeye girer; TF optikte A = Doğru, B = Yanlış. FILL ve OPEN yalnızca çalışma kağıdında (havuzdan kurma ekranında sınav seçiliyken gizlenir; sunucu da reddeder). Türün şık sayısını aşan MC (ör. LGS'de 5 şık) reddedilir. Karma sınav (optik + klasik) şimdilik istenmedi.
+- **Toplu cevap** (`updateItems`): yalnızca MC/TF'ye ve türüne uyan değerle yazılır; FILL/OPEN cevabı yazma ekranında düzenlenir.
+- **Kitapçık:** yazılan sorular metin olarak basılır (açık uçluya cevap boşluğu); çalışma kağıdının anahtar sayfası sorunun kendi cevabını gösterir.
+- **Online test (Test…) kaldırıldı;** tek sınav yapısı `Exam`.
+
