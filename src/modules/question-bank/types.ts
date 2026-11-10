@@ -42,3 +42,38 @@ export type WrittenMeta = {
 
 /** Havuz listesinde toplu düzenlenebilen alanlar. */
 export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "level" | "answer">>;
+
+/** Sorunun bir sınavda / çalışma kağıdında kullanımı (exams > bankUsage hesaplar; havuz yalnızca gösterir). */
+export type BankUse = {
+  examId: string;
+  name: string;
+  /** ISO tarih */
+  date: string;
+  worksheet: boolean;
+  /** Gören sınıfların adları */
+  classes: string[];
+  /** Sonucu hesaba giren öğrenci sayısı (çalışma kağıdında 0) */
+  n: number;
+  /** Doğru oranı (%); sonuç yoksa null */
+  p: number | null;
+  /** Madde analizi uyarısı (düz cümle); yoksa null */
+  flag: string | null;
+};
+
+/** Sorunun bütün kullanımlarının özeti. Kayıtta saklanmaz; her seferinde denemelerden hesaplanır. */
+export type BankUsage = {
+  uses: BankUse[];
+  exams: number;
+  worksheets: number;
+  /** Son kullanım (ISO) */
+  last: string | null;
+  /** Bütün sınavlardaki öğrenci sayısı ve ağırlıklı doğru oranı (%) */
+  n: number;
+  p: number | null;
+  /** Ölçülen zorluk (1 kolay, 2 orta, 3 zor); yeterli öğrenci yoksa null */
+  measured: number | null;
+  /** Son sınavdaki uyarı */
+  flag: string | null;
+  /** Gören sınıfların kimlikleri */
+  classIds: string[];
+};

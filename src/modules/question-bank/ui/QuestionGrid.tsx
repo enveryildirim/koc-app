@@ -2,8 +2,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ANSWERS, answerLabel, DIFFICULTY, GRADES, OPTION_LETTERS, QUESTION_TYPES, type QuestionContent, type QuestionPatch, type QuestionType } from "../index";
+import { ANSWERS, answerLabel, DIFFICULTY, GRADES, OPTION_LETTERS, QUESTION_TYPES, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType } from "../index";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
+import Drawer from "@/shared/ui/Drawer";
 import QuestionView from "./QuestionView";
 
 export type GridItem = {
@@ -15,7 +16,6 @@ export type GridItem = {
   level: string;
   answer: string;
   origin: string;
-  usedCount: number;
   page: number | null;
   source: { name: string } | null;
   type: string;
@@ -27,8 +27,21 @@ export type GridItem = {
 const API = "/api/kurum/soru-havuzu/sorular";
 
 /** Havuzdaki sorular: kart ızgarası, karttan cevap işaretleme (türüne göre), seçili sorularda toplu düzenleme / silme. */
-export default function QuestionGrid({ items, subjects, topics }: { items: GridItem[]; subjects: string[]; topics: Record<string, string[]> }) {
+export default function QuestionGrid({
+  items,
+  subjects,
+  topics,
+  usage = {},
+}: {
+  items: GridItem[];
+  subjects: string[];
+  topics: Record<string, string[]>;
+  /** Sayfadaki soruların kullanım geçmişi (kullanılmamışlar yok) */
+  usage?: Record<string, BankUsage>;
+}) {
   const router = useRouter();
+  const [detail, setDetail] = useState<string | null>(null);
+  const shown = detail ? items.find((i) => i.id === detail) : undefined;
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState({ subject: "", topic: "", grade: "", difficulty: "", level: "", answer: "" });
   const [busy, setBusy] = useState(false);
@@ -160,6 +173,7 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
                   <img src={`${API}/${q.id}/gorsel`} alt={`${q.subject} sorusu`} loading="lazy" className="mx-auto max-h-72 w-auto object-contain" />
                 </a>
               )}
+              <UsageLine q={q} u={usage[q.id]} onOpen={() => setDetail(q.id)} />
               <div className="flex items-center gap-2 border-t border-rule px-2.5 py-1.5">
                 <AnswerControl q={q} busy={busy} onSet={(answer) => send("PATCH", [q.id], { answer })} />
                 <span className="ml-auto flex min-w-0 items-center gap-2 text-xs text-lead">
@@ -174,6 +188,99 @@ export default function QuestionGrid({ items, subjects, topics }: { items: GridI
           );
         })}
       </ul>
+
+      <Drawer open={!!shown} title="Kullanım geçmişi" onClose={() => setDetail(null)}>
+        {shown && <UsageDetail q={shown} u={usage[shown.id]} busy={busy} onDifficulty={(d) => send("PATCH", [shown.id], { difficulty: d })} />}
+      </Drawer>
+    </div>
+  );
+}
+
+const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
+const lower = (s: string) => s.toLocaleLowerCase("tr-TR");
+
+/** Kart üzerindeki tek satırlık kullanım özeti; tıklanınca ayrıntı açılır. */
+function UsageLine({ q, u, onOpen }: { q: GridItem; u?: BankUsage; onOpen: () => void }) {
+  if (!u) return <p className="border-t border-rule px-2.5 py-1 text-xs text-lead/80">Hiç kullanılmadı</p>;
+  const parts = [
+    u.exams ? `${u.exams} sınav` : "",
+    u.worksheets ? `${u.worksheets} çalışma kağıdı` : "",
+    u.last ? `son ${fmtDay(u.last)}` : "",
+    u.p !== null ? `%${u.p} doğru (${u.n} öğr.)` : "",
+  ].filter(Boolean);
+  const off = u.measured && u.measured !== q.difficulty;
+  return (
+    <button type="button" onClick={onOpen} className="block w-full border-t border-rule px-2.5 py-1 text-left text-xs text-lead hover:bg-mist/60" title="Kullanım geçmişini aç">
+      <span className="block truncate">{parts.join(" · ")}</span>
+      {(u.flag || off || u.classIds.length > 0) && (
+        <span className="flex min-w-0 gap-2">
+          {u.flag && <span className="shrink-0 font-semibold text-red-700">{u.flag}</span>}
+          {!u.flag && off && <span className="shrink-0 text-amber-700">ölçülen: {lower(DIFFICULTY[u.measured!])}</span>}
+          {u.classIds.length > 0 && <span className="truncate">Gören: {[...new Set(u.uses.flatMap((x) => x.classes))].sort((a, b) => a.localeCompare(b, "tr")).join(", ")}</span>}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** Yan panel: her kullanım (sınav / çalışma kağıdı, tarih, gören sınıflar, sonuç) ve ölçülen zorluk. */
+function UsageDetail({ q, u, busy, onDifficulty }: { q: GridItem; u?: BankUsage; busy: boolean; onDifficulty: (d: number) => void }) {
+  const title = q.content?.stem.split("\n")[0] || `${q.subject}${q.topic ? ` · ${q.topic}` : ""}`;
+  return (
+    <div className="space-y-4 text-sm">
+      <p dir="auto" className="line-clamp-3 text-lead">{title}</p>
+      {!u ? (
+        <p>Bu soru henüz hiçbir sınavda ya da çalışma kağıdında kullanılmadı.</p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-x-5 gap-y-1">
+            <span><b className="num">{u.exams}</b> sınav</span>
+            <span><b className="num">{u.worksheets}</b> çalışma kağıdı</span>
+            {u.p !== null && <span><b className="num">%{u.p}</b> doğru · <span className="num">{u.n}</span> öğrenci</span>}
+          </div>
+          <div className="rounded-md bg-mist/60 px-3 py-2">
+            <p>
+              Girilen zorluk: <b>{DIFFICULTY[q.difficulty]}</b>
+              {u.measured ? (
+                <> · sonuçlara göre: <b>{DIFFICULTY[u.measured]}</b></>
+              ) : (
+                <span className="text-lead"> · ölçülen zorluk için en az 20 öğrencinin sonucu gerekir</span>
+              )}
+            </p>
+            {u.measured && u.measured !== q.difficulty && (
+              <button type="button" className="btn-secondary mt-2 py-1" disabled={busy} onClick={() => onDifficulty(u.measured!)}>
+                Zorluğu “{DIFFICULTY[u.measured]}” yap
+              </button>
+            )}
+            {u.flag && <p className="mt-1 font-semibold text-red-700">{u.flag} (son sınava göre). Soruyu ve cevap anahtarını kontrol edin.</p>}
+          </div>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="text-left text-xs text-lead">
+                <th className="py-1 font-normal">Sınav</th>
+                <th className="py-1 font-normal">Gören</th>
+                <th className="py-1 text-right font-normal">Sonuç</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-rule/70">
+              {u.uses.map((x, i) => (
+                <tr key={i} className="align-top">
+                  <td className="py-1.5 pr-2">
+                    <Link href={`/kurum/denemeler/${x.examId}`} className="font-semibold text-graphite hover:underline">{x.name}</Link>
+                    <span className="block text-xs text-lead">{fmtDay(x.date)}{x.worksheet ? " · çalışma kağıdı" : ""}</span>
+                  </td>
+                  <td className="py-1.5 pr-2 text-lead">{x.classes.join(", ") || "—"}</td>
+                  <td className="py-1.5 text-right whitespace-nowrap">
+                    {x.p !== null ? <>%{x.p} <span className="text-xs text-lead">({x.n})</span></> : <span className="text-xs text-lead">{x.worksheet ? "puanlanmaz" : "sonuç yok"}</span>}
+                    {x.flag && <span className="block text-xs text-red-700">{x.flag}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-lead">Gören sınıf: derse bağlı sınavda dersin sınıfı, ayrıca sonucu okunan öğrencilerin sınıfları. Derse bağlanmamış çalışma kağıdının kime dağıtıldığı bilinmez.</p>
+        </>
+      )}
     </div>
   );
 }

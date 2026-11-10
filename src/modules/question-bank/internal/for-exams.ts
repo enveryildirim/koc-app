@@ -7,7 +7,7 @@ export async function bankPickerItems(ownerId: string, limit = 5000) {
     where: { ownerId },
     orderBy: [{ createdAt: "desc" }, { page: "asc" }],
     take: limit,
-    select: { id: true, subject: true, topic: true, grade: true, difficulty: true, answer: true, usedCount: true, type: true, content: true, imageKey: true },
+    select: { id: true, subject: true, topic: true, grade: true, difficulty: true, answer: true, type: true, content: true, imageKey: true },
   });
   return rows.map(({ imageKey, content, ...r }) => ({ ...r, content: parseContent(content), hasImage: !!imageKey }));
 }
@@ -20,10 +20,4 @@ export async function bankItemsByIds(ownerId: string, ids: string[]) {
     select: { id: true, subject: true, topic: true, level: true, answer: true, crop: true, type: true, content: true, imageKey: true },
   });
   return rows.map(({ imageKey, content, ...r }) => ({ ...r, content: parseContent(content), hasImage: !!imageKey }));
-}
-
-/** Denemede kullanılan soruların kullanım sayısını artırır (tekrar kullanım uyarısı için). */
-export async function markBankItemsUsed(ownerId: string, ids: string[]) {
-  if (!ids.length) return;
-  await prisma.questionItem.updateMany({ where: { ownerId, id: { in: ids } }, data: { usedCount: { increment: 1 } } });
 }

@@ -7,7 +7,20 @@ import { subjectMatches } from "@/shared/subjects";
 import { toInputDate } from "@/shared/date";
 import { choicesFor, EXAM_TYPES, LETTERS } from "../domain";
 
-type Item = { id: string; subject: string; topic: string; grade: string; difficulty: number; answer: string; usedCount: number; type: string; content: QuestionContent | null; hasImage: boolean };
+type Item = {
+  id: string;
+  subject: string;
+  topic: string;
+  grade: string;
+  difficulty: number;
+  answer: string;
+  type: string;
+  content: QuestionContent | null;
+  hasImage: boolean;
+  /** Kaç sınav / çalışma kağıdında kullanıldı ve hangi sınıflar gördü (denemelerden hesaplanır) */
+  uses: number;
+  classIds: string[];
+};
 type Sec = { name: string; target: number; items: string[] };
 
 const IMG = (id: string) => `/api/kurum/soru-havuzu/sorular/${id}/gorsel`;
@@ -37,7 +50,7 @@ function shuffle<T>(a: T[]) {
 }
 
 /** Havuzdan deneme kurma: bölüm seç, havuzdan soru ekle (elle ya da zorluk dağılımıyla rastgele), sırala, oluştur. */
-type CourseOpt = { id: string; label: string };
+type CourseOpt = { id: string; label: string; classroomId: string; classroomName: string };
 
 export default function BankExamBuilder({ items: initial, courses = [], initialCourse = "" }: { items: Item[]; courses?: CourseOpt[]; initialCourse?: string }) {
   const router = useRouter();
@@ -49,7 +62,10 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
   const worksheet = meta.purpose === "WORKSHEET";
   const [secs, setSecs] = useState<Sec[]>(templateOf("SERBEST"));
   const [active, setActive] = useState(0);
-  const [f, setF] = useState({ subject: "", topic: "", difficulty: "", unused: false });
+  const [f, setF] = useState({ subject: "", topic: "", difficulty: "", unused: false, unseen: true });
+  // Derse bağlı sınavda o sınıfın daha önce gördüğü sorular varsayılan olarak gizlenir
+  const course = courses.find((c) => c.id === meta.courseId);
+  const room = course?.classroomId ?? "";
   const [shown, setShown] = useState(PAGE);
   const [mix, setMix] = useState({ 1: 0, 2: 0, 3: 0 } as Record<number, number>);
   const [busy, setBusy] = useState(false);
@@ -66,10 +82,12 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
       (worksheet || isOptical(q.type)) &&
       (!f.topic || q.topic === f.topic) &&
       (!f.difficulty || q.difficulty === Number(f.difficulty)) &&
-      (!f.unused || q.usedCount === 0);
+      (!f.unused || q.uses === 0) &&
+      (!room || !f.unseen || !q.classIds.includes(room));
     const bySubject = f.subject ? items.filter((q) => q.subject === f.subject) : items.filter((q) => subjectMatches(sec.name, q.subject));
     return (f.subject || bySubject.length ? bySubject : items).filter(fits);
-  }, [items, f, chosen, sec.name, worksheet]);
+  }, [items, f, chosen, sec.name, worksheet, room]);
+  const seenByRoom = room ? items.filter((q) => !chosen.has(q.id) && q.classIds.includes(room)).length : 0;
   // Sınavda optikle okunamayan sorular havuzda gösterilmez; kaç tane olduğu söylenir
   const hiddenOpen = worksheet ? 0 : items.filter((q) => !isOptical(q.type)).length;
   const topicChoices = useMemo(
@@ -102,7 +120,7 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
     for (const d of [1, 2, 3]) {
       const want = mix[d] || 0;
       if (!want) continue;
-      const cand = shuffle(pool.filter((q) => q.difficulty === d)).sort((a, b) => a.usedCount - b.usedCount);
+      const cand = shuffle(pool.filter((q) => q.difficulty === d)).sort((a, b) => a.uses - b.uses);
       picked.push(...cand.slice(0, want).map((q) => q.id));
       if (cand.length < want) short.push(`${DIFFICULTY[d].toLocaleLowerCase("tr")} ${want - cand.length}`);
     }
@@ -258,6 +276,12 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
               <input type="checkbox" checked={f.unused} onChange={(e) => setF({ ...f, unused: e.target.checked })} />
               Kullanılmamış
             </label>
+            {room && (
+              <label className="flex items-center gap-1.5 text-[13px]" title={`${course!.classroomName} sınıfının daha önceki sınav ya da çalışma kağıtlarında gördüğü sorular`}>
+                <input type="checkbox" checked={f.unseen} onChange={(e) => setF({ ...f, unseen: e.target.checked })} />
+                {course!.classroomName} görmedi{seenByRoom > 0 && f.unseen ? <span className="text-lead"> ({seenByRoom} gizli)</span> : null}
+              </label>
+            )}
           </div>
 
           <div className="card mb-3 flex flex-wrap items-center gap-2 px-3 py-2 text-[13px]">
@@ -284,7 +308,11 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
                   <div className="flex items-center gap-1.5 border-t border-rule px-2 py-1 text-xs text-lead">
                     <span className="min-w-0 truncate">{q.topic || q.subject}</span>
                     <span className="ml-auto shrink-0">{DIFFICULTY[q.difficulty]}</span>
-                    {q.usedCount > 0 && <span className="shrink-0 text-amber-700" title="Daha önce denemede kullanıldı">· {q.usedCount}×</span>}
+                    {room && q.classIds.includes(room) ? (
+                      <span className="shrink-0 font-semibold text-amber-700" title="Bu sınıf soruyu daha önce gördü">· {course!.classroomName} gördü</span>
+                    ) : q.uses > 0 ? (
+                      <span className="shrink-0 text-amber-700" title="Daha önce sınav ya da çalışma kağıdında kullanıldı">· {q.uses}×</span>
+                    ) : null}
                     {q.type !== "MC" && <span className="shrink-0">· {QUESTION_TYPES[q.type as QuestionType]?.short}</span>}
                     {q.type === "MC" || q.type === "TF" ? (
                       <span className={`shrink-0 font-semibold ${q.answer ? "text-graphite" : "text-red-700"}`}>{q.answer || "?"}</span>

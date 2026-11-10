@@ -191,7 +191,7 @@ Takibat
   Veli karnesi            /kurum/veli-karnesi    Veli linki üret
   Haftalık veli raporu    /kurum/veli-bulteni    Mesaj önizleme, öğretmen notu, gönderim
 Araçlar
-  Soru havuzu             /kurum/soru-havuzu     Sorular (tür filtresi, kartta cevap, yazılanda Düzenle) · Kaynaklar ve kesme
+  Soru havuzu             /kurum/soru-havuzu     Sorular (tür ve kullanım süzgeçleri, "sınıf görmedi", kartta cevap ve kullanım özeti → yan panelde geçmiş; yazılanda Düzenle) · Kaynaklar ve kesme
     └ Soru yaz            /kurum/soru-havuzu/yaz Tek tek yaz (önizlemeli) · Yapıştır ve böl (?mod=yapistir) · düzenleme (?id=)
 Yönetim
   Öğrenciler              /kurum/ogrenciler      Liste; + Öğrenci ekle → yan panel; Excel'den yükle → listenin üstünde

@@ -1,6 +1,6 @@
 import { prisma } from "@/shared/db";
 import { invalid } from "@/shared/errors";
-import { bankItemsByIds, markBankItemsUsed } from "@/modules/question-bank/server";
+import { bankItemsByIds } from "@/modules/question-bank/server";
 import { isOptical, opticalLetter, QUESTION_TYPES, type QuestionType } from "@/modules/question-bank";
 import { bookletLetters, choicesFor, EXAM_TYPES, LETTERS, makeBooklet, orderFor, setBooklet, type AltBooklet, type ExamSection } from "../domain";
 import { bookletFields } from "./exams";
@@ -10,7 +10,7 @@ import { findCourse } from "@/modules/schedule/server";
  * Soru havuzundan deneme: her bölüm için seçilen soruların cevapları A anahtarını, konuları konu listesini oluşturur.
  * A dışındaki her kitapçıkta (B, C, D) sorular bölüm içinde ayrı ayrı karıştırılır (anahtar + eşleme).
  * D/Y soruları optikte A = Doğru, B = Yanlış olarak okunur. Açık uçlu ve boşluk doldurma optikle okunamadığı için
- * yalnızca çalışma kağıdına girer. Kullanılan soruların sayacı artar.
+ * yalnızca çalışma kağıdına girer. Kullanım geçmişi denemelerden hesaplanır (for-bank.ts > bankUsage).
  *
  * body: { name, type, date, booklets (1–4), sections: [{ name, items: string[] }] }
  */
@@ -93,7 +93,6 @@ export async function createExamFromBank(ownerId: string, body: Record<string, u
       courseId,
     },
   });
-  await markBankItemsUsed(ownerId, all);
   return { id: exam.id };
 }
 

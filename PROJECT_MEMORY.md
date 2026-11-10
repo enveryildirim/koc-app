@@ -563,3 +563,11 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 - **Kitapçık:** yazılan sorular metin olarak basılır (açık uçluya cevap boşluğu); çalışma kağıdının anahtar sayfası sorunun kendi cevabını gösterir.
 - **Online test (Test…) kaldırıldı;** tek sınav yapısı `Exam`.
 
+### Soru havuzu — kullanım geçmişi ve sonuçlardan ölçülen bilgiler (2026-11-10)
+- **Saklanmaz, hesaplanır:** `exams/internal/for-bank.ts > bankUsage`. Sorunun girdiği sınav ve çalışma kağıtları `Exam.sections[].items`'tan; silinen deneme sayılmaz. Eski `QuestionItem.usedCount` sayacı (deneme silinince azalmıyordu) şemadan kaldırıldı.
+- **Gören sınıf:** derse bağlı sınavda dersin sınıfı + sonucu okunan öğrencilerin ana sınıfı (`enrollment > studentHomeClassrooms`). Derse bağlanmamış çalışma kağıdının kime dağıtıldığı bilinmez, sınıf eklemez.
+- **Ölçülen:** sonucu olan sınavlarda `itemAnalysis`'ten öğrenci sayısıyla ağırlıklı doğru oranı; ölçülen zorluk (%70+ kolay, %40–69 orta, altı zor) ancak 20 öğrenciden (ITEM_RULES.minN) sonra. Uyarı sonucu olan en son sınavdan; "anahtar hatası" her durumda, ayırt edicilik uyarıları 20 öğrenciden sonra. Girilen zorluk kendiliğinden değişmez; panelde "Zorluğu … yap" düğmesi.
+- **Havuz:** kartta tek satır (kaç sınav / çalışma kağıdı, son kullanım, %doğru, uyarı ya da ölçülen zorluk farkı, gören sınıflar); tıklayınca yan panelde her kullanım. Süzgeçler: hiç kullanılmamış, en çok kullanılan (sıralı), sorunlu, "X sınıfı görmedi". Özet sayılarda "Hiç kullanılmamış".
+- **Havuzdan sınav:** ders seçilince o sınıfın gördüğü sorular varsayılan olarak gizlenir ("8-A görmedi (9 gizli)"); kutu kaldırılırsa kartta "8-A gördü".
+- **Sonraki (2. adım, kullanıcı kararı):** arşiv durumu ve müfredattan kazanım. "Boyut" (kâğıtta kapladığı yer) istenmedi.
+

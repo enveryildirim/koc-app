@@ -225,6 +225,11 @@ export type ItemFilter = {
   /** "cevap" = cevabı girilmemiş, "konu" = konusu girilmemiş */
   missing?: string;
   q?: string;
+  /** Yalnızca bu sorular / bu sorular hariç (kullanım süzgeçleri; kullanım exams'ten hesaplanıp verilir) */
+  only?: string[];
+  except?: string[];
+  /** Verilirse bu sıra önce gelir (ör. en çok kullanılan); kalanlar yeniden eskiye */
+  rank?: string[];
 };
 
 const PAGE_SIZE = 120;
@@ -242,20 +247,28 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
   if (f.missing === "cevap") Object.assign(where, NO_ANSWER, f.type && isQuestionType(f.type) && f.type !== "OPEN" ? { type: f.type } : {});
   if (f.missing === "konu") where.topic = "";
   if (f.q) where.OR = [{ topic: { contains: f.q } }, { text: { contains: f.q } }];
+  if (f.only || f.except) where.id = { ...(f.only ? { in: f.only } : {}), ...(f.except ? { notIn: f.except } : {}) };
 
-  const [total, rows] = await Promise.all([
-    prisma.questionItem.count({ where }),
-    prisma.questionItem.findMany({
-      where,
-      orderBy: [{ createdAt: "desc" }, { page: "asc" }],
-      skip: (Math.max(1, page) - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      select: {
-        id: true, subject: true, topic: true, grade: true, difficulty: true, level: true, answer: true, origin: true, usedCount: true, page: true,
-        type: true, content: true, imageKey: true, source: { select: { name: true } },
-      },
-    }),
-  ]);
+  const select = {
+    id: true, subject: true, topic: true, grade: true, difficulty: true, level: true, answer: true, origin: true, page: true,
+    type: true, content: true, imageKey: true, source: { select: { name: true } },
+  } satisfies Prisma.QuestionItemSelect;
+  const orderBy: Prisma.QuestionItemOrderByWithRelationInput[] = [{ createdAt: "desc" }, { page: "asc" }];
+  const skip = (Math.max(1, page) - 1) * PAGE_SIZE;
+  let total: number;
+  let rows: Prisma.QuestionItemGetPayload<{ select: typeof select }>[];
+  if (f.rank?.length) {
+    // Sıra veritabanında değil (kullanım hesaplanır): eşleşen kimlikler sıralanıp sayfa kesilir
+    const pos = new Map(f.rank.map((id, i) => [id, i]));
+    const ids = (await prisma.questionItem.findMany({ where, orderBy, select: { id: true } })).map((r) => r.id);
+    ids.sort((a, b) => (pos.get(a) ?? Infinity) - (pos.get(b) ?? Infinity));
+    total = ids.length;
+    const slice = ids.slice(skip, skip + PAGE_SIZE);
+    const got = new Map((await prisma.questionItem.findMany({ where: { id: { in: slice } }, select })).map((r) => [r.id, r]));
+    rows = slice.map((id) => got.get(id)!).filter(Boolean);
+  } else {
+    [total, rows] = await Promise.all([prisma.questionItem.count({ where }), prisma.questionItem.findMany({ where, orderBy, skip, take: PAGE_SIZE, select })]);
+  }
   const items = rows.map(({ imageKey, content, ...r }) => ({ ...r, content: parseContent(content), hasImage: !!imageKey }));
   return { total, items, pageSize: PAGE_SIZE };
 }

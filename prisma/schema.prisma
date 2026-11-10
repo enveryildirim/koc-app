@@ -379,7 +379,6 @@ model QuestionItem {
   text       String          @default("")
   /// Kutunun nasıl bulunduğu: MANUAL | AUTO (sezgisel) | AI
   origin     String          @default("MANUAL")
-  usedCount  Int             @default(0)
   createdAt  DateTime        @default(now())
 
   @@index([ownerId, subject])
