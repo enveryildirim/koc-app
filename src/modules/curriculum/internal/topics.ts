@@ -1,7 +1,7 @@
 import { prisma } from "@/shared/db";
 import { invalid } from "@/shared/errors";
 import { subjectMatches } from "@/shared/subjects";
-import { gradeScope, gradeSortKey, normGrade, planSourceOf, SAMPLE_CURRICULUM, topicKey, type CurriculumRow } from "../index";
+import { gradeScope, gradeSortKey, normGrade, planSourceOf, SAMPLE_CURRICULUM, topicKey, type CurriculumRow, type OutcomeRow } from "../index";
 
 const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -33,6 +33,15 @@ export async function curriculumSets(ownerId: string) {
 /** Bir setin konuları (sırasıyla). */
 export async function curriculumTopics(ownerId: string, subject: string, grade: string) {
   return prisma.curriculumTopic.findMany({ where: { ownerId, subject, grade }, orderBy: { order: "asc" } });
+}
+
+/** Kazanım bağlamak için bütün satırlar kimlikleriyle (soru havuzu: question-bank > matchOutcome). */
+export async function curriculumOutcomes(ownerId: string): Promise<OutcomeRow[]> {
+  return prisma.curriculumTopic.findMany({
+    where: { ownerId },
+    orderBy: [{ subject: "asc" }, { grade: "asc" }, { order: "asc" }],
+    select: { id: true, subject: true, grade: true, unit: true, topic: true, code: true, outcome: true },
+  });
 }
 
 /** Tüm müfredat (dışa aktarma ve diğer ekranlardaki konu önerileri için). */

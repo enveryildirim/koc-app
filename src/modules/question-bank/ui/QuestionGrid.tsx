@@ -22,6 +22,9 @@ export type GridItem = {
   /** Yazılan soruda içerik; kesilmiş soruda null (içerik görseldedir) */
   content: QuestionContent | null;
   hasImage: boolean;
+  archived: boolean;
+  /** Bağlı müfredat satırının kazanımı (yoksa null) */
+  outcome: { code: string; text: string; unit: string } | null;
 };
 
 const API = "/api/kurum/soru-havuzu/sorular";
@@ -32,12 +35,15 @@ export default function QuestionGrid({
   subjects,
   topics,
   usage = {},
+  archive = false,
 }: {
   items: GridItem[];
   subjects: string[];
   topics: Record<string, string[]>;
   /** Sayfadaki soruların kullanım geçmişi (kullanılmamışlar yok) */
   usage?: Record<string, BankUsage>;
+  /** Arşiv görünümü: toplu işlem "Arşivden çıkar" olur */
+  archive?: boolean;
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<string | null>(null);
@@ -78,8 +84,22 @@ export default function QuestionGrid({
   }
 
   async function removeSelected() {
-    if (!confirm(`${sel.size} soru havuzdan silinsin mi? Bu işlem geri alınamaz.`)) return;
+    const used = [...sel].filter((id) => usage[id]).length;
+    const warn = used
+      ? `\n\n${used} tanesi sınav ya da çalışma kağıdında kullanıldı; silinirse o kitapçıklarda yerleri boş kalır. Silmek yerine arşive kaldırabilirsiniz.`
+      : "";
+    if (!confirm(`${sel.size} soru havuzdan silinsin mi? Bu işlem geri alınamaz.${warn}`)) return;
     if (await send("DELETE", [...sel])) setSel(new Set());
+  }
+
+  /** Arşive kaldırma / arşivden çıkarma: soru silinmez, eski kitapçıklarda yerinde kalır. */
+  async function setArchived(ids: string[], archived: boolean) {
+    const r = await send("PATCH", ids, { archived });
+    if (r) {
+      setSel(new Set());
+      setDetail(null);
+      setMsg({ ok: true, text: archived ? `${ids.length} soru arşive kaldırıldı; havuzda ve sınav kurarken görünmez, eski kitapçıklarda yerinde kalır.` : `${ids.length} soru arşivden çıkarıldı.` });
+    }
   }
 
   const toggle = (id: string) =>
@@ -140,6 +160,7 @@ export default function QuestionGrid({
             </select>
           </label>
           <button className="btn-primary" disabled={busy} onClick={applyBulk}>Seçililere uygula</button>
+          <button className="btn-secondary" disabled={busy} onClick={() => setArchived([...sel], !archive)}>{archive ? "Arşivden çıkar" : "Arşive kaldır"}</button>
           <button className="btn-danger" disabled={busy} onClick={removeSelected}>Sil</button>
           <button className="btn-secondary" onClick={() => setSel(new Set())}>Seçimi kaldır</button>
           <datalist id="qg-subjects">{subjects.map((s) => <option key={s} value={s} />)}</datalist>
@@ -163,6 +184,12 @@ export default function QuestionGrid({
                 {q.level && <span className="badge badge-plain ml-auto bg-mist text-lead" title="Bilişsel düzey">{q.level}</span>}
                 <span className={`badge bg-mist text-graphite ${q.level ? "" : "ml-auto"}`}>{DIFFICULTY[q.difficulty]}</span>
               </div>
+              {q.outcome && (q.outcome.code || q.outcome.text) && (
+                <p className="truncate border-b border-rule/60 px-2.5 py-1 text-xs text-lead" title={[q.outcome.unit, q.outcome.code, q.outcome.text].filter(Boolean).join(" · ")}>
+                  {q.outcome.code && <b className="mr-1 font-semibold text-graphite">{q.outcome.code}</b>}
+                  {q.outcome.text || "Kazanım"}
+                </p>
+              )}
               {q.content ? (
                 <div className="relative max-h-80 flex-1 overflow-hidden bg-white p-3 text-black">
                   <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `${API}/${q.id}/gorsel` : null} answer={q.answer} />
@@ -190,7 +217,15 @@ export default function QuestionGrid({
       </ul>
 
       <Drawer open={!!shown} title="Kullanım geçmişi" onClose={() => setDetail(null)}>
-        {shown && <UsageDetail q={shown} u={usage[shown.id]} busy={busy} onDifficulty={(d) => send("PATCH", [shown.id], { difficulty: d })} />}
+        {shown && (
+          <UsageDetail
+            q={shown}
+            u={usage[shown.id]}
+            busy={busy}
+            onDifficulty={(d) => send("PATCH", [shown.id], { difficulty: d })}
+            onArchive={() => setArchived([shown.id], !shown.archived)}
+          />
+        )}
       </Drawer>
     </div>
   );
@@ -224,11 +259,18 @@ function UsageLine({ q, u, onOpen }: { q: GridItem; u?: BankUsage; onOpen: () =>
 }
 
 /** Yan panel: her kullanım (sınav / çalışma kağıdı, tarih, gören sınıflar, sonuç) ve ölçülen zorluk. */
-function UsageDetail({ q, u, busy, onDifficulty }: { q: GridItem; u?: BankUsage; busy: boolean; onDifficulty: (d: number) => void }) {
+function UsageDetail({ q, u, busy, onDifficulty, onArchive }: { q: GridItem; u?: BankUsage; busy: boolean; onDifficulty: (d: number) => void; onArchive: () => void }) {
   const title = q.content?.stem.split("\n")[0] || `${q.subject}${q.topic ? ` · ${q.topic}` : ""}`;
   return (
     <div className="space-y-4 text-sm">
       <p dir="auto" className="line-clamp-3 text-lead">{title}</p>
+      {q.outcome && (q.outcome.code || q.outcome.text) && (
+        <p className="text-[13px]">
+          <span className="text-lead">Kazanım: </span>
+          {q.outcome.code && <b>{q.outcome.code} </b>}
+          {q.outcome.text}
+        </p>
+      )}
       {!u ? (
         <p>Bu soru henüz hiçbir sınavda ya da çalışma kağıdında kullanılmadı.</p>
       ) : (
@@ -281,6 +323,12 @@ function UsageDetail({ q, u, busy, onDifficulty }: { q: GridItem; u?: BankUsage;
           <p className="text-xs text-lead">Gören sınıf: derse bağlı sınavda dersin sınıfı, ayrıca sonucu okunan öğrencilerin sınıfları. Derse bağlanmamış çalışma kağıdının kime dağıtıldığı bilinmez.</p>
         </>
       )}
+      <div className="border-t border-rule pt-3">
+        <button type="button" className="btn-secondary" disabled={busy} onClick={onArchive}>{q.archived ? "Arşivden çıkar" : "Arşive kaldır"}</button>
+        <p className="mt-1 text-xs text-lead">
+          {q.archived ? "Arşivdeki soru havuzda ve sınav kurarken görünmez." : "Arşivdeki soru silinmez: havuzda ve sınav kurarken görünmez, eski kitapçıklarda yerinde kalır."}
+        </p>
+      </div>
     </div>
   );
 }

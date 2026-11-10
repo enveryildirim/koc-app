@@ -359,6 +359,11 @@ model QuestionItem {
   /// Kaynaktaki sayfa (1 tabanlı) ve kesim kutusu (sayfaya göre 0–1 oranlı JSON {x,y,w,h})
   page       Int?
   crop       String          @default("")
+  /// Bağlı müfredat satırı (CurriculumTopic.id): konu + kazanım. İlişki kurulmaz (curriculum modülünün tablosu);
+  /// ders + düzey + konu adından kendiliğinden bağlanır (question-bank > linkOutcomes), satır silinirse boşalır
+  curriculumTopicId String?
+  /// Arşive kaldırılma zamanı: arşivdeki soru havuzda ve sınav kurarken görünmez, eski kitapçıklarda yerinde kalır
+  archivedAt DateTime?
   /// Kesilmiş soruda sorunun görseli; yazılan soruda isteğe bağlı şekil/resim; boş = görsel yok
   imageKey   String          @default("")
   /// MC (çoktan seçmeli) | TF (doğru/yanlış) | OPEN (açık uçlu) | FILL (boşluk doldurma). Tanımlar: question-bank > QUESTION_TYPES

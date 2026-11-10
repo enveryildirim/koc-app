@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
-import { bankSummary, listItems, listSources } from "@/modules/question-bank/server";
+import { bankSummary, linkOutcomes, listItems, listSources } from "@/modules/question-bank/server";
 import { mergeTopicSuggestions } from "@/modules/curriculum";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
 import { bankUsage } from "@/modules/exams/server";
@@ -11,7 +11,7 @@ import { Empty, Kpi, PageHeader, Tabs } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
-type Search = { ders?: string; konu?: string; zorluk?: string; tur?: string; kaynak?: string; eksik?: string; kullanim?: string; gormedi?: string; q?: string; s?: string };
+type Search = { ders?: string; konu?: string; zorluk?: string; tur?: string; kaynak?: string; eksik?: string; kullanim?: string; gormedi?: string; durum?: string; q?: string; s?: string };
 
 /** Kullanım süzgeçleri: kullanım kayıtta değil, denemelerden hesaplanır (exams > bankUsage). */
 function usageFilter(usage: Awaited<ReturnType<typeof bankUsage>>["usage"], sp: Search) {
@@ -31,14 +31,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const ownerId = await requireOwner();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.s) || 1);
-  const usage = await bankUsage(ownerId);
+  // Müfredat sonradan yüklenmiş ya da değişmiş olabilir: kazanım bağları adlardan yenilenir
+  const [usage] = await Promise.all([bankUsage(ownerId), linkOutcomes(ownerId)]);
+  const archive = sp.durum === "arsiv";
   const [summary, sources, list, curTopics] = await Promise.all([
-    bankSummary(ownerId),
+    bankSummary(ownerId, Object.keys(usage.usage)),
     listSources(ownerId),
-    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, ...usageFilter(usage.usage, sp) }, page),
+    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, archived: archive, ...usageFilter(usage.usage, sp) }, page),
     curriculumTopicNames(ownerId),
   ]);
-  const unused = summary.total - Object.keys(usage.usage).length;
+  const unused = summary.unused ?? 0;
   const pageUsage = Object.fromEntries(list.items.flatMap((i) => (usage.usage[i.id] ? [[i.id, usage.usage[i.id]]] : [])));
   // Düzenleme önerileri: müfredat konuları önce (havuzda olmasa da seçilebilsin)
   const suggestions = mergeTopicSuggestions(curTopics, summary.topics);
@@ -69,11 +71,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           value={summary.total}
           hint={TYPE_ORDER.filter((t) => summary.byType[t]).map((t) => `${QUESTION_TYPES[t].short} ${summary.byType[t]}`).join(" · ") || `${summary.subjects.length} ders`}
         />
-        <Kpi label="Cevabı girilmemiş" value={summary.noAnswer} hint={summary.noAnswer ? <Link href="?eksik=cevap" className="underline">Listele</Link> : "Hepsi tamam"} />
+        <Kpi
+          label="Cevabı girilmemiş"
+          value={summary.noAnswer}
+          hint={
+            <>
+              {summary.noAnswer ? <Link href="?eksik=cevap" className="underline">Listele</Link> : "Hepsi tamam"}
+              {summary.noOutcome > 0 && <> · <Link href="?eksik=kazanim" className="underline">{summary.noOutcome} kazanımsız</Link></>}
+            </>
+          }
+        />
         <Kpi label="Hiç kullanılmamış" value={unused} hint={unused ? <Link href="?kullanim=hic" className="underline">Listele</Link> : "Hepsi kullanıldı"} />
       </div>
 
-      {summary.total === 0 ? (
+      {summary.total === 0 && !summary.archived ? (
         <Empty>
           Havuz boş. <Link href="/kurum/soru-havuzu/yaz" className="font-semibold text-graphite underline">Soru yazın</Link>,{" "}
           <Link href="/kurum/soru-havuzu/yaz?mod=yapistir" className="font-semibold text-graphite underline">Word&apos;deki soruları yapıştırın</Link> ya da{" "}
@@ -118,7 +129,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
               <option value="">Eksik bilgi: hepsi</option>
               <option value="cevap">Cevabı girilmemiş</option>
               <option value="konu">Konusu girilmemiş</option>
+              <option value="kazanim">Kazanımı bağlı değil</option>
             </select>
+            {(summary.archived > 0 || archive) && (
+              <select name="durum" defaultValue={sp.durum ?? ""} className="input w-auto" aria-label="Durum">
+                <option value="">Kullanımda</option>
+                <option value="arsiv">Arşiv ({summary.archived})</option>
+              </select>
+            )}
             <input name="q" defaultValue={sp.q ?? ""} placeholder="Konu ya da metinde ara" className="input w-40" />
             <button className="btn-secondary">Filtrele</button>
             {filtered && <Link href="/kurum/soru-havuzu" className="text-[13px] text-lead hover:text-graphite">Temizle</Link>}
@@ -126,9 +144,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           </form>
 
           {list.items.length === 0 ? (
-            <Empty>Bu filtreye uygun soru yok.</Empty>
+            <Empty>{archive ? "Arşivde bu filtreye uygun soru yok." : "Bu filtreye uygun soru yok."}</Empty>
           ) : (
-            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} />
+            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} archive={archive} />
           )}
 
           {pages > 1 && (

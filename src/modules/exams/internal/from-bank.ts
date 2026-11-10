@@ -43,6 +43,7 @@ export async function createExamFromBank(ownerId: string, body: Record<string, u
 
   const found = new Map((await bankItemsByIds(ownerId, all)).map((q) => [q.id, q]));
   if (found.size !== all.length) throw invalid("Seçilen sorulardan bazıları havuzda bulunamadı. Sayfayı yenileyin.");
+  if ([...found.values()].some((q) => q.archived)) throw invalid("Seçilen sorulardan bazıları arşive kaldırılmış. Sayfayı yenileyin.");
   const allowed = LETTERS.slice(0, choicesFor(type));
 
   const sections: ExamSection[] = filled.map((s) => {

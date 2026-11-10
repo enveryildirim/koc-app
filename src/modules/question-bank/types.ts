@@ -41,7 +41,10 @@ export type WrittenMeta = {
 };
 
 /** Havuz listesinde toplu düzenlenebilen alanlar. */
-export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "level" | "answer">>;
+export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "level" | "answer">> & {
+  /** true arşive kaldırır, false arşivden çıkarır */
+  archived?: boolean;
+};
 
 /** Sorunun bir sınavda / çalışma kağıdında kullanımı (exams > bankUsage hesaplar; havuz yalnızca gösterir). */
 export type BankUse = {

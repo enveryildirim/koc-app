@@ -3,7 +3,7 @@ import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, GRADES } from "@/modules/question-bank";
 import { bankSummary, findWrittenItem } from "@/modules/question-bank/server";
 import { gradeSortKey, mergeTopicSuggestions } from "@/modules/curriculum";
-import { allCurriculum, curriculumTopicNames } from "@/modules/curriculum/server";
+import { curriculumOutcomes, curriculumTopicNames } from "@/modules/curriculum/server";
 import QuestionWriter from "@/modules/question-bank/ui/QuestionWriter";
 import { PageHeader } from "@/shared/ui/kurum";
 
@@ -16,7 +16,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ i
   const [summary, curTopics, cur, edit] = await Promise.all([
     bankSummary(ownerId),
     curriculumTopicNames(ownerId),
-    allCurriculum(ownerId),
+    curriculumOutcomes(ownerId),
     sp.id ? findWrittenItem(ownerId, sp.id) : Promise.resolve(null),
   ]);
   if (sp.id && !edit) notFound();
@@ -30,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ i
         sub={edit ? undefined : "Tek tek yazın ya da Word'deki soruları yapıştırıp bölün. Kesilecek PDF ya da fotoğraf için Kaynaklar sekmesi."}
         back={{ href: "/kurum/soru-havuzu", label: "Soru havuzu" }}
       />
-      <QuestionWriter subjects={subjects} topics={mergeTopicSuggestions(curTopics, summary.topics)} grades={grades} edit={edit} initialMode={sp.mod === "yapistir" ? "yapistir" : "tek"} />
+      <QuestionWriter subjects={subjects} topics={mergeTopicSuggestions(curTopics, summary.topics)} grades={grades} outcomes={cur} edit={edit} initialMode={sp.mod === "yapistir" ? "yapistir" : "tek"} />
     </div>
   );
 }

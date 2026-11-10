@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
+import { matchOutcome, normGrade, type OutcomeRow } from "@/modules/curriculum";
 import {
   answerLabel,
   countBlanks,
@@ -90,10 +91,18 @@ const trimOptions = (o: string[]) => {
   return l;
 };
 
-type Props = { subjects: string[]; topics: Record<string, string[]>; grades: string[]; edit?: EditItem | null; initialMode?: "tek" | "yapistir" };
+type Props = {
+  subjects: string[];
+  topics: Record<string, string[]>;
+  grades: string[];
+  /** Müfredat satırları: konu önerisi ve kazanım bağı için */
+  outcomes?: OutcomeRow[];
+  edit?: EditItem | null;
+  initialMode?: "tek" | "yapistir";
+};
 
 /** Soru yazma: tek tek (önizlemeli) ya da metni yapıştırıp sorulara bölerek. Ortak etiketler (ders, düzey, konu…) hatırlanır. */
-export default function QuestionWriter({ subjects, topics, grades, edit, initialMode = "tek" }: Props) {
+export default function QuestionWriter({ subjects, topics, grades, outcomes = [], edit, initialMode = "tek" }: Props) {
   const [common, setCommonState] = useState<Common>(() =>
     edit ? { ...DEFAULT_COMMON, subject: edit.subject, topic: edit.topic, grade: edit.grade, difficulty: edit.difficulty, level: edit.level } : DEFAULT_COMMON,
   );
@@ -107,7 +116,11 @@ export default function QuestionWriter({ subjects, topics, grades, edit, initial
       return n;
     });
   const [mode, setMode] = useState<"tek" | "yapistir">(edit ? "tek" : initialMode);
-  const topicList = (common.subject && topics[common.subject]) || [...new Set(Object.values(topics).flat())];
+  // Ders ve düzey seçiliyse önce o setin müfredat konuları (sırasıyla), sonra havuzdaki diğer adlar
+  const setTopics = outcomes.filter((o) => o.subject === common.subject && (!common.grade || o.grade === normGrade(common.grade))).map((o) => o.topic);
+  const topicList = [...new Set([...setTopics, ...((common.subject && topics[common.subject]) || Object.values(topics).flat())])];
+  const linked = matchOutcome(outcomes, common);
+  const hasSet = outcomes.some((o) => o.subject === common.subject);
 
   return (
     <div>
@@ -142,7 +155,18 @@ export default function QuestionWriter({ subjects, topics, grades, edit, initial
         </label>
         <datalist id="qw-subjects">{subjects.map((s) => <option key={s} value={s} />)}</datalist>
         <datalist id="qw-topics">{topicList.map((s) => <option key={s} value={s} />)}</datalist>
-        {!edit && <p className="w-full text-xs text-lead">Bu bilgiler kaydettiğiniz her soruya yazılır ve bir sonraki soru için hatırlanır.</p>}
+        <p className="w-full text-xs text-lead">
+          {linked ? (
+            <span className="text-graphite">
+              Kazanım: {linked.code && <b>{linked.code} </b>}
+              {linked.outcome || linked.topic}
+            </span>
+          ) : common.topic.trim() && hasSet ? (
+            <span className="text-amber-700">Bu konu müfredatta {common.grade ? "bu düzey için " : ""}yok; kazanım bağlanmaz. Listeden seçebilirsiniz.</span>
+          ) : null}
+          {(linked || (common.topic.trim() && hasSet)) && !edit ? " · " : ""}
+          {!edit && "Bu bilgiler kaydettiğiniz her soruya yazılır ve bir sonraki soru için hatırlanır."}
+        </p>
       </div>
 
       {!edit && (

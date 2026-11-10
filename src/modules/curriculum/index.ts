@@ -76,6 +76,24 @@ export const topicKey = (s: string) =>
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 
+/** Müfredat satırının kazanım alanları (soru havuzu gösterir). */
+export type OutcomeRow = { id: string; subject: string; grade: string; unit: string; topic: string; code: string; outcome: string };
+
+/**
+ * Sorunun (ders, düzey, konu) adlarına uyan müfredat satırı; yoksa null.
+ * Ders ve konu ad olarak karşılaştırılır (büyük/küçük harf, noktalama önemsiz). Düzey girilmişse o düzeyin satırı;
+ * girilmemişse yalnızca tek düzeyde geçen konu bağlanır (hangi sınıfın kazanımı olduğu belirsiz kalmasın).
+ */
+export function matchOutcome(rows: OutcomeRow[], q: { subject: string; grade: string; topic: string }): OutcomeRow | null {
+  if (!q.topic.trim()) return null;
+  const s = topicKey(q.subject);
+  const t = topicKey(q.topic);
+  const same = rows.filter((r) => topicKey(r.subject) === s && topicKey(r.topic) === t);
+  if (!same.length) return null;
+  if (q.grade) return same.find((r) => r.grade === normGrade(q.grade)) ?? null;
+  return new Set(same.map((r) => r.grade)).size === 1 ? same[0] : null;
+}
+
 /* ------------------------------- Excel ------------------------------- */
 
 type Field = keyof CurriculumRow;
