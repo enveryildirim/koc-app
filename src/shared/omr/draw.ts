@@ -66,16 +66,17 @@ export function renderSampleScan(info: FormSpec, fill: SampleFill): string {
   // El yazısı ad
   ctx.font = `italic ${5 * scale}px "Comic Sans MS", cursive`;
   ctx.fillStyle = "#1e3a8a";
-  ctx.fillText(fill.name, 49 * scale, 41.8 * scale);
+  ctx.fillText(fill.name, L.nameAt.x * scale, L.nameAt.y * scale);
 
   // Kişisel formda numara alanı yoktur (numara kimlik şeridinde basılıdır).
   if (L.student.length) fill.studentNo.split("").forEach((d, c) => {
     const b = L.student[c][Number(d)];
-    if (b) pencil(b.x, b.y, 2.2);
+    if (b) pencil(b.x, b.y, L.version === 1 ? 2.2 : 2);
     ctx.font = `${3.6 * scale}px Arial`;
     ctx.fillStyle = "#1e3a8a";
     ctx.textAlign = "center";
-    ctx.fillText(d, b.x * scale, (L.studentBox.y + 5) * scale);
+    const w = L.studentWrite[c];
+    ctx.fillText(d, w.x * scale, (w.y + 1.3) * scale);
     ctx.textAlign = "left";
   });
   fill.answers.forEach((choices, q) => {

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { CHOICES, computeLayout, FormSpec } from "./layout";
+import { CHOICES, computeLayout, FormSpec, type FormVersion } from "./layout";
 import { scanForm, ScanResult } from "./scan";
 import { renderSampleScan } from "./draw";
 import { qrMatrix } from "./qr";
@@ -40,7 +40,11 @@ const SAMPLE_NAMES = ["Ali Vural", "Büşra Kılıç", "Cem Aksoy", "Dilara Tan"
 const norm = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "") || "0";
 
 export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "test", students = {}, wrongPer = 0 }: Props) {
-  const layout = useMemo(() => computeLayout(spec), [spec]);
+  // Okuyucu kâğıttaki sürüm işaretine göre düzeni seçer (eski basılı formlar da okunur)
+  const layoutFor = useMemo(() => {
+    const cache = new Map<FormVersion, ReturnType<typeof computeLayout>>();
+    return (v: FormVersion) => cache.get(v) ?? cache.set(v, computeLayout({ ...spec, version: v })).get(v)!;
+  }, [spec]);
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ n: number; skipped: string[]; badBooklet: string[] } | null>(null);
@@ -64,7 +68,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
       canvas.height = Math.round(img.height * ratio);
       const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const scan = scanForm(ctx.getImageData(0, 0, canvas.width, canvas.height), layout);
+      const scan = scanForm(ctx.getImageData(0, 0, canvas.width, canvas.height), layoutFor);
       patch(key, {
         status: "done",
         scan,

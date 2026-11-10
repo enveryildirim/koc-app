@@ -4,10 +4,10 @@
  * 1. Gri tonlama + uyarlamalı eşikleme (gölgeli fotoğraflara dayanıklı)
  * 2. Bağlı bileşen analizi ile 4 köşe karesini bulma
  * 3. Yön: dört olası yönelimden yön işaretinin (ORIENT_MARK) dolu göründüğünü seçme
- * 4. Form (mm) → görüntü (px) homografisi
+ * 4. Form (mm) → görüntü (px) homografisi; sürüm işareti (VERSION_MARK) doluysa sürüm 2 düzeni, değilse sürüm 1
  * 5. Her baloncukta koyu piksel oranını ölçme; kimlik şeridi varsa numarayı oradan okuma
  */
-import { ID_CELL, Layout, MARKERS, ORIENT_MARK, ORIENT_SIZE } from "./layout";
+import { ID_CELL, Layout, MARKERS, ORIENT_MARK, ORIENT_SIZE, VERSION_MARK, VERSION_SIZE, type FormVersion } from "./layout";
 import { decodeStudentId } from "./idcode";
 
 export type ImageLike = { data: Uint8ClampedArray; width: number; height: number };
@@ -37,13 +37,18 @@ export type ScanResult = {
    */
   studentSource: "id" | "grid" | "invalid";
   questions: QuestionRead[];
+  /** Kâğıttaki sürüm işaretinden okunan düzen sürümü */
+  version: FormVersion;
 };
 
 const MARK_T = 0.45;
 const UNSURE_T = 0.25;
 
-export function scanForm(img: ImageLike, layout: Layout): ScanResult {
-  const R = layout.r;
+/**
+ * layoutFor: sürüme göre düzen (ör. `(v) => computeLayout({ ...spec, version: v })`). Tek bir düzen verilirse
+ * kâğıttaki sürüm işaretine bakılmadan o kullanılır.
+ */
+export function scanForm(img: ImageLike, layoutFor: Layout | ((v: FormVersion) => Layout)): ScanResult {
   const { width: W, height: H } = img;
   const dark = binarize(img);
   const found = findMarkers(dark, W, H);
@@ -75,6 +80,9 @@ export function scanForm(img: ImageLike, layout: Layout): ScanResult {
   const markers = chosen.dst;
   const h = chosen.hh;
   const project = (x: number, y: number) => applyH(h, x, y);
+  const version: FormVersion = square(h, VERSION_MARK, VERSION_SIZE * 0.3) >= 0.6 ? 2 : 1;
+  const layout = typeof layoutFor === "function" ? layoutFor(version) : layoutFor;
+  const R = layout.r;
   const pxPerMm = Math.hypot(markers[1][0] - markers[0][0], markers[1][1] - markers[0][1]) / (MARKERS[1][0] - MARKERS[0][0]);
 
   const measure = (bx: number, by: number): BubbleState => {
@@ -147,6 +155,7 @@ export function scanForm(img: ImageLike, layout: Layout): ScanResult {
     booklet,
     questions: qReads,
     rotation: ((chosen.k * 90) % 360) as ScanResult["rotation"],
+    version: layout.version,
     oriented,
     studentSource: hasStrip ? (fromStrip ? "id" : "invalid") : "grid",
   };
