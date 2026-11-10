@@ -34,6 +34,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const sections = await bookletOf(ownerId, exam.secs, booklet);
   const hasItems = exam.secs.some((s) => s.items?.length);
   const missing = sections.reduce((n, s) => n + s.questions.filter((q) => !q).length, 0);
+  // "Kaynak numaralarını ört" yalnızca PDF / fotoğraftan kesilmiş sorularda anlamlı
+  const hasCut = sections.some((s) => s.questions.some((q) => q && !q.content));
   const link = (p: Partial<Record<"k" | "sutun" | "ort" | "cevap" | "optik", string>>) => {
     const q = new URLSearchParams({ k: booklet, sutun: String(cols), ort: cover ? "1" : "0", cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", ...p });
     return `?${q}`;
@@ -83,9 +85,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <Link href={link({ sutun: "2" })} className={pill(cols === 2)}>İki sütun</Link>
         <Link href={link({ sutun: "1" })} className={pill(cols === 1)}>Tek sütun</Link>
         <span className="mx-1 h-4 w-px bg-rule" />
-        <Link href={link({ ort: cover ? "0" : "1" })} className={pill(cover)} title="Kesimde kaynağın soru numarası varsa üstünü beyazla örter">
-          Kaynak numaralarını ört
-        </Link>
+        {hasCut && (
+          <Link href={link({ ort: cover ? "0" : "1" })} className={pill(cover)} title="Kesilmiş sorularda kaynağın soru numarası varsa üstünü beyazla örter">
+            Kaynak numaralarını ört
+          </Link>
+        )}
         {!worksheet && (
           <Link href={link({ optik: withForm ? "0" : "1" })} className={pill(withForm)} title="Soruların arkasına optik formu ekler; tek seferde sorular ve form yazdırılır">
             Optik formu arkaya ekle
@@ -140,7 +144,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                       <b className="w-6 shrink-0 pt-0.5 text-right text-[13px]">{n}.</b>
                       {q?.content ? (
                         <div className="min-w-0 flex-1 text-[13px]">
-                          <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `/api/kurum/soru-havuzu/sorular/${q.id}/gorsel` : null} print optical={!worksheet} />
+                          <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `/api/kurum/soru-havuzu/sorular/${q.id}/gorsel` : null} print optical={!worksheet} narrow={cols === 2} />
                         </div>
                       ) : q ? (
                         <div className="relative min-w-0 flex-1">

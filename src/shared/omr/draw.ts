@@ -66,7 +66,7 @@ export function renderSampleScan(info: FormSpec, fill: SampleFill): string {
   // El yazısı ad
   ctx.font = `italic ${5 * scale}px "Comic Sans MS", cursive`;
   ctx.fillStyle = "#1e3a8a";
-  ctx.fillText(fill.name, 24 * scale, 47 * scale);
+  ctx.fillText(fill.name, 24 * scale, 46 * scale);
 
   // Kişisel formda numara alanı yoktur (numara kimlik şeridinde basılıdır).
   if (L.student.length) fill.studentNo.split("").forEach((d, c) => {

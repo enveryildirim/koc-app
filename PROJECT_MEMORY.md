@@ -586,3 +586,7 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 - **`tidyBank`** (havuz açılırken; eski `linkOutcomes`'un yerine): yazılışları birleştirir, kazanım bağını ve arama anahtarını yeniler; yalnızca değişen soruları yazar. question-bank artık schedule'a da bağımlı.
 - **Havuzdan sınav:** oluşturulduktan sonra "Sınav oluşturuldu; kitapçık açılıyor…" ve "Kitapçığı aç" bağlantısı (yönlendirme gecikirse düğme sessizce "Oluşturuluyor…" kalıyordu).
 
+### Optik form üst kısmı ve kitapçık düzeni (2026-11-10)
+- **Form bilgi alanı** (`shared/omr/layout.ts > buildForm`): dört uzun satır yerine tek çerçevede iki sıra (Ad Soyad; Sınıf/Şube · Tarih (kişiselde Numara) · İmza) ve altında işaretleme örneği (doğru: tam dolu; yanlış: tik, çarpı, nokta). Yalnızca okuyucunun bakmadığı yazı alanı değişti; baloncukların yeri (`computeLayout`) aynı, eski basılı formlar da okunur. Doğrulama: tarayıcıda 24 örnek form (genel + kişisel, 4/5 şık, 0/90/180/270°) üretilip okutuldu, 24/24 cevap, numara ve kitapçık doğru.
+- **Kitapçık:** "Kaynak numaralarını ört" yalnızca kesilmiş (görsel) soru varsa görünür. İki sütunda şıklar daha erken ikili / alt alta dizilir (`QuestionView narrow`), sözcük ortadan bölünmez.
+

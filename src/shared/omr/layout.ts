@@ -189,15 +189,45 @@ export function buildForm(spec: FormSpec, layout = computeLayout(spec)): Prim[] 
   p.push({ kind: "text", x: 26, y: 27, text: truncate(spec.title, 48), size: 6, fill: ink, bold: true });
 
   const per = spec.personal;
-  const fields: [string, string][] = per
-    ? [["Ad Soyad", per.name], ["Sınıf / Şube", per.className], ["Öğrenci numarası", per.studentNo], ["İmza", ""]]
-    : [["Ad Soyad", ""], ["Sınıf / Şube", ""], ["Tarih", ""], ["İmza", ""]];
-  fields.forEach(([f, value], i) => {
-    const y = 42 + i * 14;
-    p.push({ kind: "text", x: 22, y, text: f, size: 3.2, fill: "#4b5563" });
-    if (value) p.push({ kind: "text", x: 22, y: y + 5.8, text: truncate(value, 40), size: 4.6, fill: ink, bold: true });
-    p.push({ kind: "line", x1: 22, y1: y + 7, x2: 122, y2: y + 7, stroke: "#d1d5db", sw: 0.3 });
+  // Öğrenci bilgileri: tek çerçevede iki sıra (üstte ad soyad, altta üç hücre). Okuyucu bu alana bakmaz;
+  // baloncukların yeri (computeLayout) değişmediği için eski basılı formlar da aynı okunur.
+  const box = { x: 20, y: 35, w: 108, row: 15 };
+  const label = "#6b7280";
+  const rule = "#d1d5db";
+  p.push({ kind: "rect", x: box.x, y: box.y, w: box.w, h: box.row * 2, stroke: rule, sw: 0.3, r: 1.5 });
+  p.push({ kind: "line", x1: box.x, y1: box.y + box.row, x2: box.x + box.w, y2: box.y + box.row, stroke: rule, sw: 0.3 });
+  const cells: { x: number; y: number; w: number; label: string; value?: string }[] = [
+    { x: box.x, y: box.y, w: box.w, label: "AD SOYAD", value: per?.name },
+    { x: box.x, y: box.y + box.row, w: 40, label: "SINIF / ŞUBE", value: per?.className },
+    { x: box.x + 40, y: box.y + box.row, w: 34, label: per ? "NUMARA" : "TARİH", value: per?.studentNo },
+    { x: box.x + 74, y: box.y + box.row, w: 34, label: "İMZA" },
+  ];
+  cells.forEach((c, i) => {
+    if (i > 1) p.push({ kind: "line", x1: c.x, y1: c.y, x2: c.x, y2: c.y + box.row, stroke: rule, sw: 0.3 });
+    p.push({ kind: "text", x: c.x + 3, y: c.y + 4.4, text: c.label, size: 2.3, fill: label, bold: true });
+    if (c.value) p.push({ kind: "text", x: c.x + 3, y: c.y + 11.2, text: truncate(c.value, i ? 16 : 44), size: 4.4, fill: ink, bold: true });
   });
+
+  // İşaretleme örneği: doğru (tam dolu) ve okunmayan yanlış işaretler (tik, çarpı, nokta)
+  const gy = 76;
+  p.push({ kind: "text", x: box.x + 1, y: gy - 4, text: "İŞARETLEME", size: 2.3, fill: label, bold: true });
+  const er = 2.2;
+  const sample = (x: number, caption: string, ok: boolean) => {
+    p.push({ kind: "circle", x, y: gy, r: er, stroke: ok ? ink : "#9ca3af", sw: 0.3, ...(ok ? { fill: ink } : {}) });
+    p.push({ kind: "text", x, y: gy + 6, text: caption, size: 2.2, fill: ok ? ink : label, anchor: "middle", bold: ok });
+  };
+  sample(box.x + 9, "Doğru", true);
+  p.push({ kind: "line", x1: box.x + 20, y1: gy - 4, x2: box.x + 20, y2: gy + 7, stroke: rule, sw: 0.3 });
+  sample(box.x + 33, "Tik atmayın", false);
+  p.push({ kind: "line", x1: box.x + 32.1, y1: gy + 0.1, x2: box.x + 32.9, y2: gy + 1, stroke: "#6b7280", sw: 0.35 });
+  p.push({ kind: "line", x1: box.x + 32.9, y1: gy + 1, x2: box.x + 34.3, y2: gy - 1.1, stroke: "#6b7280", sw: 0.35 });
+  sample(box.x + 55, "Çarpı koymayın", false);
+  p.push({ kind: "line", x1: box.x + 53.9, y1: gy - 1.1, x2: box.x + 56.1, y2: gy + 1.1, stroke: "#6b7280", sw: 0.35 });
+  p.push({ kind: "line", x1: box.x + 53.9, y1: gy + 1.1, x2: box.x + 56.1, y2: gy - 1.1, stroke: "#6b7280", sw: 0.35 });
+  sample(box.x + 78, "Nokta koymayın", false);
+  p.push({ kind: "circle", x: box.x + 78, y: gy, r: 0.55, fill: "#6b7280" });
+  p.push({ kind: "text", x: box.x + 92, y: gy + 0.8, text: "Koyu kurşun kalem;", size: 2.1, fill: label });
+  p.push({ kind: "text", x: box.x + 92, y: gy + 3.8, text: "silerken iz bırakmayın.", size: 2.1, fill: label });
 
   if (L.booklet.length) {
     p.push({ kind: "text", x: 22, y: L.booklet[0].y + 1.1, text: "KİTAPÇIK TÜRÜ", size: 3, fill: "#4b5563", bold: true });
