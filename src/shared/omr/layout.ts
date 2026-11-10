@@ -189,49 +189,72 @@ export function buildForm(spec: FormSpec, layout = computeLayout(spec)): Prim[] 
   p.push({ kind: "text", x: 26, y: 27, text: truncate(spec.title, 48), size: 6, fill: ink, bold: true });
 
   const per = spec.personal;
-  // Öğrenci bilgileri: tek çerçevede iki sıra (üstte ad soyad, altta üç hücre). Okuyucu bu alana bakmaz;
+  // Bilgi alanları resmî form düzeninde: solda gri etiket hücresi, sağda yazma alanı. Okuyucu bu alanlara bakmaz;
   // baloncukların yeri (computeLayout) değişmediği için eski basılı formlar da aynı okunur.
-  const box = { x: 20, y: 35, w: 108, row: 15 };
-  const label = "#6b7280";
-  const rule = "#d1d5db";
-  p.push({ kind: "rect", x: box.x, y: box.y, w: box.w, h: box.row * 2, stroke: rule, sw: 0.3, r: 1.5 });
-  p.push({ kind: "line", x1: box.x, y1: box.y + box.row, x2: box.x + box.w, y2: box.y + box.row, stroke: rule, sw: 0.3 });
-  const cells: { x: number; y: number; w: number; label: string; value?: string }[] = [
-    { x: box.x, y: box.y, w: box.w, label: "AD SOYAD", value: per?.name },
-    { x: box.x, y: box.y + box.row, w: 40, label: "SINIF / ŞUBE", value: per?.className },
-    { x: box.x + 40, y: box.y + box.row, w: 34, label: per ? "NUMARA" : "TARİH", value: per?.studentNo },
-    { x: box.x + 74, y: box.y + box.row, w: 34, label: "İMZA" },
-  ];
-  cells.forEach((c, i) => {
-    if (i > 1) p.push({ kind: "line", x1: c.x, y1: c.y, x2: c.x, y2: c.y + box.row, stroke: rule, sw: 0.3 });
-    p.push({ kind: "text", x: c.x + 3, y: c.y + 4.4, text: c.label, size: 2.3, fill: label, bold: true });
-    if (c.value) p.push({ kind: "text", x: c.x + 3, y: c.y + 11.2, text: truncate(c.value, i ? 16 : 44), size: 4.4, fill: ink, bold: true });
+  const rule = "#9ca3af";
+  const cellFill = "#f3f4f6";
+  const labelInk = "#374151";
+  const LX = 20;
+  const LW = 108;
+  const LABEL_W = 26;
+  /** Etiket hücreli şerit: labels birden çok satır olabilir. */
+  const panel = (y: number, h: number, labels: string[]) => {
+    p.push({ kind: "rect", x: LX, y, w: LABEL_W, h, fill: cellFill });
+    p.push({ kind: "rect", x: LX, y, w: LW, h, stroke: rule, sw: 0.3 });
+    p.push({ kind: "line", x1: LX + LABEL_W, y1: y, x2: LX + LABEL_W, y2: y + h, stroke: rule, sw: 0.3 });
+    const y0 = y + h / 2 - ((labels.length - 1) * 3.2) / 2 + 0.85;
+    labels.forEach((t, i) => p.push({ kind: "text", x: LX + 2.5, y: y0 + i * 3.2, text: t, size: 2.35, fill: labelInk, bold: true }));
+  };
+
+  // Öğrenci bilgileri: üç sıra
+  const ROW = 8.5;
+  const infoY = 36;
+  const rows: [string, string | undefined][] = per
+    ? [["AD SOYAD", per.name], ["SINIF / NUMARA", [per.className, per.studentNo].filter(Boolean).join(" · ")], ["İMZA", undefined]]
+    : [["AD SOYAD", undefined], ["SINIF / ŞUBE", undefined], ["İMZA", undefined]];
+  rows.forEach(([lbl, value], i) => {
+    const y = infoY + i * ROW;
+    p.push({ kind: "rect", x: LX, y, w: LABEL_W, h: ROW, fill: cellFill });
+    p.push({ kind: "text", x: LX + 2.5, y: y + ROW / 2 + 0.85, text: lbl, size: 2.35, fill: labelInk, bold: true });
+    if (value) p.push({ kind: "text", x: LX + LABEL_W + 3, y: y + ROW / 2 + 1.5, text: truncate(value, 38), size: 4.2, fill: ink, bold: true });
+    if (i) p.push({ kind: "line", x1: LX, y1: y, x2: LX + LW, y2: y, stroke: rule, sw: 0.3 });
   });
+  p.push({ kind: "rect", x: LX, y: infoY, w: LW, h: ROW * rows.length, stroke: rule, sw: 0.3 });
+  p.push({ kind: "line", x1: LX + LABEL_W, y1: infoY, x2: LX + LABEL_W, y2: infoY + ROW * rows.length, stroke: rule, sw: 0.3 });
 
   // İşaretleme örneği: doğru (tam dolu) ve okunmayan yanlış işaretler (tik, çarpı, nokta)
-  const gy = 76;
-  p.push({ kind: "text", x: box.x + 1, y: gy - 4, text: "İŞARETLEME", size: 2.3, fill: label, bold: true });
-  const er = 2.2;
-  const sample = (x: number, caption: string, ok: boolean) => {
-    p.push({ kind: "circle", x, y: gy, r: er, stroke: ok ? ink : "#9ca3af", sw: 0.3, ...(ok ? { fill: ink } : {}) });
-    p.push({ kind: "text", x, y: gy + 6, text: caption, size: 2.2, fill: ok ? ink : label, anchor: "middle", bold: ok });
-  };
-  sample(box.x + 9, "Doğru", true);
-  p.push({ kind: "line", x1: box.x + 20, y1: gy - 4, x2: box.x + 20, y2: gy + 7, stroke: rule, sw: 0.3 });
-  sample(box.x + 33, "Tik atmayın", false);
-  p.push({ kind: "line", x1: box.x + 32.1, y1: gy + 0.1, x2: box.x + 32.9, y2: gy + 1, stroke: "#6b7280", sw: 0.35 });
-  p.push({ kind: "line", x1: box.x + 32.9, y1: gy + 1, x2: box.x + 34.3, y2: gy - 1.1, stroke: "#6b7280", sw: 0.35 });
-  sample(box.x + 55, "Çarpı koymayın", false);
-  p.push({ kind: "line", x1: box.x + 53.9, y1: gy - 1.1, x2: box.x + 56.1, y2: gy + 1.1, stroke: "#6b7280", sw: 0.35 });
-  p.push({ kind: "line", x1: box.x + 53.9, y1: gy + 1.1, x2: box.x + 56.1, y2: gy - 1.1, stroke: "#6b7280", sw: 0.35 });
-  sample(box.x + 78, "Nokta koymayın", false);
-  p.push({ kind: "circle", x: box.x + 78, y: gy, r: 0.55, fill: "#6b7280" });
-  p.push({ kind: "text", x: box.x + 92, y: gy + 0.8, text: "Koyu kurşun kalem;", size: 2.1, fill: label });
-  p.push({ kind: "text", x: box.x + 92, y: gy + 3.8, text: "silerken iz bırakmayın.", size: 2.1, fill: label });
+  // Bilgi alanı ile kitapçık şeridi (ya da cevap alanı) arasında ortalanır
+  const gH = 22;
+  const infoEnd = infoY + ROW * rows.length;
+  const below = L.booklet.length ? L.booklet[0].y - 5 : L.answerBox.y - 4;
+  const gY = Math.round((infoEnd + (below - infoEnd - gH) / 2) * 10) / 10;
+  panel(gY, gH, ["İŞARETLEME", "ÖRNEĞİ"]);
+  const cy = gY + 8.5;
+  const slot = (LW - LABEL_W) / 4;
+  const cx = (i: number) => LX + LABEL_W + slot * (i + 0.5);
+  const mark = "#4b5563";
+  ["Doğru", "Yanlış", "Yanlış", "Yanlış"].forEach((caption, i) => {
+    const ok = i === 0;
+    p.push({ kind: "circle", x: cx(i), y: cy, r: 2.2, stroke: ok ? ink : rule, sw: 0.3, ...(ok ? { fill: ink } : {}) });
+    p.push({ kind: "text", x: cx(i), y: cy + 7, text: caption, size: 2.3, fill: ok ? ink : "#6b7280", anchor: "middle", bold: ok });
+  });
+  p.push({ kind: "line", x1: LX + LABEL_W + slot, y1: gY + 3, x2: LX + LABEL_W + slot, y2: gY + gH - 3, stroke: "#d1d5db", sw: 0.3 });
+  // tik
+  p.push({ kind: "line", x1: cx(1) - 1.1, y1: cy + 0.1, x2: cx(1) - 0.2, y2: cy + 1.1, stroke: mark, sw: 0.35 });
+  p.push({ kind: "line", x1: cx(1) - 0.2, y1: cy + 1.1, x2: cx(1) + 1.3, y2: cy - 1.1, stroke: mark, sw: 0.35 });
+  // çarpı
+  p.push({ kind: "line", x1: cx(2) - 1.1, y1: cy - 1.1, x2: cx(2) + 1.1, y2: cy + 1.1, stroke: mark, sw: 0.35 });
+  p.push({ kind: "line", x1: cx(2) - 1.1, y1: cy + 1.1, x2: cx(2) + 1.1, y2: cy - 1.1, stroke: mark, sw: 0.35 });
+  // nokta
+  p.push({ kind: "circle", x: cx(3), y: cy, r: 0.55, fill: mark });
 
+  // Kitapçık türü: baloncuklar sabit yerinde (x 50–74, y 112), şerit onların çevresine çizilir
   if (L.booklet.length) {
-    p.push({ kind: "text", x: 22, y: L.booklet[0].y + 1.1, text: "KİTAPÇIK TÜRÜ", size: 3, fill: "#4b5563", bold: true });
+    const bY = L.booklet[0].y - 5;
+    panel(bY, 10, ["KİTAPÇIK TÜRÜ"]);
     for (const b of L.booklet) bubble(p, b, 2.2);
+    const last = L.booklet[L.booklet.length - 1];
+    p.push({ kind: "text", x: last.x + 6, y: last.y + 0.8, text: "Kitapçığınızın harfini işaretleyin", size: 2.2, fill: "#6b7280" });
   }
 
   if (per) {
@@ -247,8 +270,7 @@ export function buildForm(spec: FormSpec, layout = computeLayout(spec)): Prim[] 
         const c = i % per.qr!.size;
         p.push({ kind: "rect", x: x0 + c * m, y: y0 + r * m, w: m + 0.02, h: m + 0.02, fill: "#000" });
       });
-      p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: y0 + side + 5, text: "Kişiye özel form", size: 2.8, fill: "#4b5563", anchor: "middle", bold: true });
-      p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: y0 + side + 9, text: "Başkasıyla değiştirmeyin", size: 2.4, fill: soft, anchor: "middle" });
+      p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: y0 + side + 5, text: "Başkasıyla değiştirmeyin", size: 2.4, fill: "#6b7280", anchor: "middle" });
     }
     encodeStudentId(per.studentNo).forEach((on, i) => {
       const c = L.idStrip[i];
@@ -257,19 +279,22 @@ export function buildForm(spec: FormSpec, layout = computeLayout(spec)): Prim[] 
     });
   }
 
-  // Öğrenci numarası
-  if (L.student.length) p.push({ kind: "rect", ...L.studentBox, stroke: "#d1d5db", sw: 0.3, r: 1.5 });
-  if (L.student.length) p.push({ kind: "text", x: L.studentBox.x + L.studentBox.w / 2, y: L.studentBox.y - 2, text: "ÖĞRENCİ NUMARASI", size: 2.8, fill: "#4b5563", anchor: "middle", bold: true });
+  // Öğrenci numarası (kişisel formda QR): üstte gri başlık bandı, sol sütundaki etiket hücreleriyle aynı dil
+  const SB = L.studentBox;
+  p.push({ kind: "rect", x: SB.x, y: SB.y - 6.5, w: SB.w, h: 6.5, fill: cellFill, stroke: rule, sw: 0.3 });
+  p.push({ kind: "text", x: SB.x + SB.w / 2, y: SB.y - 2.4, text: per ? "KİŞİYE ÖZEL FORM" : "ÖĞRENCİ NUMARASI", size: 2.35, fill: labelInk, anchor: "middle", bold: true });
+  // Kişisel formda çerçeve QR ve notu kadar
+  p.push({ kind: "rect", ...SB, ...(per ? { h: per.qr ? 44 : 10 } : {}), stroke: rule, sw: 0.3 });
   for (const col of L.student) {
     p.push({ kind: "rect", x: col[0].x - 2.6, y: L.studentBox.y + 1, w: 5.2, h: 5, stroke: "#9ca3af", sw: 0.25 });
     for (const b of col) bubble(p, b, 2.2);
   }
 
   // Cevap alanı
-  p.push({ kind: "rect", ...L.answerBox, stroke: "#d1d5db", sw: 0.3, r: 1.5 });
-  p.push({ kind: "text", x: L.answerBox.x + 2, y: L.answerBox.y - 2, text: "CEVAPLAR", size: 2.8, fill: "#4b5563", bold: true });
+  p.push({ kind: "rect", ...L.answerBox, stroke: rule, sw: 0.3 });
+  p.push({ kind: "text", x: L.answerBox.x, y: L.answerBox.y - 1.6, text: "CEVAPLAR", size: 2.6, fill: labelInk, bold: true });
   for (const h of L.headers) {
-    p.push({ kind: "rect", x: h.x, y: h.y - 2.4, w: h.w, h: 4.2, fill: "#eef2f7", r: 0.8 });
+    p.push({ kind: "rect", x: h.x, y: h.y - 2.4, w: h.w, h: 4.2, fill: cellFill });
     p.push({ kind: "text", x: h.x + 1.2, y: h.y + 0.9, text: truncate(h.text.toLocaleUpperCase("tr-TR"), 18), size: 2.5, fill: "#374151", bold: true });
   }
   for (const l of L.qLabels) {

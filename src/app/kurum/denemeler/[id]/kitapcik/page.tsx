@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
-import { EXAM_TYPES, examFormSpec, fmtDate, keyFor } from "@/modules/exams";
+import { EXAM_TYPES, examFormSpec, keyFor } from "@/modules/exams";
 import { bookletOf, findExam } from "@/modules/exams/server";
 import { answerLabel } from "@/modules/question-bank";
 import QuestionView from "@/modules/question-bank/ui/QuestionView";
@@ -115,7 +115,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <header className="mb-4 flex items-stretch gap-4 border-b-2 border-black pb-3">
             <div className="flex-1">
               <h1 className="text-xl leading-tight font-bold">{exam.name}</h1>
-              <p className="text-sm">{worksheet ? "Çalışma kağıdı" : (EXAM_TYPES[exam.type]?.label ?? exam.type)} · {fmtDate(exam.date)} · {sections.reduce((a, s) => a + s.questions.length, 0)} soru</p>
+              <p className="text-sm">{worksheet ? "Çalışma kağıdı" : (EXAM_TYPES[exam.type]?.label ?? exam.type)} · {sections.reduce((a, s) => a + s.questions.length, 0)} soru</p>
               <div className="mt-3 grid grid-cols-[auto_1fr_auto_8rem] items-end gap-x-2 text-sm">
                 <span>Adı Soyadı:</span>
                 <span className="border-b border-dotted border-black" />
