@@ -10,10 +10,12 @@
     "db:setup": "prisma db push && prisma db seed",
     "db:seed": "prisma db seed",
     "setup": "npm run db:setup",
+    "mcp": "tsx --tsconfig tsconfig.mcp.json src/mcp/server.ts",
     "dev:test": "DATABASE_URL=file:./test.db next dev",
     "db:test:reset": "rm -f prisma/test.db prisma/test.db-journal && DATABASE_URL=file:./test.db prisma db push --skip-generate"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.15",
@@ -25,7 +27,8 @@
     "react-dom": "19.1.0",
     "read-excel-file": "^5.8.8",
     "server-only": "^0.0.1",
-    "write-excel-file": "^2.3.10"
+    "write-excel-file": "^2.3.10",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

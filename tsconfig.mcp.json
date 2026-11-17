@@ -1,0 +1,11 @@
+{
+  // Only for `npm run mcp` (tsx): the MCP server runs outside Next, where `import "server-only"` throws.
+  // Here it resolves to an empty module; Next builds keep the real guard.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "server-only": ["./src/mcp/server-only-stub.ts"]
+    }
+  }
+}

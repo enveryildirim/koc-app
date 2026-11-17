@@ -44,7 +44,7 @@ const dbImport = {
 
 const boundaryRules = [
   {
-    files: ["src/app/**", "src/shared/**", "src/middleware.ts"],
+    files: ["src/app/**", "src/mcp/**", "src/shared/**", "src/middleware.ts"],
     ignores: ["src/shared/db.ts"],
     rules: {
       "no-restricted-imports": [DB_IN_APP, { patterns: [dbImport, ...Object.keys(MODULES).map(internalOf)] }],

@@ -29,3 +29,19 @@ export async function institutionName(ownerId: string) {
   const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { name: true } });
   return u?.name ?? "";
 }
+
+/**
+ * Yerel araçlar (MCP sunucusu) için kurum kimliği: e-posta verilirse o hesap; verilmezse veritabanında tek hesap varsa o.
+ * Oturum / şifre sorulmaz: yalnızca veritabanının bulunduğu makinede çalışan süreçler kullanır.
+ */
+export async function resolveLocalOwner(email?: string) {
+  const e = String(email ?? "").toLowerCase().trim();
+  if (e) {
+    const u = await prisma.user.findUnique({ where: { email: e }, select: { id: true, name: true } });
+    if (!u) throw invalid(`${e} ile kayıtlı hesap yok.`);
+    return u;
+  }
+  const users = await prisma.user.findMany({ select: { id: true, name: true }, take: 2 });
+  if (users.length === 1) return users[0];
+  throw invalid(users.length ? "Birden fazla kurum hesabı var; MCP_OWNER_EMAIL ile hangisi olduğunu belirtin." : "Veritabanında kurum hesabı yok.");
+}

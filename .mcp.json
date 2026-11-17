@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rea-question-bank": {
+      "command": "npm",
+      "args": ["run", "--silent", "mcp"]
+    }
+  }
+}
