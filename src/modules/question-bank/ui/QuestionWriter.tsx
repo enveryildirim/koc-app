@@ -15,6 +15,7 @@ import {
   QUESTION_TYPES,
   splitFill,
   splitPasted,
+  stripEmphasis,
   TYPE_ORDER,
   type DraftQuestion,
   type QuestionType,
@@ -343,7 +344,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
       router.push("/kurum/soru-havuzu");
       return;
     }
-    setSaved((l) => [{ type: d.type, text: d.stem.trim().split("\n")[0].slice(0, 90) || "(görselli soru)" }, ...l]);
+    setSaved((l) => [{ type: d.type, text: stripEmphasis(d.stem.trim().split("\n")[0]).slice(0, 90) || "(görselli soru)" }, ...l]);
     setMsg({ ok: true, text: missingAnswer ? "Kaydedildi; cevabı girilmedi (havuzda “cevabı girilmemiş” listesinde)." : "Kaydedildi." });
     setD(emptyDraft(d.type, d.type === "MC" ? Math.max(2, trimOptions(d.options).length) : common.optionCount));
     setImage(null);

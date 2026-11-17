@@ -51,7 +51,15 @@ export const searchKey = (s: string) =>
     .trim();
 
 /** Arama için düz metin: kök + şıklar. */
-export const plainText = (c: QuestionContent) => [c.stem, ...(c.options ?? [])].join("\n").trim();
+export const plainText = (c: QuestionContent) => stripEmphasis([c.stem, ...(c.options ?? [])].join("\n")).trim();
+
+/**
+ * Vurgu: kökte ya da şıkta **…** arası kalın basılır (ör. olumsuz kök: "hangisi **değildir**?"). Yapay zekâ talimatı
+ * olumsuz kökü böyle vurgulatır; öğretmen de elle yazabilir. Ekranda ve kitapçıkta QuestionView kalın yazar.
+ */
+export const EMPHASIS_RE = /\*\*(.+?)\*\*/g;
+/** Vurgu işaretleri olmadan düz metin (başlık satırları, iletiler, arama, benzerlik). */
+export const stripEmphasis = (s: string) => s.replace(EMPHASIS_RE, "$1");
 
 /**
  * Satırın yazı yönü harf çoğunluğuna göre: Arapça harfi çoksa "rtl", değilse "ltr".

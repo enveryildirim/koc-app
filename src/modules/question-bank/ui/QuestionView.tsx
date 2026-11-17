@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { BLANK_RE, OPTION_LETTERS, textDir, type QuestionContent } from "../written";
+import { BLANK_RE, EMPHASIS_RE, OPTION_LETTERS, textDir, type QuestionContent } from "../written";
 
 /**
  * Yazılan sorunun görünümü: ekranda (havuz, önizleme, deneme kurma) ve kitapçıkta aynı düzen.
@@ -60,7 +60,7 @@ export default function QuestionView({
             return (
               <li key={i} className={`flex min-w-0 gap-1 ${mark(l) ? "font-semibold text-emerald-800" : ""}`}>
                 <b className="shrink-0">{l})</b>
-                <span dir={textDir(o)} className="min-w-0 break-words">{o}</span>
+                <span dir={textDir(o)} className="min-w-0 break-words"><Emphasis text={o} /></span>
               </li>
             );
           })}
@@ -80,18 +80,27 @@ export default function QuestionView({
   );
 }
 
-/** Kökteki boşluk işaretlerini (___, .....) yazılabilir çizgiye çevirir. */
+/** Kökteki boşluk işaretlerini (___, .....) yazılabilir çizgiye, **…** vurgusunu kalına çevirir. */
 function Stem({ text }: { text: string }) {
   const parts = text.split(BLANK_RE);
-  if (parts.length === 1) return <>{text}</>;
+  if (parts.length === 1) return <Emphasis text={text} />;
   return (
     <>
       {parts.map((p, i) => (
         <Fragment key={i}>
-          {p}
+          <Emphasis text={p} />
           {i < parts.length - 1 && <span className="mx-0.5 inline-block w-[22mm] max-w-full translate-y-[2px] border-b border-current align-baseline" />}
         </Fragment>
       ))}
     </>
   );
 }
+
+/** **…** arasını kalın yazar (eşi olmayan yıldızlar olduğu gibi kalır). */
+function Emphasis({ text }: { text: string }) {
+  const parts = text.split(new RegExp(EMPHASIS_RE.source));
+  if (parts.length === 1) return <>{text}</>;
+  // split yakalama grubuyla: çift indeksler düz, tek indeksler vurgulu
+  return <>{parts.map((p, i) => (i % 2 ? <b key={i} className="font-bold">{p}</b> : <Fragment key={i}>{p}</Fragment>))}</>;
+}
+

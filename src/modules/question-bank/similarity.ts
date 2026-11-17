@@ -35,7 +35,9 @@ type Vec = Map<string, number>;
 const TOKEN = /\p{L}+|\d+|[^\s\p{L}\d.,;:!?"'’‘`´…]/gu;
 
 function tokens(s: string) {
+  // **vurgu** işaretleri karşılaştırmaya girmez (vurgulu ve vurgusuz aynı soru aynıdır)
   const k = s
+    .replace(/\*\*(.+?)\*\*/g, "$1")
     .toLocaleLowerCase("tr-TR")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")

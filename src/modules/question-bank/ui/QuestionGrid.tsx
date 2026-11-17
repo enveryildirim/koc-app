@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ANSWERS, answerLabel, BASIS, DIFFICULTY, isBasis, GRADES, OPTION_LETTERS, QUESTION_TYPES, SIMILAR_KINDS, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType, type SimilarKind } from "../index";
+import { stripEmphasis, ANSWERS, answerLabel, BASIS, DIFFICULTY, isBasis, GRADES, OPTION_LETTERS, QUESTION_TYPES, SIMILAR_KINDS, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType, type SimilarKind } from "../index";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 import Drawer from "@/shared/ui/Drawer";
 import QuestionView from "./QuestionView";
@@ -383,7 +383,7 @@ function UsageDetail({
   onArchive: () => void;
   onNotes: (set: { explanation: string; sourceNote: string }) => void;
 }) {
-  const title = q.content?.stem.split("\n")[0] || `${q.subject}${q.topic ? ` · ${q.topic}` : ""}`;
+  const title = stripEmphasis((q.content ?? q.transcript)?.stem.split("\n")[0] ?? "") || `${q.subject}${q.topic ? ` · ${q.topic}` : ""}`;
   const [explanation, setExplanation] = useState(q.explanation);
   const [sourceNote, setSourceNote] = useState(q.sourceNote);
   const dirty = explanation.trim() !== q.explanation || sourceNote.trim() !== q.sourceNote;

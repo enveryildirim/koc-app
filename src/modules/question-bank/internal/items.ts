@@ -29,6 +29,7 @@ import {
   type WrittenMeta,
   isBasis,
   SIMILAR_KINDS,
+  stripEmphasis,
 } from "../index";
 import { similarForDrafts, similarForItems } from "./similar";
 import { hashDistance, IMAGE_SAME, imageHash } from "./image-hash";
@@ -260,7 +261,7 @@ async function storeImages(ownerId: string, images: (Uint8Array | null)[]) {
 export type WrittenBy = { origin?: "MANUAL" | "AI"; allowSimilar?: boolean };
 
 const short = (s: string, n = 70) => {
-  const t = s.replace(/\s+/g, " ").trim();
+  const t = stripEmphasis(s).replace(/\s+/g, " ").trim();
   return t.length > n ? `${t.slice(0, n - 1)}…` : t || "(görselli soru)";
 };
 
