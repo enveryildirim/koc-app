@@ -650,3 +650,7 @@ Tek sınav yapısı `Exam` olsun diye `online-test` modülü ve Test/Question/Op
 - `sharp` artık doğrudan bağımlılık (0.35.5, Next ile aynı sürüm).
 - **Doğrulama:** test kopyası: 10 eski kesimin parmak izi dolduruldu; kenarı farklı yeniden kesilen görsel 409 → onayla kaydedildi, ikisi birbirini "Aynı soru" buldu; MCP list_untranscribed görselleri döndü, set_question_text yazdı, MANUAL metin atlandı; aynı metinle similarTo kesilmiş soruyu buldu, arama metni buldu. Tarayıcıda rozetler, metin alanı ve benzer soru (görselle) görüldü. dev.db'deki kesimler ~140 px (kaynak 320 px fotoğraf) ve bulanık: güvenle okunamadığı için gerçek yazıya geçirme denenmedi.
 - **Doküman:** `MCP.md` (bağlanma, istekler, onay grupları, kesilmiş soru metni, güvenlik, geliştirici notları); README'den bağlantı.
+
+### Sonraki işler listesi ve eski notların taşınması (2026-11-17)
+- Kalan işler `notes/sonraki-isler.md`'de: (1) tahriri imtihanları aktarma ile gerçek veri denemesi (önerilen), (2) yazma ekranına vurgu ipucu, (3) uzaktan MCP: rate limit, öğretmen başına anahtar / yetki, (4) sunucuda yapay zekâ (4 karar bekliyor), (5) benzerlik önbelleği.
+- dev.db'de "Kaynakta cevap anahtarı yok; cevap agent tarafından çözüldü." cümlesi 69 aktarılmış sorunun notundan silindi, `answerBy = agent` yapıldı (SQL ile; yedek scratchpad'de). Onay bekleyenlerde 28 gerçek şüphe notu kaldı. `basis` öncesi 14 soruya dokunulmadı.

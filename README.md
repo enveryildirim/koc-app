@@ -16,6 +16,8 @@ npm run dev        # http://localhost:3000
 Demo hesap: **demo@sinavkur.com / demo1234** → giriş sonrası **Kurum Paneli** (`/kurum`) açılır (giriş sayfasında “Demo hesabıyla gir” düğmesi de var).
 Demo verilerini sıfırlamak için: `npm run db:seed`
 
+Yayına alma (Dokploy): [DEPLOY.md](DEPLOY.md).
+
 ## Kurum paneli (`/kurum`)
 
 | Modül | Sayfa | İçerik |
