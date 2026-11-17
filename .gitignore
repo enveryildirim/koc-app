@@ -49,3 +49,6 @@ prisma/test.db*
 
 !.env.example
 /.next-*/
+
+# notlardaki kaynak PDF'ler (büyük dosyalar, kitap / kurum materyali)
+notes/*.pdf
