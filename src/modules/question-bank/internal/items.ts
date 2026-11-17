@@ -31,6 +31,7 @@ import {
   SIMILAR_KINDS,
 } from "../index";
 import { similarForDrafts, similarForItems } from "./similar";
+import { hashDistance, IMAGE_SAME, imageHash } from "./image-hash";
 
 const ORIGINS = new Set(["MANUAL", "AUTO", "AI"]);
 const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
@@ -176,7 +177,7 @@ function cleanWritten(m: WrittenMeta, hasImage: boolean, label = "") {
  * Kesme ekranından gelen soruları kaydeder: her etiket kaydı için bir PNG/JPG/WEBP görsel.
  * sourceId verilirse kurumun kaynağı olmalıdır.
  */
-export async function createItems(ownerId: string, sourceId: string | null, metas: unknown, images: Uint8Array[]) {
+export async function createItems(ownerId: string, sourceId: string | null, metas: unknown, images: Uint8Array[], opts: { allowSimilar?: boolean } = {}) {
   if (!Array.isArray(metas) || metas.length !== images.length) throw invalid("Soru bilgileri ile görseller eşleşmiyor.");
   if (!metas.length) throw invalid("Kaydedilecek soru yok.");
   if (metas.length > LIMITS.batch) throw invalid(`Tek seferde en fazla ${LIMITS.batch} soru kaydedilebilir.`);
@@ -203,9 +204,26 @@ export async function createItems(ownerId: string, sourceId: string | null, meta
     };
   });
 
+  // Görsel parmak izi: aynı görsel havuzda (ya da bu gönderimde) daha önce kesilmişse kayıt onay ister
+  const hashes = await Promise.all(images.map(imageHash));
+  if (!opts.allowSimilar) {
+    const known = await prisma.questionItem.findMany({
+      where: { ownerId, content: "", imageHash: { not: "" } },
+      select: { imageHash: true, page: true, source: { select: { name: true } } },
+    });
+    const many = rows.length > 1;
+    const dup = hashes.flatMap((h, i) => {
+      const k = known.find((x) => hashDistance(h, x.imageHash) <= IMAGE_SAME);
+      const j = hashes.findIndex((x, n) => n < i && hashDistance(h, x) <= IMAGE_SAME);
+      const who = many ? `${i + 1}. soru` : "Bu soru";
+      if (k) return [`${who} havuzda zaten var${k.source ? ` (${k.source.name}${k.page ? `, s. ${k.page}` : ""})` : ""}.`];
+      return j >= 0 ? [`${who}, ${j + 1}. soruyla aynı görsel.`] : [];
+    });
+    if (dup.length) throw needsConfirm([...dup.slice(0, 3), dup.length > 3 ? `ve ${dup.length - 3} soru daha.` : ""].filter(Boolean).join(" "));
+  }
   const keys = await storeImages(ownerId, images);
   try {
-    await prisma.questionItem.createMany({ data: rows.map((r, i) => ({ ...r, ownerId, sourceId, imageKey: keys[i] })) });
+    await prisma.questionItem.createMany({ data: rows.map((r, i) => ({ ...r, ownerId, sourceId, imageKey: keys[i], imageHash: hashes[i] })) });
   } catch (e) {
     await removeFiles(ownerId, keys);
     throw e;
@@ -412,7 +430,7 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
   const select = {
     id: true, subject: true, topic: true, grade: true, difficulty: true, level: true, answer: true, origin: true, page: true,
     type: true, content: true, imageKey: true, curriculumTopicId: true, archivedAt: true, explanation: true, sourceNote: true,
-    needsReview: true, agentNote: true, basis: true, answerBy: true, source: { select: { name: true } },
+    needsReview: true, agentNote: true, basis: true, answerBy: true, transcript: true, transcriptBy: true, source: { select: { name: true } },
   } satisfies Prisma.QuestionItemSelect;
   const orderBy: Prisma.QuestionItemOrderByWithRelationInput[] = [{ createdAt: "desc" }, { page: "asc" }];
   const skip = (Math.max(1, page) - 1) * PAGE_SIZE;
@@ -431,11 +449,12 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
     [total, rows] = await Promise.all([prisma.questionItem.count({ where }), prisma.questionItem.findMany({ where, orderBy, skip, take: PAGE_SIZE, select })]);
   }
   const outcomes = rows.some((r) => r.curriculumTopicId) ? new Map((await curriculumOutcomes(ownerId)).map((o) => [o.id, o])) : new Map<string, OutcomeRow>();
-  const items = rows.map(({ imageKey, content, curriculumTopicId, archivedAt, ...r }) => {
+  const items = rows.map(({ imageKey, content, curriculumTopicId, archivedAt, transcript, ...r }) => {
     const o = curriculumTopicId ? outcomes.get(curriculumTopicId) : undefined;
     return {
       ...r,
       content: parseContent(content),
+      transcript: parseContent(transcript),
       hasImage: !!imageKey,
       archived: !!archivedAt,
       outcome: o ? { code: o.code, text: o.outcome, unit: o.unit } : null,
@@ -569,5 +588,92 @@ export async function reviewQueue(ownerId: string, f: ItemFilter = {}) {
     if (!same && !noted && !solved && !noAnswer) groups.temiz.push(r.id);
   }
   return { total: rows.length, ids: rows.map((r) => r.id), groups };
+}
+
+/**
+ * Parmak izi olmayan kesilmiş sorular için parmak izi hesaplar (bu özellikten önce kesilenler). Havuz açılırken çağrılır;
+ * bir seferde en fazla `limit` soru (görsel okuma maliyetli). Hesaplanan sayıyı döndürür.
+ */
+export async function hashMissingImages(ownerId: string, limit = 100) {
+  const rows = await prisma.questionItem.findMany({ where: { ownerId, content: "", imageKey: { not: "" }, imageHash: "" }, select: { id: true, imageKey: true }, take: limit });
+  let n = 0;
+  for (const r of rows) {
+    const f = await getFile(ownerId, r.imageKey).catch(() => null);
+    // Görsel okunamazsa "-" yazılır, her açılışta yeniden denenmez
+    const h = f ? await imageHash(new Uint8Array(f.data)) : "";
+    await prisma.questionItem.update({ where: { id: r.id }, data: { imageHash: h || "-" } });
+    if (h) n++;
+  }
+  return n;
+}
+
+/** Yazıya geçirilen metin: kök + şıklar (çoktan seçmelide). Formüller düz metin (√, ², π). */
+export type TranscriptInput = { id: string; stem: string; options?: string[] };
+
+/**
+ * Kesilmiş (yalnızca görsel) sorulara metin yazar. Kitapçıkta soru yine görsel basılır; metin arama ve benzerlik içindir,
+ * bu yüzden soru yeniden onaya düşmez (karttaki işaretten kimin çıkardığı görünür).
+ * by = "AI": öğretmenin elle yazdığı metnin üzerine yazmaz (`skipped`); "MANUAL": her zaman yazar. Boş kök metni siler.
+ */
+export async function setTranscripts(ownerId: string, list: TranscriptInput[], by: "AI" | "MANUAL") {
+  if (!Array.isArray(list) || !list.length) throw invalid("Metin yok.");
+  if (list.length > LIMITS.batch) throw invalid(`Tek seferde en fazla ${LIMITS.batch} soru.`);
+  const rows = await prisma.questionItem.findMany({
+    where: { ownerId, id: { in: list.map((x) => String(x.id)) } },
+    select: { id: true, content: true, subject: true, topic: true, sourceNote: true, transcriptBy: true },
+  });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const many = list.length > 1;
+  const updates = list.map((x, i) => {
+    const at = many ? `${i + 1}. soru: ` : "";
+    const r = byId.get(String(x.id));
+    if (!r) throw notFound(`${at}soru bulunamadı (${x.id}).`);
+    if (r.content) throw invalid(`${at}bu soru zaten yazılı; metin yalnızca kesilmiş (görsel) sorulara yazılır.`);
+    const stem = String(x.stem ?? "").replace(/\r\n?/g, "\n").trim().slice(0, TEXT_LIMITS.stem);
+    const options = (Array.isArray(x.options) ? x.options : []).map((o) => str(o, TEXT_LIMITS.option)).filter(Boolean).slice(0, MAX_OPTIONS);
+    const content: QuestionContent = options.length ? { stem, options } : { stem };
+    return { r, content, empty: !stem };
+  });
+  let updated = 0;
+  const skipped: string[] = [];
+  for (const u of updates) {
+    if (by === "AI" && u.r.transcriptBy === "MANUAL") {
+      skipped.push(u.r.id);
+      continue;
+    }
+    const text = u.empty ? "" : plainText(u.content);
+    await prisma.questionItem.update({
+      where: { id: u.r.id },
+      data: { transcript: u.empty ? "" : JSON.stringify(u.content), transcriptBy: u.empty ? "" : by, text, searchText: searchOf(u.r, text, u.r.sourceNote) },
+    });
+    updated++;
+  }
+  return { updated, skipped };
+}
+
+/**
+ * Metni olmayan kesilmiş sorular (yeniden eskiye), görselleriyle: agent yazıya geçirsin diye (MCP).
+ * Arşivdekiler hariç. `total`: süzgece uyan metinsiz soru sayısı.
+ */
+export async function untranscribedItems(ownerId: string, f: { subject?: string; sourceId?: string; limit?: number } = {}) {
+  const where: Prisma.QuestionItemWhereInput = { ownerId, content: "", transcript: "", imageKey: { not: "" }, archivedAt: null };
+  if (f.subject) where.subject = f.subject;
+  if (f.sourceId) where.sourceId = f.sourceId;
+  const take = Math.min(Math.max(1, f.limit ?? 10), 20);
+  const [total, rows] = await Promise.all([
+    prisma.questionItem.count({ where }),
+    prisma.questionItem.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }, { page: "asc" }],
+      take,
+      select: { id: true, subject: true, topic: true, grade: true, type: true, answer: true, page: true, imageKey: true, source: { select: { name: true } } },
+    }),
+  ]);
+  const items = [];
+  for (const { imageKey, source, ...r } of rows) {
+    const file = await getFile(ownerId, imageKey).catch(() => null);
+    if (file) items.push({ ...r, source: source?.name ?? "", image: { data: Buffer.from(file.data).toString("base64"), mimeType: file.type } });
+  }
+  return { total, items };
 }
 

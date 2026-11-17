@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
-import { bankSummary, isReviewGroup, listItems, listSources, REVIEW_GROUPS, reviewQueue, similarForItems, tidyBank, type ReviewGroup } from "@/modules/question-bank/server";
+import { bankSummary, hashMissingImages, isReviewGroup, listItems, listSources, REVIEW_GROUPS, reviewQueue, similarForItems, tidyBank, type ReviewGroup } from "@/modules/question-bank/server";
 import { mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
 import { listCourses } from "@/modules/schedule/server";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
@@ -32,7 +32,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.s) || 1);
   // Havuz toparlanır: ders / konu yazılışları birleşir, kazanım bağları ve arama anahtarı yenilenir (müfredat ya da Dersler değişmiş olabilir)
-  const [usage] = await Promise.all([bankUsage(ownerId), tidyBank(ownerId)]);
+  // Parmak izi olmayan eski kesilmiş sorular da tamamlanır (aynı görselin yeniden kesilmesini yakalamak için)
+  const [usage] = await Promise.all([bankUsage(ownerId), tidyBank(ownerId), hashMissingImages(ownerId)]);
   const archive = sp.durum === "arsiv";
   const review = sp.durum === "onay";
   const filter = { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, archived: archive, review, ...usageFilter(usage.usage, sp) };

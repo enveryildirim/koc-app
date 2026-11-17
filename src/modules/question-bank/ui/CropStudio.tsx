@@ -59,7 +59,7 @@ export default function CropStudio(props: {
   const [autoDetect, setAutoDetect] = useState(true);
   const [defaults, setDefaults] = useState({ subject: "", topic: "", grade: "", difficulty: 2, level: "", sourceNote: "" });
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; confirm?: () => void } | null>(null);
 
   const pageBoxes = useMemo(() => [...(boxes[page] ?? [])].sort((a, b) => readingOrder(a.crop, b.crop)), [boxes, page]);
   const pageSaved = props.saved.filter((s) => s.page === page);
@@ -238,7 +238,8 @@ export default function CropStudio(props: {
     return new Promise<Blob>((res, rej) => out.toBlob((b) => (b ? res(b) : rej(new Error("crop"))), "image/png"));
   }
 
-  async function save() {
+  /** confirmed: havuzda aynı görsel varsa kullanıcı "Yine de kaydet" dedi. */
+  async function save(confirmed = false) {
     if (!defaults.subject.trim()) return setMsg({ ok: false, text: "Kaydetmeden önce ders seçin." });
     const list = pageBoxes.slice(0, LIMITS.batch);
     if (!list.length) return;
@@ -260,6 +261,7 @@ export default function CropStudio(props: {
       origin: b.origin,
     }));
     form.set("meta", JSON.stringify(metas));
+    if (confirmed) form.set("confirm", "1");
     try {
       for (const b of list) form.append("images", await cropBlob(b.crop), "soru.png");
     } catch {
@@ -269,6 +271,7 @@ export default function CropStudio(props: {
     const res = await fetch("/api/kurum/soru-havuzu/sorular", { method: "POST", body: form });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
+    if (!res.ok && json.confirm) return setMsg({ ok: false, text: json.error, confirm: () => save(true) });
     if (!res.ok) return setMsg({ ok: false, text: json.error ?? "Kaydedilemedi." });
     const ids = new Set(list.map((b) => b.id));
     setPageBoxes((l) => l.filter((b) => !ids.has(b.id)));
@@ -477,10 +480,20 @@ export default function CropStudio(props: {
               ))}
             </ol>
           )}
-          <button className="btn-primary mt-3 w-full" disabled={busy || !pageBoxes.length} onClick={save}>
+          <button className="btn-primary mt-3 w-full" disabled={busy || !pageBoxes.length} onClick={() => save()}>
             {busy ? "Kaydediliyor…" : `Havuza ekle (${pageBoxes.length} soru)`}
           </button>
-          {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
+          {msg?.confirm ? (
+            <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-2 text-xs text-amber-900" role="alert">
+              <p>{msg.text}</p>
+              <div className="mt-1.5 flex gap-2">
+                <button type="button" className="btn-secondary px-2.5 py-1 text-xs" disabled={busy} onClick={msg.confirm}>Yine de kaydet</button>
+                <button type="button" className="px-2 py-1 text-xs text-lead hover:text-graphite" onClick={() => setMsg(null)}>Vazgeç</button>
+              </div>
+            </div>
+          ) : (
+            msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>
+          )}
           {unsaved > pageBoxes.length && (
             <p className="mt-1 text-xs text-lead">Diğer sayfalarda {unsaved - pageBoxes.length} kaydedilmemiş kutu var.</p>
           )}

@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from "fs";
 import { readFile, stat } from "fs/promises";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { importQuestionsPrompt, INSTRUCTIONS, writeQuestionsPrompt } from "./guide";
+import { importQuestionsPrompt, INSTRUCTIONS, transcribeQuestionsPrompt, writeQuestionsPrompt } from "./guide";
 
 /** Institution rules (layer 2–3), read on every call so edits apply without restarting. Relative to the repo root (cwd). */
 const institutionRules = () => {
@@ -74,7 +74,7 @@ export type BankServerOptions = {
 export async function createBankServer(opts: BankServerOptions) {
   const { institutionName } = await import("@/modules/identity/server");
   const qb = await import("@/modules/question-bank");
-  const { bankSummary, createWrittenItems, listItems, similarForDrafts } = await import("@/modules/question-bank/server");
+  const { bankSummary, createWrittenItems, listItems, setTranscripts, similarForDrafts, untranscribedItems } = await import("@/modules/question-bank/server");
   const { curriculumOutcomes } = await import("@/modules/curriculum/server");
   const { mergeSubjectNames, normGrade, subjectKey } = await import("@/modules/curriculum");
   const { listCourses } = await import("@/modules/schedule/server");
@@ -96,7 +96,7 @@ export async function createBankServer(opts: BankServerOptions) {
     return { summary, outcomes, subjects, grades };
   }
 
-  const server = new McpServer({ name: "rea-question-bank", version: "0.4.0" }, { instructions: INSTRUCTIONS });
+  const server = new McpServer({ name: "rea-question-bank", version: "0.5.0" }, { instructions: INSTRUCTIONS });
 
   server.registerTool(
     "get_bank_context",
@@ -305,6 +305,77 @@ export async function createBankServer(opts: BankServerOptions) {
               : "No duplicates were found."),
         };
       }),
+  );
+
+  server.registerTool(
+    "list_untranscribed",
+    {
+      title: "List cut questions without text",
+      description:
+        "Questions teachers cropped from PDFs or photos are stored as images; without text they can't be searched or checked for duplicates. " +
+        "Returns up to `limit` of them with their images (newest first) and how many remain. Read each image and save its text with set_question_text.",
+      inputSchema: {
+        subject: z.string().optional(),
+        limit: z.number().int().min(1).max(20).default(5),
+      },
+    },
+    async ({ subject, limit }) => {
+      try {
+        const { total, items } = await untranscribedItems(await ownerId(), { subject, limit });
+        const meta = {
+          remaining: total,
+          returned: items.length,
+          next: items.length ? "Read each image and call set_question_text with {id, stem, options?}. Then call list_untranscribed again for the next ones." : "Nothing left to transcribe.",
+          questions: items.map(({ image: _i, ...q }) => (void _i, q)),
+        };
+        return {
+          content: [
+            { type: "text" as const, text: JSON.stringify(meta, null, 2) },
+            ...items.flatMap((q) => [
+              { type: "text" as const, text: `id: ${q.id}${q.type ? ` · type: ${q.type}` : ""}${q.source ? ` · ${q.source}${q.page ? `, p. ${q.page}` : ""}` : ""}` },
+              { type: "image" as const, data: q.image.data, mimeType: q.image.mimeType },
+            ]),
+          ],
+        };
+      } catch (e) {
+        return { content: [{ type: "text" as const, text: `Error: ${e instanceof Error ? e.message : String(e)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    "set_question_text",
+    {
+      title: "Save the text of cut questions",
+      description:
+        "Saves what you read from cut questions' images (from list_untranscribed): the stem and, for multiple choice, the options without letters. " +
+        "The question still prints as its image; the text is for search and duplicate detection. Text a teacher typed is not overwritten (returned in skipped).",
+      inputSchema: {
+        questions: z
+          .array(z.object({ id: z.string(), stem: z.string().min(1), options: z.array(z.string()).optional() }))
+          .min(1)
+          .max(qb.LIMITS.batch),
+      },
+    },
+    ({ questions }) =>
+      run(async () => {
+        const r = await setTranscripts(await ownerId(), questions, "AI");
+        return { ...r, next: r.skipped.length ? "Some were skipped because a teacher already typed their text." : "Saved. Call list_untranscribed for more." };
+      }),
+  );
+
+  server.registerPrompt(
+    "transcribe_questions",
+    {
+      title: "Transcribe cut questions",
+      description: "Write the text of questions that were cropped as images, so they can be searched and checked for duplicates.",
+      argsSchema: {
+        subject: z.string().optional().describe("Only this subject"),
+        count: z.string().optional().describe("At most this many"),
+        notes: z.string().optional(),
+      },
+    },
+    (args) => ({ messages: [{ role: "user", content: { type: "text", text: transcribeQuestionsPrompt(args) } }] }),
   );
 
   server.registerPrompt(

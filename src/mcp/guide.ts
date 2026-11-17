@@ -60,7 +60,15 @@ const ALWAYS = `Always
 - Send at most 60 questions per add_questions call; split long material into batches. If a call returns an error, nothing in that batch was saved: fix what it names and resend that batch.
 - Report to the user: how many were saved (by basis), duplicates, every doubt you noted, and the review link. Never say a question is approved; only a teacher approves.`;
 
-const RULES = [NEEDED, BEFORE, BASIS, TRANSCRIBED, SELF_CHECK, IMAGES, UNREADABLE, ALWAYS].join("\n\n");
+const CUT = `Cut questions (images in the bank without text)
+- Teachers crop questions from PDFs and photos; those are stored as images and print as images. Their text is only for search and duplicate detection.
+- list_untranscribed gives a few at a time with their images; set_question_text saves what you read. Nothing else about the question changes, and it is not sent back for review.
+- Write exactly what the image says: the stem in stem, and for multiple choice each option without its letter in options. Do not solve, rephrase or correct it, and do not add the answer.
+- Math as plain text with Unicode (√2, x², π, ≤, ½, |AB|, m(ABC)); no LaTeX. Keep Arabic and Ottoman script as written.
+- Figures: describe nothing; write only the text that appears. If the question is only a figure, write the words it has (labels, the question sentence).
+- If you can't read part of it, leave that question out and tell the user which id; never guess.`;
+
+const RULES = [NEEDED, BEFORE, BASIS, TRANSCRIBED, SELF_CHECK, IMAGES, UNREADABLE, CUT, ALWAYS].join("\n\n");
 
 /** Server instructions: sent on connect; clients such as Claude Code add them to the agent's system prompt. */
 export const INSTRUCTIONS = `${ROLE}\n\n${RULES}`;
@@ -108,3 +116,15 @@ Steps: read the whole material first and find its answer key; tell me how many q
 
 ${RULES}`;
 }
+
+export type TranscribeRequest = { subject?: string; count?: string; notes?: string };
+
+/** transcribe_questions prompt: write the text of cut (image-only) questions so they can be searched and compared. */
+export function transcribeQuestionsPrompt(r: TranscribeRequest) {
+  return `Transcribe the cut questions in the bank that have no text yet${clean(r.subject) ? ` (subject: ${clean(r.subject)})` : ""}${clean(r.count) ? `, at most ${clean(r.count)}` : ""}.${clean(r.notes) ? `\nNotes: ${clean(r.notes)}` : ""}
+
+Steps: call list_untranscribed; read each image; save with set_question_text (a batch at a time); repeat until done or the limit is reached; then tell me how many you saved and which ids you skipped and why.
+
+${CUT}`;
+}
+

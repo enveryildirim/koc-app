@@ -423,6 +423,13 @@ model QuestionItem {
   /// Cevabın kaynağı (yalnızca yapay zekâ sorusunda): key (kaynağın cevap anahtarından) | agent (agent çözdü). Elle girilende boş.
   /// Aktarılan soruda "agent" ise kaynakta anahtar yoktu; öğretmen cevabı onaylarken kontrol eder
   answerBy   String          @default("")
+  /// Kesilmiş (yalnızca görsel) sorunun yazıya geçirilmiş hâli: JSON { stem, options? }. Kitapçıkta soru yine görsel basılır;
+  /// metin arama ve benzerlik içindir. Yazılan soruda boş (içerik content'tedir)
+  transcript   String        @default("")
+  /// Metni kim çıkardı: AI (agent, MCP) | MANUAL (öğretmen). Boş = metin yok
+  transcriptBy String        @default("")
+  /// Kesilmiş sorunun görsel parmak izi (dHash 16×16, 64 hex): aynı görselin yeniden kesilmesini yakalar. Yazılan soruda boş
+  imageHash    String        @default("")
   createdAt  DateTime        @default(now())
 
   @@index([ownerId, subject])

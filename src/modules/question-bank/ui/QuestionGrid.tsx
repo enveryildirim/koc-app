@@ -31,6 +31,10 @@ export type GridItem = {
   basis: string;
   /** Yapay zekâ sorusunda cevabın kaynağı: key (kaynağın anahtarı) | agent (agent çözdü) */
   answerBy: string;
+  /** Kesilmiş sorunun yazıya geçirilmiş metni (arama ve benzerlik için; yoksa null) */
+  transcript: QuestionContent | null;
+  /** Metni kim çıkardı: AI | MANUAL */
+  transcriptBy: string;
   /** Bağlı müfredat satırının kazanımı (yoksa null) */
   outcome: { code: string; text: string; unit: string } | null;
   /** Çözüm / açıklama (boş = yazılmamış) */
@@ -282,6 +286,16 @@ export default function QuestionGrid({
                   {q.explanation && (
                     <button type="button" onClick={() => setDetail(q.id)} className="badge shrink-0 bg-mist text-graphite hover:bg-rule" title="Çözümü göster">Çözümlü</button>
                   )}
+                  {!q.content && (
+                    <button
+                      type="button"
+                      onClick={() => setDetail(q.id)}
+                      className={`badge shrink-0 hover:bg-rule ${q.transcript ? "bg-mist text-graphite" : "bg-white text-lead ring-1 ring-rule"}`}
+                      title={q.transcript ? `Metni ${q.transcriptBy === "AI" ? "yapay zekâ ile çıkarıldı" : "elle yazıldı"}: aranabilir, benzerleri bulunur` : "Metni yok: aramada ve benzer soru bulmada kullanılamaz. Yazmak için tıklayın"}
+                    >
+                      {q.transcript ? (q.transcriptBy === "AI" ? "Metin · YZ" : "Metin") : "Metinsiz"}
+                    </button>
+                  )}
                   <span className="truncate" title={[q.sourceNote, q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : ""].filter(Boolean).join(" · ")}>
                     {[
                       q.grade ? (/^\d+$/.test(q.grade) ? `${q.grade}. sınıf` : q.grade) : "",
@@ -388,7 +402,8 @@ function UsageDetail({
         </label>
         <button type="button" className="btn-primary py-1" disabled={busy || !dirty} onClick={() => onNotes({ explanation, sourceNote })}>Kaydet</button>
       </div>
-      {q.content && <SimilarList id={q.id} />}
+      {!q.content && <TranscriptEditor key={`${q.id}-${q.transcriptBy}`} q={q} />}
+      <SimilarList id={q.id} />
       <h3 className="text-[13px] font-semibold">Kullanım geçmişi</h3>
       {q.outcome && (q.outcome.code || q.outcome.text) && (
         <p className="text-[13px]">
@@ -519,6 +534,7 @@ function SimilarBadge({ s, onOpen }: { s?: { same: number; sibling: number }; on
 type SimilarRow = {
   id: string;
   kind: SimilarKind;
+  cut: boolean;
   stem: string;
   options?: string[];
   answer: string;
@@ -558,10 +574,15 @@ function SimilarList({ id }: { id: string }) {
               {r.pending && <span>onay bekliyor</span>}
               {r.archived && <span>arşivde</span>}
               <span className="ml-auto truncate">{[r.topic, r.grade ? (/^\d+$/.test(r.grade) ? `${r.grade}. sınıf` : r.grade) : ""].filter(Boolean).join(" · ")}</span>
-              <Link href={`/kurum/soru-havuzu/yaz?id=${r.id}`} className="shrink-0 font-semibold text-graphite hover:underline">Düzenle</Link>
+              {!r.cut && <Link href={`/kurum/soru-havuzu/yaz?id=${r.id}`} className="shrink-0 font-semibold text-graphite hover:underline">Düzenle</Link>}
             </div>
             <div className="max-h-48 overflow-hidden bg-white p-2.5 text-black">
-              <QuestionView type={r.type} content={{ stem: r.stem, options: r.options }} imageSrc={r.hasImage ? `${API}/${r.id}/gorsel` : null} answer={r.answer} compact />
+              {r.cut ? (
+                // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
+                <img src={`${API}/${r.id}/gorsel`} alt="" loading="lazy" className="max-h-44 w-auto object-contain" />
+              ) : (
+                <QuestionView type={r.type} content={{ stem: r.stem, options: r.options }} imageSrc={r.hasImage ? `${API}/${r.id}/gorsel` : null} answer={r.answer} compact />
+              )}
             </div>
           </li>
         ))}
@@ -570,3 +591,52 @@ function SimilarList({ id }: { id: string }) {
     </div>
   );
 }
+
+/**
+ * Kesilmiş sorunun metni (arama ve benzer soru bulma için; kitapçıkta soru yine görsel basılır).
+ * Yapay zekâ ile çıkarılmışsa işaret edilir; öğretmen düzeltip kaydedebilir (sonra "elle" sayılır).
+ */
+function TranscriptEditor({ q }: { q: GridItem }) {
+  const router = useRouter();
+  const [stem, setStem] = useState(q.transcript?.stem ?? "");
+  const [options, setOptions] = useState((q.transcript?.options ?? []).join("\n"));
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const mc = q.type === "MC";
+  const initial = { stem: q.transcript?.stem ?? "", options: (q.transcript?.options ?? []).join("\n") };
+  const dirty = stem.trim() !== initial.stem.trim() || (mc && options.trim() !== initial.options.trim());
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    const res = await fetch(`${API}/${q.id}/metin`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stem, options: mc ? options.split("\n").map((o) => o.trim()).filter(Boolean) : undefined }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) return setMsg({ ok: false, text: json.error ?? "Kaydedilemedi." });
+    setMsg({ ok: true, text: stem.trim() ? "Metin kaydedildi." : "Metin silindi." });
+    router.refresh();
+  }
+  return (
+    <div className="space-y-2 rounded-md px-3 py-2.5 ring-1 ring-rule">
+      <div className="flex items-baseline gap-2">
+        <span className="text-xs text-lead">Soru metni <span className="text-lead/80">(arama ve benzer soru için; kitapçıkta görsel basılır)</span></span>
+        {q.transcriptBy === "AI" && <span className="ml-auto shrink-0 text-xs text-amber-800">yapay zekâ ile çıkarıldı · kontrol edin</span>}
+      </div>
+      <textarea dir="auto" className="input min-h-20 resize-y" value={stem} onChange={(e) => setStem(e.target.value)} placeholder="Görseldeki soru kökünü yazın." />
+      {mc && (
+        <label className="block">
+          <span className="text-xs text-lead">Şıklar (her satıra bir şık, harfsiz)</span>
+          <textarea dir="auto" className="input min-h-16 resize-y" value={options} onChange={(e) => setOptions(e.target.value)} />
+        </label>
+      )}
+      <div className="flex items-center gap-2">
+        <button type="button" className="btn-primary py-1" disabled={busy || !dirty} onClick={save}>Kaydet</button>
+        {msg && <span className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</span>}
+      </div>
+    </div>
+  );
+}
+

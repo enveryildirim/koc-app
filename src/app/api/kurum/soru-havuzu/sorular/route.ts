@@ -3,7 +3,7 @@ import { invalid } from "@/shared/errors";
 import { ownerOrThrow } from "@/modules/identity/server";
 import { createItems, deleteItems, updateItems } from "@/modules/question-bank/server";
 
-/** Kesilen soruları kaydet (multipart): sourceId?, meta (JSON dizi), images[] (aynı sırayla). */
+/** Kesilen soruları kaydet (multipart): sourceId?, meta (JSON dizi), images[] (aynı sırayla), confirm = "1": aynı görsel olsa da kaydet. */
 export const POST = api(async (req) => {
   const ownerId = await ownerOrThrow();
   const form = await req.formData().catch(() => {
@@ -18,7 +18,7 @@ export const POST = api(async (req) => {
   const images = await Promise.all(
     form.getAll("images").filter((f): f is File => f instanceof File).map(async (f) => new Uint8Array(await f.arrayBuffer())),
   );
-  return createItems(ownerId, String(form.get("sourceId") ?? "") || null, metas, images);
+  return createItems(ownerId, String(form.get("sourceId") ?? "") || null, metas, images, { allowSimilar: form.get("confirm") === "1" });
 });
 
 /** Toplu düzenleme: { ids, set: { subject?, topic?, grade?, difficulty?, answer? } } */

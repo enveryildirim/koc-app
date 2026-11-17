@@ -65,7 +65,7 @@ export default function PracticePicker({ data, name }: { data: PracticeSuggestio
               <div className="p-3">
                 {it.candidates.length === 0 ? (
                   <p className="text-[13px] text-lead">
-                    {it.content ? "Havuzda benzeri yok." : "Kesilmiş (görsel) soru: metni olmadığı için benzeri aranamıyor."}
+                    {it.content ? "Havuzda benzeri yok." : "Havuzda aynısı yok. Kesilmiş soru: metni yazılırsa (soru ayrıntısı ya da yapay zekâ ile) benzerleri de aranır."}
                   </p>
                 ) : (
                   <ul className="space-y-2">
@@ -82,7 +82,12 @@ export default function PracticePicker({ data, name }: { data: PracticeSuggestio
                                 {c.seen ? <span className="font-semibold text-amber-700">sınıf daha önce gördü</span> : c.uses > 0 ? <span>{c.uses}× kullanıldı</span> : <span>hiç kullanılmadı</span>}
                               </span>
                               <span className="block max-h-40 overflow-hidden text-black">
-                                <QuestionView type={c.type} content={{ stem: c.stem, options: c.options }} imageSrc={c.hasImage ? IMG(c.id) : null} answer={c.answer} compact />
+                                {c.cut ? (
+                                  // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
+                                  <img src={IMG(c.id)} alt="" loading="lazy" className="max-h-36 w-auto object-contain" />
+                                ) : (
+                                  <QuestionView type={c.type} content={{ stem: c.stem, options: c.options }} imageSrc={c.hasImage ? IMG(c.id) : null} answer={c.answer} compact />
+                                )}
                               </span>
                             </span>
                           </label>
