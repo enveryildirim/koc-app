@@ -57,6 +57,8 @@ export type WrittenMeta = {
   agentNote?: string;
   /** Yalnızca yapay zekâ (MCP) sorusunda: nasıl yapıldığı (BASIS) */
   basis?: string;
+  /** Yalnızca yapay zekâ (MCP) sorusunda: cevabın kaynağı, "key" (kaynağın anahtarı) | "agent" (agent çözdü) */
+  answerBy?: string;
 };
 
 /** Havuz listesinde toplu düzenlenebilen alanlar. */

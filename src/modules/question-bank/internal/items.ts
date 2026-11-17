@@ -30,7 +30,7 @@ import {
   isBasis,
   SIMILAR_KINDS,
 } from "../index";
-import { similarForDrafts } from "./similar";
+import { similarForDrafts, similarForItems } from "./similar";
 
 const ORIGINS = new Set(["MANUAL", "AUTO", "AI"]);
 const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
@@ -277,7 +277,9 @@ export async function createWrittenItems(ownerId: string, metas: unknown, images
       const c = canon(tags);
       const extra = { explanation: cleanExplanation(m.explanation), sourceNote: cleanSourceNote(m.sourceNote) };
       const agentNote = ai ? String(m.agentNote ?? "").replace(/\r\n?/g, "\n").trim().slice(0, TEXT_LIMITS.agentNote) : "";
-      return { ...tags, ...c, ...extra, agentNote, basis, searchText: searchOf(c, w.text, extra.sourceNote), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, origin: ai ? "AI" : "MANUAL", needsReview: ai };
+      // Uyarlanan / yeni yazılan sorunun cevabını agent bulmuştur; aktarılanda kaynağın anahtarı mı, agent mı (bilinmiyorsa boş)
+      const answerBy = !ai ? "" : basis !== "transcribed" ? "agent" : m.answerBy === "key" || m.answerBy === "agent" ? m.answerBy : "";
+      return { ...tags, ...c, ...extra, agentNote, basis, answerBy, searchText: searchOf(c, w.text, extra.sourceNote), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, origin: ai ? "AI" : "MANUAL", needsReview: ai };
     } catch (e) {
       if (label && e instanceof Error && !e.message.startsWith(label)) throw invalid(`${label}: ${e.message}`);
       throw e;
@@ -385,8 +387,8 @@ const PAGE_SIZE = 120;
 /** Cevabı eksik sayılan sorular: açık uçluda örnek cevap isteğe bağlıdır. */
 const NO_ANSWER: Prisma.QuestionItemWhereInput = { answer: "", type: { not: "OPEN" } };
 
-/** Havuz listesi (yeniden eskiye, sayfalı) ve filtreye uyan toplam soru sayısı. */
-export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
+/** Süzgeçten veritabanı koşulu (liste ve onay kuyruğu ortak). */
+function whereOf(ownerId: string, f: ItemFilter) {
   const where: Prisma.QuestionItemWhereInput = { ownerId, archivedAt: f.archived ? { not: null } : null, needsReview: !!f.review && !f.archived };
   if (f.archived) delete where.needsReview;
   if (f.subject) where.subject = f.subject;
@@ -401,11 +403,16 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
   // Türkçe harflerde büyük/küçük harf ayırmadan: saklanan anahtar ve aranan sözcük aynı işlemden geçer
   if (f.q && searchKey(f.q)) where.searchText = { contains: searchKey(f.q) };
   if (f.only || f.except) where.id = { ...(f.only ? { in: f.only } : {}), ...(f.except ? { notIn: f.except } : {}) };
+  return where;
+}
 
+/** Havuz listesi (yeniden eskiye, sayfalı) ve filtreye uyan toplam soru sayısı. */
+export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
+  const where = whereOf(ownerId, f);
   const select = {
     id: true, subject: true, topic: true, grade: true, difficulty: true, level: true, answer: true, origin: true, page: true,
     type: true, content: true, imageKey: true, curriculumTopicId: true, archivedAt: true, explanation: true, sourceNote: true,
-    needsReview: true, agentNote: true, basis: true, source: { select: { name: true } },
+    needsReview: true, agentNote: true, basis: true, answerBy: true, source: { select: { name: true } },
   } satisfies Prisma.QuestionItemSelect;
   const orderBy: Prisma.QuestionItemOrderByWithRelationInput[] = [{ createdAt: "desc" }, { page: "asc" }];
   const skip = (Math.max(1, page) - 1) * PAGE_SIZE;
@@ -524,3 +531,43 @@ export async function itemImage(ownerId: string, id: string) {
   if (!f) throw notFound("Görsel bulunamadı.");
   return f;
 }
+
+/** Onay kuyruğundaki gruplar (`?onay=`). */
+export const REVIEW_GROUPS = {
+  tekrar: "Havuzda aynısı var",
+  not: "Agent notu var",
+  cozdu: "Anahtarsız, agent çözdü",
+  cevap: "Cevabı eksik",
+  temiz: "Sorunsuz görünen",
+} as const;
+export type ReviewGroup = keyof typeof REVIEW_GROUPS;
+export const isReviewGroup = (v: unknown): v is ReviewGroup => typeof v === "string" && v in REVIEW_GROUPS;
+
+/**
+ * Onay bekleyen sorular, süzgece uyanların tümü (sayfasız), gruplara ayrılmış: havuzda aynısı olan, agent notu olan,
+ * kaynağında cevap anahtarı olmayıp cevabını agent'ın çözdüğü, cevabı eksik ve bunların hiçbiri olmayan ("sorunsuz görünen"). Bir soru birden fazla grupta olabilir (temiz hariç).
+ * Öğretmen önce sorunlu grupları inceler, sorunsuzları toplu onaylar.
+ */
+export async function reviewQueue(ownerId: string, f: ItemFilter = {}) {
+  const rows = await prisma.questionItem.findMany({
+    where: whereOf(ownerId, { ...f, review: true, archived: false }),
+    orderBy: [{ createdAt: "desc" }, { page: "asc" }],
+    select: { id: true, agentNote: true, answer: true, type: true, basis: true, answerBy: true },
+  });
+  const sim = await similarForItems(ownerId, rows.map((r) => r.id));
+  const groups: Record<ReviewGroup, string[]> = { tekrar: [], not: [], cozdu: [], cevap: [], temiz: [] };
+  for (const r of rows) {
+    const same = sim.get(r.id)?.some((h) => h.kind === "same") ?? false;
+    const noted = !!r.agentNote.trim();
+    const noAnswer = !r.answer && r.type !== "OPEN";
+    // Kaynakta anahtar yoktu, cevabı agent çözdü: öğretmen cevabı kontrol etmeli
+    const solved = r.basis === "transcribed" && r.answerBy === "agent" && !noAnswer;
+    if (same) groups.tekrar.push(r.id);
+    if (noted) groups.not.push(r.id);
+    if (solved) groups.cozdu.push(r.id);
+    if (noAnswer) groups.cevap.push(r.id);
+    if (!same && !noted && !solved && !noAnswer) groups.temiz.push(r.id);
+  }
+  return { total: rows.length, ids: rows.map((r) => r.id), groups };
+}
+

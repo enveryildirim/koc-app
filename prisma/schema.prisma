@@ -402,6 +402,9 @@ model QuestionItem {
   /// Yapay zekâ sorusunun nasıl yapıldığı: transcribed (kaynaktan olduğu gibi aktarıldı) | adapted (kaynaktan uyarlandı) |
   /// original (agent yazdı). Elle girilen soruda boş. Tanımlar: question-bank > BASIS
   basis      String          @default("")
+  /// Cevabın kaynağı (yalnızca yapay zekâ sorusunda): key (kaynağın cevap anahtarından) | agent (agent çözdü). Elle girilende boş.
+  /// Aktarılan soruda "agent" ise kaynakta anahtar yoktu; öğretmen cevabı onaylarken kontrol eder
+  answerBy   String          @default("")
   createdAt  DateTime        @default(now())
 
   @@index([ownerId, subject])

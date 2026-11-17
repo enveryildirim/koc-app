@@ -29,6 +29,8 @@ export type GridItem = {
   agentNote: string;
   /** Yapay zekâ sorusunun nasıl yapıldığı (BASIS); elle girilende boş */
   basis: string;
+  /** Yapay zekâ sorusunda cevabın kaynağı: key (kaynağın anahtarı) | agent (agent çözdü) */
+  answerBy: string;
   /** Bağlı müfredat satırının kazanımı (yoksa null) */
   outcome: { code: string; text: string; unit: string } | null;
   /** Çözüm / açıklama (boş = yazılmamış) */
@@ -48,6 +50,7 @@ export default function QuestionGrid({
   similar = {},
   archive = false,
   review = false,
+  reviewAll,
 }: {
   items: GridItem[];
   subjects: string[];
@@ -60,6 +63,8 @@ export default function QuestionGrid({
   archive?: boolean;
   /** Onay bekleyenler görünümü: toplu işlemlerin başında "Onayla" olur */
   review?: boolean;
+  /** Onay görünümünde süzgece (ve seçili gruba) uyan bütün soruların kimlikleri (sayfasız): "tümünü onayla / sil" */
+  reviewAll?: { ids: string[]; group: string | null };
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<string | null>(null);
@@ -127,6 +132,29 @@ export default function QuestionGrid({
     }
   }
 
+  /** Listedeki (bütün sayfalar) onay bekleyenlerin tümü: onayla ya da sil. */
+  async function allInList(action: "approve" | "delete") {
+    const ids = reviewAll?.ids ?? [];
+    if (!ids.length) return;
+    if (action === "approve") {
+      const risky = reviewAll?.group === "tekrar" || reviewAll?.group === "not" || reviewAll?.group === "cevap";
+      if (!confirm(`Listedeki ${ids.length} soru onaylansın mı?${risky ? "\n\nBu gruptaki soruların her birinde incelenmesi gereken bir durum var." : ""}`)) return;
+      await approve(ids);
+    } else {
+      if (!confirm(`Listedeki ${ids.length} soru silinsin mi? Bu işlem geri alınamaz.`)) return;
+      const r = await send("DELETE", ids);
+      if (r) {
+        setSel(new Set());
+        setMsg({ ok: true, text: `${ids.length} soru silindi.` });
+      }
+    }
+  }
+
+  async function removeOne(id: string) {
+    if (!confirm("Bu soru silinsin mi? Bu işlem geri alınamaz.")) return;
+    if (await send("DELETE", [id])) setMsg({ ok: true, text: "Soru silindi." });
+  }
+
   const toggle = (id: string) =>
     setSel((s) => {
       const n = new Set(s);
@@ -144,6 +172,16 @@ export default function QuestionGrid({
           Bu sayfadakilerin tümünü seç
         </label>
         {sel.size > 0 && <span className="text-lead">{sel.size} soru seçili</span>}
+        {review && reviewAll && reviewAll.ids.length > 0 && (
+          <span className="ml-auto flex flex-wrap items-center gap-2">
+            <button type="button" className={reviewAll.group === "temiz" ? "btn-primary py-1" : "btn-secondary py-1"} disabled={busy} onClick={() => allInList("approve")}>
+              Listedeki {reviewAll.ids.length} sorunun tümünü onayla
+            </button>
+            {reviewAll.group === "tekrar" && (
+              <button type="button" className="btn-danger py-1" disabled={busy} onClick={() => allInList("delete")}>Listedeki {reviewAll.ids.length} soruyu sil</button>
+            )}
+          </span>
+        )}
       </div>
 
       {sel.size > 0 && (
@@ -207,6 +245,9 @@ export default function QuestionGrid({
                     YZ{isBasis(q.basis) ? ` · ${BASIS[q.basis].label}` : ""}
                   </span>
                 )}
+                {q.needsReview && q.basis === "transcribed" && q.answerBy === "agent" && (
+                  <span className="badge shrink-0 bg-amber-100 text-amber-900" title="Kaynakta cevap anahtarı yoktu; cevabı agent çözdü. Onaylamadan önce cevabı kontrol edin.">Cevabı agent çözdü</span>
+                )}
                 <SimilarBadge s={similar[q.id]} onOpen={() => setDetail(q.id)} />
                 {q.type !== "MC" && <span className="badge shrink-0 bg-mist text-graphite" title={QUESTION_TYPES[q.type as QuestionType]?.label}>{QUESTION_TYPES[q.type as QuestionType]?.short ?? q.type}</span>}
                 <span className="min-w-0 truncate">
@@ -252,8 +293,13 @@ export default function QuestionGrid({
               </div>
               {q.needsReview && (
                 <div className="flex items-center gap-2 border-t border-rule bg-mist/60 px-2.5 py-1.5 text-xs text-lead">
-                  Onay bekliyor: onaylanana kadar havuzda ve sınav kurarken görünmez.
-                  <button type="button" disabled={busy} onClick={() => approve([q.id])} className="btn-primary ml-auto shrink-0 px-3 py-1 text-xs">Onayla</button>
+                  {similar[q.id]?.same ? (
+                    <button type="button" onClick={() => setDetail(q.id)} className="text-left font-semibold text-amber-800 hover:underline">Havuzda aynısı var: karşılaştırın</button>
+                  ) : (
+                    <span>Onay bekliyor: onaylanana kadar havuzda ve sınav kurarken görünmez.</span>
+                  )}
+                  <button type="button" disabled={busy} onClick={() => removeOne(q.id)} className="ml-auto shrink-0 px-2 py-1 text-xs text-lead hover:text-red-700">Sil</button>
+                  <button type="button" disabled={busy} onClick={() => approve([q.id])} className="btn-primary shrink-0 px-3 py-1 text-xs">Onayla</button>
                 </div>
               )}
             </li>

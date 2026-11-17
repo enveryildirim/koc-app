@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
-import { bankSummary, listItems, listSources, similarForItems, tidyBank } from "@/modules/question-bank/server";
+import { bankSummary, isReviewGroup, listItems, listSources, REVIEW_GROUPS, reviewQueue, similarForItems, tidyBank, type ReviewGroup } from "@/modules/question-bank/server";
 import { mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
 import { listCourses } from "@/modules/schedule/server";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
@@ -11,7 +11,7 @@ import { Empty, Kpi, PageHeader } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
-type Search = { ders?: string; konu?: string; zorluk?: string; tur?: string; kaynak?: string; eksik?: string; kullanim?: string; gormedi?: string; durum?: string; q?: string; s?: string };
+type Search = { ders?: string; konu?: string; zorluk?: string; tur?: string; kaynak?: string; eksik?: string; kullanim?: string; gormedi?: string; durum?: string; onay?: string; q?: string; s?: string };
 
 /** Kullanım süzgeçleri: kullanım kayıtta değil, denemelerden hesaplanır (exams > bankUsage). */
 function usageFilter(usage: Awaited<ReturnType<typeof bankUsage>>["usage"], sp: Search) {
@@ -35,10 +35,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const [usage] = await Promise.all([bankUsage(ownerId), tidyBank(ownerId)]);
   const archive = sp.durum === "arsiv";
   const review = sp.durum === "onay";
+  const filter = { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, archived: archive, review, ...usageFilter(usage.usage, sp) };
+  // Onay kuyruğu: süzgece uyan bütün onay bekleyenler gruplara ayrılır; ?onay= ile bir grup gösterilir
+  const queue = review ? await reviewQueue(ownerId, filter) : null;
+  const group: ReviewGroup | null = review && isReviewGroup(sp.onay) ? sp.onay : null;
+  if (queue && group) filter.only = filter.only ? queue.groups[group].filter((id) => filter.only!.includes(id)) : queue.groups[group];
   const [summary, sources, list, curTopics, courses] = await Promise.all([
     bankSummary(ownerId, Object.keys(usage.usage)),
     listSources(ownerId),
-    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, archived: archive, review, ...usageFilter(usage.usage, sp) }, page),
+    listItems(ownerId, filter, page),
     curriculumTopicNames(ownerId),
     listCourses(ownerId),
   ]);
@@ -150,16 +155,37 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
                 <option value="arsiv">Arşiv ({summary.archived})</option>
               </select>
             )}
+            {group && <input type="hidden" name="onay" value={group} />}
             <input name="q" defaultValue={sp.q ?? ""} placeholder="Ders, konu ya da metinde ara" className="input w-40" />
             <button className="btn-secondary">Filtrele</button>
             {filtered && <Link href="/kurum/soru-havuzu" className="text-[13px] text-lead hover:text-graphite">Temizle</Link>}
             <span className="ml-auto text-[13px] text-lead">{list.total} soru</span>
           </form>
 
+          {queue && queue.total > 0 && (
+            <nav className="no-print mb-3 flex flex-wrap items-center gap-1.5 text-[13px]" aria-label="Onay grupları">
+              <span className="mr-1 text-lead">Onay bekleyen {queue.total} soru:</span>
+              {([null, ...Object.keys(REVIEW_GROUPS)] as (ReviewGroup | null)[]).map((g) => {
+                const n = g ? queue.groups[g].length : queue.total;
+                const params = new URLSearchParams({ ...Object.fromEntries(Object.entries(sp).filter(([k, v]) => v && k !== "onay" && k !== "s")), ...(g ? { onay: g } : {}) });
+                return (
+                  <Link
+                    key={g ?? "hepsi"}
+                    href={`?${params}`}
+                    aria-current={group === g ? "true" : undefined}
+                    className={`rounded-md px-2.5 py-1 ${group === g ? "bg-graphite font-semibold text-surface" : "text-lead ring-1 ring-rule hover:text-graphite"} ${!n && g ? "opacity-50" : ""}`}
+                  >
+                    {g ? REVIEW_GROUPS[g] : "Hepsi"} <span className="num">{n}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+
           {list.items.length === 0 ? (
             <Empty>{archive ? "Arşivde bu filtreye uygun soru yok." : review ? "Onay bekleyen soru yok." : "Bu filtreye uygun soru yok."}</Empty>
           ) : (
-            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} similar={similar} archive={archive} review={review} />
+            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} similar={similar} archive={archive} review={review} reviewAll={queue ? { ids: group ? queue.groups[group] : queue.ids, group } : undefined} />
           )}
 
           {pages > 1 && (
