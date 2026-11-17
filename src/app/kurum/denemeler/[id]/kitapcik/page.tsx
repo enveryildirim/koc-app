@@ -213,7 +213,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <>
           {/* Optik form: kenar boşluksuz kendi sayfası (@page omr), okuyucu ölçüleri bozulmasın */}
           <div className="omr-sheet mx-auto mt-8 bg-white shadow-lg ring-1 ring-rule" style={{ width: "210mm", height: "297mm" }}>
-            <FormSvg info={examFormSpec(exam.name, exam.type, exam.secs, exam.letters, { studentNumber: exam.omrStudentNo })} style={{ width: "210mm", height: "297mm", display: "block" }} />
+            <FormSvg info={examFormSpec(exam.name, exam.type, exam.secs, exam.letters, { studentNumber: exam.omrStudentNo, booklet })} style={{ width: "210mm", height: "297mm", display: "block" }} />
           </div>
           {(withKey || withSol) && (
             <article className="booklet mx-auto mt-8 bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule print:mt-0" style={{ width: "210mm", breakBefore: "page" }}>

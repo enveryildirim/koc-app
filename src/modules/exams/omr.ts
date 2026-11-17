@@ -6,13 +6,15 @@ export type ExamKeyItem = { points: number; correct: number[]; number: number; s
 
 /** letters: denemenin kitapçıkları (["A"] ise formda kitapçık alanı çıkmaz). */
 /** studentNumber: false ise formda öğrenci numarası alanı basılmaz (Exam.omrStudentNo). */
-export function examFormSpec(name: string, type: string, secs: ExamSection[], letters: readonly string[], opts: { studentNumber?: boolean; brand?: string } = {}): FormSpec {
+export function examFormSpec(name: string, type: string, secs: ExamSection[], letters: readonly string[], opts: { studentNumber?: boolean; brand?: string; booklet?: string } = {}): FormSpec {
   const c = choicesFor(type);
   return {
     title: name,
     brand: opts.brand ?? "SınavKur",
     ...(opts.studentNumber === false ? { studentNumber: false } : {}),
     booklets: letters.length > 1 ? [...letters] : undefined,
+    // Kitapçıkla birlikte basılan formda kitapçık türü dolu gelir
+    ...(opts.booklet && letters.length > 1 && letters.includes(opts.booklet) ? { markedBooklet: opts.booklet } : {}),
     sections: secs.map((s) => ({ name: s.name, count: s.count })),
     questions: secs.flatMap((s) => Array.from({ length: s.count }, () => ({ choiceCount: c }))),
   };

@@ -87,6 +87,11 @@ export type FormSpec = {
   version?: FormVersion;
   /** false: öğrenci numarası alanı basılmaz (okuturken öğrenci listeden seçilir). Kitapçık baloncukları yerinde kalır. */
   studentNumber?: boolean;
+  /**
+   * Kitapçık türü basılı dolu gelir (form kitapçıkla birlikte basılıyorsa hangi kitapçığa ait olduğu bellidir).
+   * Okuyucu dolu baloncuğu işaret olarak okur; öğrencinin ayrıca işaretlemesi gerekmez.
+   */
+  markedBooklet?: string;
 };
 /** Geriye dönük uyumluluk için. */
 export type FormInfo = FormSpec;
@@ -346,9 +351,10 @@ function headerV1(p: Prim[], spec: FormSpec, L: Layout) {
   if (L.booklet.length) {
     const bY = L.booklet[0].y - 5;
     panel(bY, 10, ["KİTAPÇIK TÜRÜ"]);
-    for (const b of L.booklet) bubble(p, b, 2.2);
+    for (const b of L.booklet) bubble(p, b, 2.2, b.label === spec.markedBooklet);
     const last = L.booklet[L.booklet.length - 1];
-    p.push({ kind: "text", x: last.x + 6, y: last.y + 0.8, text: "Kitapçığınızın harfini işaretleyin", size: 2.2, fill: "#6b7280" });
+    const preset = L.booklet.some((b) => b.label === spec.markedBooklet);
+    p.push({ kind: "text", x: last.x + 6, y: last.y + 0.8, text: preset ? "Kitapçık türü basılıdır, değiştirmeyin" : "Kitapçığınızın harfini işaretleyin", size: 2.2, fill: "#6b7280" });
   }
 
   if (per) {
@@ -430,7 +436,7 @@ function headerV2(p: Prim[], spec: FormSpec, L: Layout) {
   const RX = 92;
   if (L.booklet.length) {
     sec(RX, 53, "KİTAPÇIK TÜRÜ");
-    for (const b of L.booklet) bubble(p, b, 2.2);
+    for (const b of L.booklet) bubble(p, b, 2.2, b.label === spec.markedBooklet);
   }
 
   // İşaretleme örneği kullanıcı isteğiyle kaldırıldı; nasıl işaretleneceği alt kenardaki notta yazar.
@@ -444,9 +450,10 @@ function headerV2(p: Prim[], spec: FormSpec, L: Layout) {
   }
 }
 
-function bubble(p: Prim[], b: Bubble, r: number) {
-  p.push({ kind: "circle", x: b.x, y: b.y, r, stroke: "#6b7280", sw: 0.25 });
-  p.push({ kind: "text", x: b.x, y: b.y + r * 0.38, text: b.label, size: r * 1.05, fill: "#c4c8ce", anchor: "middle" });
+/** Baloncuk; `filled` ise basılı dolu (siyah, harf beyaz): okuyucu işaretli okur. */
+function bubble(p: Prim[], b: Bubble, r: number, filled = false) {
+  p.push({ kind: "circle", x: b.x, y: b.y, r, stroke: filled ? "#000" : "#6b7280", sw: 0.25, ...(filled ? { fill: "#000" } : {}) });
+  p.push({ kind: "text", x: b.x, y: b.y + r * 0.38, text: b.label, size: r * 1.05, fill: filled ? "#fff" : "#c4c8ce", anchor: "middle" });
 }
 
 function truncate(s: string, n: number) {
