@@ -26,6 +26,8 @@ Demo verilerini sıfırlamak için: `npm run db:seed`
 | Ödev takip | `/kurum/odevler` | Sınıfa ödev verme, Yaptı / Eksik / Yapmadı işaretleme, öğrenci bazında ödev raporu |
 | Ders planlama & yoklama | `/kurum/ders-programi`, `/kurum/yoklama`, `/kurum/raporlar` | Haftalık program, öğretmenler, günlük yoklama, ek ders/etüt, devamsızlık / gelmeyenler / öğretmen ders sayısı / öğrenci ders listesi raporları |
 | Başarı Skoru | `/kurum/analiz?tab=skor` | Öğrenci başına 0–100 skor (düzey, gelişim, katılım, devam, ödev), açıklamalar, 4 haftalık değişim, kurum ayarları |
+| Soru havuzu | `/kurum/soru-havuzu` | Soru yazma / yapıştırma, PDF ve fotoğraftan kesme, aynı / benzer soru tespiti, yapay zekâ ile eklenen soruların onayı, havuzdan sınav ve çalışma kağıdı |
+| Yapay zekâ bağlantısı | `/kurum/soru-havuzu/baglanti` | Agent'ları (Claude Code, Cursor…) MCP ile soru havuzuna bağlama; kurulum ve kullanım: [MCP.md](MCP.md) |
 | Haftalık veli raporu | `/kurum/veli-bulteni` | Haftanın özetini veliye WhatsApp / kopyalama ile gönderme, haftalık öğretmen notu, gönderim ve açılma takibi |
 
 Net hesabı: LGS'de 3 yanlış, TYT/AYT'de 4 yanlış 1 doğruyu götürür (deneme bazında değiştirilebilir). Çift işaretleme yanlış sayılır.
