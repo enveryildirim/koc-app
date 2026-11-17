@@ -97,7 +97,7 @@ function Stem({ text }: { text: string }) {
 }
 
 /** **…** arasını kalın yazar (eşi olmayan yıldızlar olduğu gibi kalır). */
-function Emphasis({ text }: { text: string }) {
+export function Emphasis({ text }: { text: string }) {
   const parts = text.split(new RegExp(EMPHASIS_RE.source));
   if (parts.length === 1) return <>{text}</>;
   // split yakalama grubuyla: çift indeksler düz, tek indeksler vurgulu

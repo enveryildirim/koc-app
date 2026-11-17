@@ -1,10 +1,14 @@
 import { EXAM_TYPES, fmtDate, fmtNet, keyFor, levelStats, topicStats } from "../domain";
 import type { ExamReport as Report } from "../internal/results";
+import QrCode from "@/shared/ui/QrCode";
 
 type Row = Report["rows"][number];
 
-/** Yazdırılabilir öğrenci karnesi (A4). */
-export default function Karne({ report, row }: { report: Report; row: Row }) {
+/**
+ * Yazdırılabilir öğrenci karnesi (A4).
+ * `solutionUrl`: öğrencinin kişisel çözüm sayfası (yalnızca yanlış ve boşları); verilirse hata karnesinin yanına QR basılır.
+ */
+export default function Karne({ report, row, solutionUrl }: { report: Report; row: Row; solutionUrl?: string | null }) {
   const { exam, secs, general } = report;
   const cls = report.classAvg.get(row.classId);
   const classSize = cls?.size ?? 0;
@@ -119,25 +123,35 @@ export default function Karne({ report, row }: { report: Report; row: Row }) {
         </div>
       </div>
 
-      <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Hata karnesi (yanlış ve boş sorular)</h2>
-      <div className="space-y-1.5 text-xs">
-        {secs.map((s, i) => (
-          <div key={s.name} className="grid grid-cols-[120px_1fr] gap-2">
-            <span className="font-semibold">{s.name}</span>
-            <div className="flex flex-wrap gap-1">
-              {errors[i].length === 0 ? (
-                <span className="text-emerald-700">Hepsi doğru 🎉</span>
-              ) : (
-                errors[i].map((e) => (
-                  <span key={e.q} className={`rounded px-1.5 py-0.5 ${e.given === "–" ? "bg-mist text-lead" : "bg-red-50 text-red-700"}`}>
-                    {e.q}: {e.given}→{e.correct}
-                  </span>
-                ))
-              )}
-            </div>
+      <div className="mt-5 flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="mb-1 text-xs font-bold text-lead">Hata karnesi (yanlış ve boş sorular)</h2>
+          <div className="space-y-1.5 text-xs">
+            {secs.map((s, i) => (
+              <div key={s.name} className="grid grid-cols-[120px_1fr] gap-2">
+                <span className="font-semibold">{s.name}</span>
+                <div className="flex flex-wrap gap-1">
+                  {errors[i].length === 0 ? (
+                    <span className="text-emerald-700">Hepsi doğru 🎉</span>
+                  ) : (
+                    errors[i].map((e) => (
+                      <span key={e.q} className={`rounded px-1.5 py-0.5 ${e.given === "–" ? "bg-mist text-lead" : "bg-red-50 text-red-700"}`}>
+                        {e.q}: {e.given}→{e.correct}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+            <p className="pt-1 text-[10px] text-lead/70">Biçim: soru no: verdiğiniz cevap → doğru cevap (– boş)</p>
           </div>
-        ))}
-        <p className="pt-1 text-[10px] text-lead/70">Biçim: soru no: verdiğiniz cevap → doğru cevap (– boş)</p>
+        </div>
+        {solutionUrl && errors.some((e) => e.length) && (
+          <div className="flex w-[26mm] shrink-0 flex-col items-center text-center">
+            <QrCode text={solutionUrl} size="22mm" title="Yanlışlarının çözümleri" />
+            <span className="mt-0.5 text-[9px] leading-tight">Yanlış ve boşlarının çözümleri</span>
+          </div>
+        )}
       </div>
 
       {myLevels.length > 0 && (

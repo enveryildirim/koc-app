@@ -2,23 +2,26 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
 import { examFormSpec, keyFor } from "@/modules/exams";
-import { bookletOf, findExam } from "@/modules/exams/server";
+import { bookletOf, examSolutionToken, findExam } from "@/modules/exams/server";
 import { answerLabel } from "@/modules/question-bank";
 import QuestionView from "@/modules/question-bank/ui/QuestionView";
 import FormSvg from "@/shared/omr/FormSvg";
 import FormStudentNo from "@/modules/exams/ui/FormStudentNo";
 import PrintButton from "@/shared/ui/PrintButton";
 import { Empty } from "@/shared/ui/kurum";
+import QrCode from "@/shared/ui/QrCode";
+import { publicOrigin } from "@/shared/origin";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ k?: string; sutun?: string; cevap?: string; optik?: string; cozum?: string }>;
+type SP = Promise<{ k?: string; sutun?: string; cevap?: string; optik?: string; cozum?: string; qr?: string }>;
 
 /**
  * Havuzdan kurulan denemenin yazdırılabilir soru kitapçığı (A / B, bir ya da iki sütun). Kesilmiş sorular görsel, yazılanlar metin olarak basılır.
  * `optik=1`: optik form soruların arkasına eklenir (tek yazdırmada sorular + form). Form okunabilsin diye kendi sayfası kenar boşluksuz
  * basılır (CSS adlandırılmış sayfa `@page omr`); soru sayfaları kitapçığın kenar boşluğunu korur. Cevap anahtarı açıksa en sondadır.
  * `cozum=1`: çözümü yazılmış soruların çözümleri, kitapçık sırasıyla, en sona ("Çözümler"); düğme yalnızca çözümlü soru varsa görünür.
+ * `qr=0`: başlıktaki çözüm QR'ı basılmaz. QR, öğretmen yayınlayana kadar kapalı olan çözüm sayfasını (`/cozum/<anahtar>?k=`) açar.
  */
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const ownerId = await requireOwner();
@@ -37,8 +40,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const missing = sections.reduce((n, s) => n + s.questions.filter((q) => !q).length, 0);
   const solvable = sections.some((s) => s.questions.some((q) => q?.explanation));
   const withSol = sp.cozum === "1" && solvable;
-  const link = (p: Partial<Record<"k" | "sutun" | "cevap" | "optik" | "cozum", string>>) => {
-    const q = new URLSearchParams({ k: booklet, sutun: String(cols), cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", cozum: withSol ? "1" : "0", ...p });
+  const withQr = sp.qr !== "0" && hasItems;
+  const qrUrl = withQr ? `${await publicOrigin()}/cozum/${await examSolutionToken(ownerId, id)}${exam.letters.length > 1 ? `?k=${booklet}` : ""}` : null;
+  const link = (p: Partial<Record<"k" | "sutun" | "cevap" | "optik" | "cozum" | "qr", string>>) => {
+    const q = new URLSearchParams({ k: booklet, sutun: String(cols), cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", cozum: withSol ? "1" : "0", qr: withQr ? "1" : "0", ...p });
     return `?${q}`;
   };
   const pill = (on: boolean) => `rounded-md px-2.5 py-1 text-[13px] ${on ? "bg-graphite font-semibold text-surface" : "text-lead ring-1 ring-rule hover:text-graphite"}`;
@@ -129,6 +134,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             Çözümler
           </Link>
         )}
+        {hasItems && (
+          <Link href={link({ qr: withQr ? "0" : "1" })} className={pill(withQr)} title="Başlığa çözüm sayfasının QR'ını basar. Sayfa, deneme ekranında “Çözümleri yayınla” denene kadar kapalıdır.">
+            Çözüm QR’ı
+          </Link>
+        )}
         <span className="ml-auto flex items-center gap-2">
           <Link href={`/kurum/denemeler/${id}?tab=anahtar`} className="text-[13px] text-lead hover:text-graphite">Cevap anahtarı</Link>
           {!worksheet && !withForm && <Link href={`/kurum/denemeler/${id}/form`} target="_blank" className="btn-secondary">Optik formu yazdır</Link>}
@@ -153,6 +163,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <span className="border-b border-dotted border-black" />
               </div>
             </div>
+            {qrUrl && (
+              <div className="flex w-[22mm] flex-col items-center justify-center text-center">
+                <QrCode text={qrUrl} size="20mm" title="Çözümler" />
+                <span className="mt-0.5 text-[8px] leading-tight">{worksheet ? "Çözümler" : "Çözümler · sınavdan sonra"}</span>
+              </div>
+            )}
             {exam.letters.length > 1 && (
               <div className="flex w-20 flex-col items-center justify-center rounded border-2 border-black">
                 <span className="text-[10px] tracking-wide uppercase">Kitapçık</span>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
-import { examReport } from "@/modules/exams/server";
+import { examReport, resultSolutionTokens } from "@/modules/exams/server";
+import { publicOrigin } from "@/shared/origin";
 import Karne from "@/modules/exams/ui/Karne";
 import { PageHeader } from "@/shared/ui/kurum";
 import PrintButton from "@/shared/ui/PrintButton";
@@ -15,6 +16,10 @@ export default async function Page({ params }: { params: Promise<{ id: string; r
   if (!report) notFound();
   const row = report.rows.find((r) => r.id === resultId);
   if (!row) notFound();
+  // Havuzdan kurulmuş denemede kişisel çözüm QR'ı (yalnızca yanlış ve boşlar; öğretmen yayınlayınca açılır)
+  const fromBank = report.secs.some((s) => s.items?.length);
+  const token = fromBank ? (await resultSolutionTokens(ownerId, id)).get(resultId) : null;
+  const solutionUrl = token ? `${await publicOrigin()}/cozum/${token}` : null;
   return (
     <>
       <PageHeader
@@ -31,7 +36,7 @@ export default async function Page({ params }: { params: Promise<{ id: string; r
           </>
         }
       />
-      <Karne report={report} row={row} />
+      <Karne report={report} row={row} solutionUrl={solutionUrl} />
     </>
   );
 }

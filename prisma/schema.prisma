@@ -151,6 +151,10 @@ model Exam {
   /// Hocanın kendi sınavıysa bağlı ders (Course); kurum denemesinde boş
   courseId  String?
   course    Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  /// Çözüm sayfası (/cozum/<token>, girişsiz): kitapçığa basılan QR'ın anahtarı; ilk gerektiğinde üretilir
+  solutionToken String?  @unique
+  /// Öğretmen "Çözümleri yayınla" deyince true; kapalıyken QR okutulsa da çözümler görünmez
+  solutionsOpen Boolean  @default(false)
   createdAt DateTime     @default(now())
   results   ExamResult[]
 }
@@ -171,6 +175,8 @@ model ExamResult {
   score     Float    @default(0)
   /// OMR | TXT | MANUAL
   source    String   @default("MANUAL")
+  /// Karnedeki kişisel çözüm QR'ının anahtarı (yalnızca bu öğrencinin yanlış ve boşları); ilk gerektiğinde üretilir
+  solutionToken String? @unique
   createdAt DateTime @default(now())
 
   @@unique([examId, studentId])

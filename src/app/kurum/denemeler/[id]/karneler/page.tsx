@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
-import { examReport } from "@/modules/exams/server";
+import { examReport, resultSolutionTokens } from "@/modules/exams/server";
+import { publicOrigin } from "@/shared/origin";
 import Karne from "@/modules/exams/ui/Karne";
 import { PageHeader } from "@/shared/ui/kurum";
 import PrintButton from "@/shared/ui/PrintButton";
@@ -17,6 +18,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const rows = report.rows
     .filter((r) => !sinif || r.classId === sinif)
     .sort((a, b) => a.className.localeCompare(b.className, "tr") || a.studentNo.localeCompare(b.studentNo));
+  // Havuzdan kurulmuş denemede her karneye kişisel çözüm QR'ı
+  const tokens = report.secs.some((s) => s.items?.length) ? await resultSolutionTokens(ownerId, id) : null;
+  const origin = await publicOrigin();
   return (
     <>
       <PageHeader
@@ -28,7 +32,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <div className="space-y-6 print:space-y-0">
         {rows.map((r) => (
           <div key={r.id} className="break-after-page">
-            <Karne report={report} row={r} />
+            <Karne report={report} row={r} solutionUrl={tokens?.get(r.id) ? `${origin}/cozum/${tokens.get(r.id)}` : null} />
           </div>
         ))}
       </div>

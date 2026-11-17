@@ -7,6 +7,8 @@ import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { choicesFor, levelStats, discriminationLabel, EXAM_TYPES, fmtDate, fmtNet, ITEM_FLAGS, ITEM_RULES, itemAnalysis, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
 import { examAbsentees, examReport, findExam, listExams } from "@/modules/exams/server";
+import SolutionsToggle from "@/modules/exams/ui/SolutionsToggle";
+import { publicOrigin } from "@/shared/origin";
 import { parseReaderFormat } from "@/modules/exams";
 import { examFormSpec, examKeys } from "@/modules/exams";
 import { Empty, Kpi, PageHeader, Tabs, th, td } from "@/shared/ui/kurum";
@@ -69,6 +71,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         actions={
           <>
             <ExamCourse examId={id} courseId={exam.courseId} courses={courses.filter((c) => c.kind !== "STUDY").map((c) => ({ id: c.id, label: `${c.classroomName} · ${c.name}` }))} />
+            {exam.secs.some((s) => s.items?.length) && (
+              <SolutionsToggle examId={id} open={exam.solutionsOpen} url={exam.solutionsOpen && exam.solutionToken ? `${await publicOrigin()}/cozum/${exam.solutionToken}` : null} />
+            )}
             {exam.secs.some((s) => s.items?.length) && <Link href={`${base}/kitapcik`} className={worksheet ? "btn-primary" : "btn-secondary"}>{worksheet ? "Çalışma kağıdını yazdır" : "Soru kitapçığı"}</Link>}
             {!worksheet && exam.secs.some((s) => s.items?.length) && (
               <Link href={`${base}/benzer${sp.sinif ? `?${new URLSearchParams({ sinif: sp.sinif })}` : ""}`} className="btn-secondary" title="Yanlış ya da boş bırakılan soruların havuzdaki benzerleri; seçtiklerinizle çalışma kağıdı hazırlanır">
