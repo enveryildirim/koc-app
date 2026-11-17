@@ -150,3 +150,4 @@ Ne zaman düşünülür: Öğretmen kararları binlerle ölçüldüğünde ve ha
 
 **Deneme kurarken (17 Kasım 2026):** `similarPairs` seçilebilir sorular (arşiv ve onay bekleyen hariç) arasındaki çiftleri bir kez hesaplar. Seçilen listede soru başına "Aynısı / Benzeri denemede: Genel 3", havuz kartında "Aynı soru / Benzer soru: seçilen …", düğmenin yanında "n çift aynı soru, n çift benzer soru". Rastgele ekleme seçilmişlere ve birbirine benzeyenleri almaz. Aynı soru çifti varsa oluştururken onay sorulur; benzer soru engellemez.
 
+**Yanlışlara benzer soru (17 Kasım 2026, 6. bölüm 2. adım):** öğretmen isteyince (karne / deneme sayfası) öneriler listelenir; öğretmen seçer ve seçtikleriyle çalışma kağıdı hazırlar. Öğrenciye kendiliğinden bir şey gitmez. Ayrıntı: PROJECT_MEMORY.md.

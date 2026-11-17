@@ -60,9 +60,12 @@ export default function BankExamBuilder({
   similar = {},
   courses = [],
   initialCourse = "",
+  preset,
 }: {
   items: Item[];
   similar?: SimilarMap;
+  /** Hazır seçim (ör. yanlışlara benzer sorular): ilk bölüme eklenir; worksheet ise çalışma kağıdı olarak açılır */
+  preset?: { items: string[]; name: string; worksheet: boolean };
   courses?: CourseOpt[];
   initialCourse?: string;
 }) {
@@ -71,9 +74,16 @@ export default function BankExamBuilder({
   const byId = useMemo(() => new Map(items.map((q) => [q.id, q])), [items]);
   const subjects = useMemo(() => [...new Set(items.map((q) => q.subject))].sort((a, b) => a.localeCompare(b, "tr")), [items]);
 
-  const [meta, setMeta] = useState({ name: "", type: "SERBEST", date: toInputDate(new Date()), booklets: 2, purpose: "EXAM", courseId: initialCourse });
+  const [meta, setMeta] = useState({
+    name: preset?.name ?? "",
+    type: "SERBEST",
+    date: toInputDate(new Date()),
+    booklets: preset?.worksheet ? 1 : 2,
+    purpose: preset?.worksheet ? "WORKSHEET" : "EXAM",
+    courseId: initialCourse,
+  });
   const worksheet = meta.purpose === "WORKSHEET";
-  const [secs, setSecs] = useState<Sec[]>(templateOf("SERBEST"));
+  const [secs, setSecs] = useState<Sec[]>(() => templateOf("SERBEST").map((x, i) => (i === 0 && preset?.items.length ? { ...x, items: preset.items } : x)));
   const [active, setActive] = useState(0);
   const [f, setF] = useState({ subject: "", topic: "", difficulty: "", unused: false, unseen: true });
   // Derse bağlı sınavda o sınıfın daha önce gördüğü sorular varsayılan olarak gizlenir
@@ -437,7 +447,7 @@ export default function BankExamBuilder({
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={busy} onClick={create}>{created ? "Oluşturuldu" : busy ? "Oluşturuluyor…" : `Denemeyi oluştur (${total} soru)`}</button>
+            <button className="btn-primary" disabled={busy} onClick={create}>{created ? "Oluşturuldu" : busy ? "Oluşturuluyor…" : `${worksheet ? "Çalışma kağıdını oluştur" : "Denemeyi oluştur"} (${total} soru)`}</button>
             {problems.length > 0 && <span className="text-xs text-red-700">{problems.length} soruda cevap sorunu var</span>}
             {pairs.same + pairs.sibling > 0 && (
               <span className="text-xs text-amber-700" title="Aynı soru: olası tekrar. Benzer soru: aynı kalıp, başka sayılar; biri diğerinin cevabını ele verebilir.">

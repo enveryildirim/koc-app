@@ -70,6 +70,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <>
             <ExamCourse examId={id} courseId={exam.courseId} courses={courses.filter((c) => c.kind !== "STUDY").map((c) => ({ id: c.id, label: `${c.classroomName} · ${c.name}` }))} />
             {exam.secs.some((s) => s.items?.length) && <Link href={`${base}/kitapcik`} className={worksheet ? "btn-primary" : "btn-secondary"}>{worksheet ? "Çalışma kağıdını yazdır" : "Soru kitapçığı"}</Link>}
+            {!worksheet && exam.secs.some((s) => s.items?.length) && (
+              <Link href={`${base}/benzer${sp.sinif ? `?${new URLSearchParams({ sinif: sp.sinif })}` : ""}`} className="btn-secondary" title="Yanlış ya da boş bırakılan soruların havuzdaki benzerleri; seçtiklerinizle çalışma kağıdı hazırlanır">
+                Yanlışlara benzer soru
+              </Link>
+            )}
             <PrintButton />
           </>
         }
