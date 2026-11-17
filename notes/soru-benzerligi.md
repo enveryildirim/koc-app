@@ -144,4 +144,9 @@ Ne zaman düşünülür: Öğretmen kararları binlerle ölçüldüğünde ve ha
 - MCP: `search_questions` `similarTo` (taslak soru → aynı / kardeş, onay bekleyen ve arşivdekiler dahil); `add_questions` yanıtında `similar` (havuz ve aynı gönderimdeki diğer sorular). Kayıt reddedilmez: öğretmen onay ekranında rozeti görür.
 - Havuz: aynı dersin metinli soruları (ders yazılışı gözetilmez, sınıf düzeyiyle daraltılmaz). Kesilmiş (yalnızca görsel) sorular karşılaştırılmaz.
 
-**Sonraki adımlar:** deneme kurarken aynı denemeye kardeş/aynı soru uyarısı; yanlış yapılan sorunun kardeşini önermek (6. bölüm, 2. adım); havuz büyüyünce benzerlik sonuçlarını önbelleğe almak (şu an her sayfa açılışında dersin tüm soruları üzerinden hesaplanıyor; 113 soruda ~0,2 s).
+**Sonraki adımlar:** yanlış yapılan sorunun kardeşini önermek (6. bölüm, 2. adım); havuz büyüyünce benzerlik sonuçlarını önbelleğe almak (şu an her sayfa açılışında dersin tüm soruları üzerinden hesaplanıyor; 113 soruda ~0,2 s).
+
+**Ekrandaki ad (17 Kasım 2026):** kullanıcı isteğiyle ekranda "kardeş soru" yerine **"benzer soru"** ("Benzeri var") kullanılıyor; kodda `sibling` adı kaldı. Bu nottaki "kardeş" = ekrandaki "benzer".
+
+**Deneme kurarken (17 Kasım 2026):** `similarPairs` seçilebilir sorular (arşiv ve onay bekleyen hariç) arasındaki çiftleri bir kez hesaplar. Seçilen listede soru başına "Aynısı / Benzeri denemede: Genel 3", havuz kartında "Aynı soru / Benzer soru: seçilen …", düğmenin yanında "n çift aynı soru, n çift benzer soru". Rastgele ekleme seçilmişlere ve birbirine benzeyenleri almaz. Aynı soru çifti varsa oluştururken onay sorulur; benzer soru engellemez.
+

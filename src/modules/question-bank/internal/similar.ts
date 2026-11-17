@@ -71,7 +71,7 @@ function bySubject<T extends { subject: string }>(xs: T[]) {
 }
 
 /**
- * Havuzdaki sorular için benzerleri: kimlik → benzer sorular (önce "Aynı soru", sonra "Kardeş soru").
+ * Havuzdaki sorular için benzerleri: kimlik → benzer sorular (önce "Aynı soru", sonra "Benzer soru").
  * Metni olmayan (kesilmiş) sorular ve benzeri olmayanlar sonuçta yer almaz.
  */
 export async function similarForItems(ownerId: string, ids: string[], top?: number) {
@@ -120,4 +120,26 @@ export async function similarForDrafts(ownerId: string, drafts: SimilarDraft[], 
     }
   }
   return res;
+}
+
+/**
+ * Deneme kurma ekranı için: seçilebilir sorular (arşivdekiler ve onay bekleyenler hariç) arasındaki aynı / benzer soru çiftleri.
+ * kimlik → { id, kind }[] (iki yönlü; benzeri olmayan yok). Aynı denemeye benzer iki soru konmasın diye ekranda uyarı verilir.
+ * Not: ders başına tüm çiftler karşılaştırılır (n²); havuz binlerce soruya çıkınca önbelleğe alınmalı.
+ */
+export async function similarPairs(ownerId: string) {
+  const rows = await prisma.questionItem.findMany({
+    where: { ownerId, archivedAt: null, needsReview: false, content: { not: "" } },
+    select: { id: true, subject: true, type: true, answer: true, content: true },
+  });
+  const docs = rows.flatMap((r) => {
+    const c = parseContent(r.content);
+    return c && plainText(c) ? [{ subject: r.subject, d: doc(r.id, c, r.type, r.answer) }] : [];
+  });
+  const out: Record<string, { id: string; kind: SimilarKind }[]> = {};
+  for (const [, group] of bySubject(docs)) {
+    const ds = group.map((x) => x.d);
+    for (const [id, hits] of findSimilar(ds, ds, { top: 20 })) if (hits.length) out[id] = hits.map((h) => ({ id: h.id, kind: h.kind }));
+  }
+  return out;
 }

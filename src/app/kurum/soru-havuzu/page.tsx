@@ -42,7 +42,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
     curriculumTopicNames(ownerId),
     listCourses(ownerId),
   ]);
-  // Sayfadaki soruların benzerleri (karttaki "Aynısı var" / "Kardeşi var" rozeti; ayrıntı panelde açılır)
+  // Sayfadaki soruların benzerleri (karttaki "Aynısı var" / "Benzeri var" rozeti; ayrıntı panelde açılır)
   const sim = await similarForItems(ownerId, list.items.map((i) => i.id));
   const similar = Object.fromEntries([...sim].map(([id, hs]) => [id, { same: hs.filter((h) => h.kind === "same").length, sibling: hs.filter((h) => h.kind === "sibling").length }]));
   const unused = summary.unused ?? 0;

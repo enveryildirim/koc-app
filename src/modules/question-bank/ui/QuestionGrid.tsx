@@ -454,7 +454,7 @@ function AnswerControl({ q, busy, onSet }: { q: GridItem; busy: boolean; onSet: 
   );
 }
 
-/** Kart rozeti: havuzda aynısı (önce) ya da kardeşi var; tıklanınca ayrıntı paneli açılır. */
+/** Kart rozeti: havuzda aynısı (önce) ya da benzeri var; tıklanınca ayrıntı paneli açılır. */
 function SimilarBadge({ s, onOpen }: { s?: { same: number; sibling: number }; onOpen: () => void }) {
   if (!s || (!s.same && !s.sibling)) return null;
   const same = s.same > 0;
@@ -465,7 +465,7 @@ function SimilarBadge({ s, onOpen }: { s?: { same: number; sibling: number }; on
       className={`badge shrink-0 ${same ? "bg-amber-100 text-amber-900 hover:bg-amber-200" : "bg-mist text-graphite hover:bg-rule"}`}
       title={same ? `Olası tekrar. ${SIMILAR_KINDS.same.hint}` : SIMILAR_KINDS.sibling.hint}
     >
-      {same ? "Aynısı var" : `Kardeşi var${s.sibling > 1 ? ` (${s.sibling})` : ""}`}
+      {same ? "Aynısı var" : `Benzeri var${s.sibling > 1 ? ` (${s.sibling})` : ""}`}
     </button>
   );
 }
@@ -520,7 +520,7 @@ function SimilarList({ id }: { id: string }) {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-lead">Aynı soru: olası tekrar, birini silin ya da arşive kaldırın. Kardeş soru: aynı kalıp, başka sayılar; aynı denemede birlikte kullanmayın.</p>
+      <p className="text-xs text-lead">Aynı soru: olası tekrar, birini silin ya da arşive kaldırın. Benzer soru: aynı kalıp, başka sayılar; aynı denemede birlikte kullanmayın.</p>
     </div>
   );
 }

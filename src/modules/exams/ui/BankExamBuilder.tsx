@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ANSWERS, answerLabel, DIFFICULTY, isOptical, opticalLetter, OPTION_LETTERS, QUESTION_TYPES, type QuestionContent, type QuestionType } from "@/modules/question-bank";
+import { ANSWERS, answerLabel, DIFFICULTY, isOptical, opticalLetter, OPTION_LETTERS, QUESTION_TYPES, SIMILAR_KINDS, type QuestionContent, type QuestionType, type SimilarKind } from "@/modules/question-bank";
 import QuestionView from "@/modules/question-bank/ui/QuestionView";
 import { subjectMatches } from "@/shared/subjects";
 import { toInputDate } from "@/shared/date";
@@ -23,6 +23,8 @@ type Item = {
   classIds: string[];
 };
 type Sec = { name: string; target: number; items: string[] };
+/** Soru → havuzdaki aynı / benzer sorular (iki yönlü; question-bank > similarPairs) */
+type SimilarMap = Record<string, { id: string; kind: SimilarKind }[]>;
 
 const IMG = (id: string) => `/api/kurum/soru-havuzu/sorular/${id}/gorsel`;
 const PAGE = 40;
@@ -53,7 +55,17 @@ function shuffle<T>(a: T[]) {
 /** Havuzdan deneme kurma: bölüm seç, havuzdan soru ekle (elle ya da zorluk dağılımıyla rastgele), sırala, oluştur. */
 type CourseOpt = { id: string; label: string; classroomId: string; classroomName: string };
 
-export default function BankExamBuilder({ items: initial, courses = [], initialCourse = "" }: { items: Item[]; courses?: CourseOpt[]; initialCourse?: string }) {
+export default function BankExamBuilder({
+  items: initial,
+  similar = {},
+  courses = [],
+  initialCourse = "",
+}: {
+  items: Item[];
+  similar?: SimilarMap;
+  courses?: CourseOpt[];
+  initialCourse?: string;
+}) {
   const router = useRouter();
   const [items, setItems] = useState(initial);
   const byId = useMemo(() => new Map(items.map((q) => [q.id, q])), [items]);
@@ -77,6 +89,26 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
   const sec = secs[active] ?? secs[0];
   const chosen = useMemo(() => new Set(secs.flatMap((s) => s.items)), [secs]);
   const allowed = LETTERS.slice(0, choicesFor(meta.type));
+  // Seçilen sorunun denemedeki yeri ("Matematik 3") ve aynı denemedeki aynı / benzer soruları
+  const where = useMemo(() => new Map(secs.flatMap((s) => s.items.map((id, i) => [id, `${s.name} ${i + 1}`] as const))), [secs]);
+  const clashes = (id: string) => (similar[id] ?? []).filter((h) => h.id !== id && chosen.has(h.id));
+  const nearChosen = (id: string) => {
+    const c = clashes(id);
+    return c.find((h) => h.kind === "same") ?? c[0];
+  };
+  // Çiftler bir kez sayılır
+  const pairs = useMemo(() => {
+    const seen = new Set<string>();
+    const out = { same: 0, sibling: 0 };
+    for (const id of chosen)
+      for (const h of similar[id] ?? []) {
+        const k = [id, h.id].sort().join("|");
+        if (h.id === id || !chosen.has(h.id) || seen.has(k)) continue;
+        seen.add(k);
+        out[h.kind]++;
+      }
+    return out;
+  }, [chosen, similar]);
 
   // Ders filtresi boşsa bölüm adına uyan dersler; hiçbiri uymuyorsa tüm havuz.
   const pool = useMemo(() => {
@@ -123,9 +155,16 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
     for (const d of [1, 2, 3]) {
       const want = mix[d] || 0;
       if (!want) continue;
+      // Seçilmiş sorulara ve bu seferde seçilenlere aynı / benzer olan sorular alınmaz
       const cand = shuffle(pool.filter((q) => q.difficulty === d)).sort((a, b) => a.uses - b.uses);
-      picked.push(...cand.slice(0, want).map((q) => q.id));
-      if (cand.length < want) short.push(`${DIFFICULTY[d].toLocaleLowerCase("tr")} ${want - cand.length}`);
+      let got = 0;
+      for (const q of cand) {
+        if (got === want) break;
+        if ((similar[q.id] ?? []).some((h) => chosen.has(h.id) || picked.includes(h.id))) continue;
+        picked.push(q.id);
+        got++;
+      }
+      if (got < want) short.push(`${DIFFICULTY[d].toLocaleLowerCase("tr")} ${want - got}`);
     }
     if (!picked.length) return setMsg({ ok: false, text: "Filtreye uyan soru yok ya da adet girilmedi." });
     add(picked);
@@ -164,6 +203,7 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
     if (!meta.name.trim()) return setMsg({ ok: false, text: worksheet ? "Çalışma kağıdına ad verin." : "Deneme adı girin." });
     if (!total) return setMsg({ ok: false, text: "Bölümlere soru ekleyin." });
     if (problems.length) return setMsg({ ok: false, text: `Önce şunları düzeltin: ${problems.slice(0, 3).join("; ")}${problems.length > 3 ? "…" : ""}` });
+    if (pairs.same && !confirm(`Bu ${worksheet ? "çalışma kağıdında" : "denemede"} ${pairs.same} çift aynı soru var (işaretli sorular). Yine de oluşturulsun mu?`)) return;
     setBusy(true);
     setMsg(null);
     const res = await fetch("/api/kurum/denemeler/havuzdan", {
@@ -323,6 +363,7 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
                       <span className={`shrink-0 font-semibold ${q.answer ? "text-graphite" : "text-red-700"}`}>{q.answer || "?"}</span>
                     ) : null}
                   </div>
+                  <ClashNote near={nearChosen(q.id)} where={where} pool />
                 </li>
               ))}
             </ul>
@@ -382,6 +423,7 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
                         <span className="max-w-32 truncate text-[11px] text-lead">{QUESTION_TYPES[q?.type as QuestionType]?.label}</span>
                       )}
                       {issue && issue !== "cevap yok" && <span className="max-w-40 text-right text-[11px] text-red-700">{issue}</span>}
+                      <ClashNote near={nearChosen(id)} where={where} />
                       <div className="flex gap-1 text-xs text-lead">
                         <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Yukarı" className="px-1 disabled:opacity-30">↑</button>
                         <button onClick={() => move(i, 1)} disabled={i === sec.items.length - 1} aria-label="Aşağı" className="px-1 disabled:opacity-30">↓</button>
@@ -397,6 +439,11 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button className="btn-primary" disabled={busy} onClick={create}>{created ? "Oluşturuldu" : busy ? "Oluşturuluyor…" : `Denemeyi oluştur (${total} soru)`}</button>
             {problems.length > 0 && <span className="text-xs text-red-700">{problems.length} soruda cevap sorunu var</span>}
+            {pairs.same + pairs.sibling > 0 && (
+              <span className="text-xs text-amber-700" title="Aynı soru: olası tekrar. Benzer soru: aynı kalıp, başka sayılar; biri diğerinin cevabını ele verebilir.">
+                {[pairs.same && `${pairs.same} çift aynı soru`, pairs.sibling && `${pairs.sibling} çift benzer soru`].filter(Boolean).join(", ")}
+              </span>
+            )}
           </div>
           {msg && (
             <p className={`mt-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`} role="status">
@@ -415,3 +462,19 @@ export default function BankExamBuilder({ items: initial, courses = [], initialC
     </div>
   );
 }
+
+/** Denemede aynı / benzer soru uyarısı: seçilen listede soru başına, havuzda "seçilene benzer" etiketi. */
+function ClashNote({ near, where, pool = false }: { near?: { id: string; kind: SimilarKind }; where: Map<string, string>; pool?: boolean }) {
+  if (!near) return null;
+  const at = where.get(near.id) ?? "";
+  const text = pool ? `${SIMILAR_KINDS[near.kind].label}: seçilen ${at}` : `${near.kind === "same" ? "Aynısı" : "Benzeri"} denemede: ${at}`;
+  return (
+    <span
+      className={`text-[11px] ${pool ? "border-t border-rule/60 bg-amber-50 px-2 py-0.5" : "max-w-40 text-right"} ${near.kind === "same" ? "font-semibold text-amber-800" : "text-amber-700"}`}
+      title={SIMILAR_KINDS[near.kind].hint}
+    >
+      {text}
+    </span>
+  );
+}
+

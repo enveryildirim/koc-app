@@ -9,7 +9,7 @@
  * - **Sayı örtüşmesi** (sayı çoklukümelerinin Jaccard'ı).
  *
  * Etiket: metin çok benzer, sayılar ve doğru cevabın içeriği aynıysa "Aynı soru"; metin çok benzer ama sayılar ya da cevap
- * farklıysa "Kardeş soru" ("… yer alır" / "… yer almaz" gibi olumsuz kök çiftleri, şıkları karıştırılmış kopyada harf değil içerik
+ * farklıysa "Benzer soru" ("… yer alır" / "… yer almaz" gibi olumsuz kök çiftleri, şıkları karıştırılmış kopyada harf değil içerik
  * karşılaştırılır).
  * Kullanıcıya puan değil etiket gösterilir. Eşikler (SIMILARITY) dev.db'deki sorularla ayarlandı; öğretmen kararları
  * biriktikçe yeniden bakılmalı.
@@ -19,7 +19,7 @@ export type SimilarKind = "same" | "sibling";
 
 export const SIMILAR_KINDS: Record<SimilarKind, { label: string; hint: string }> = {
   same: { label: "Aynı soru", hint: "Havuzdaki bir soruyla neredeyse aynı: aynen tekrar ya da birkaç kelimesi değişmiş" },
-  sibling: { label: "Kardeş soru", hint: "Aynı kalıp, başka sayılar: tekrar değil; aynı denemede birlikte olmasın" },
+  sibling: { label: "Benzer soru", hint: "Aynı kalıp, başka sayılar: tekrar değil; aynı denemede birlikte olmasın" },
 };
 
 /** text: metin benzerliği eşiği (0–1); numbers: bu örtüşmeden itibaren sayılar "aynı" sayılır; top: soru başına en fazla sonuç. */
@@ -138,7 +138,7 @@ export function answerKey(type: string, answer: string, options?: string[]) {
 }
 
 /**
- * Her sorgu sorusu için havuzdaki benzer sorular (kendisi hariç; önce "Aynı soru", sonra "Kardeş soru", puana göre).
+ * Her sorgu sorusu için havuzdaki benzer sorular (kendisi hariç; önce "Aynı soru", sonra "Benzer soru", puana göre).
  * Sorgular havuzda yoksa IDF hesabına eklenir. Kısa metinler (4 simgeden az) etiketlenmez: rastgele eşleşir.
  * `all`: eşiğin altındakiler de döner (yalnızca ayar ölçümü için; kind o zaman en yakın etiket).
  */
