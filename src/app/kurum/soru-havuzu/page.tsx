@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
 import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
-import { bankSummary, listItems, listSources, tidyBank } from "@/modules/question-bank/server";
+import { bankSummary, listItems, listSources, similarForItems, tidyBank } from "@/modules/question-bank/server";
 import { mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
 import { listCourses } from "@/modules/schedule/server";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
@@ -42,6 +42,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
     curriculumTopicNames(ownerId),
     listCourses(ownerId),
   ]);
+  // Sayfadaki soruların benzerleri (karttaki "Aynısı var" / "Kardeşi var" rozeti; ayrıntı panelde açılır)
+  const sim = await similarForItems(ownerId, list.items.map((i) => i.id));
+  const similar = Object.fromEntries([...sim].map(([id, hs]) => [id, { same: hs.filter((h) => h.kind === "same").length, sibling: hs.filter((h) => h.kind === "sibling").length }]));
   const unused = summary.unused ?? 0;
   const pageUsage = Object.fromEntries(list.items.flatMap((i) => (usage.usage[i.id] ? [[i.id, usage.usage[i.id]]] : [])));
   // Düzenleme önerileri: müfredat konuları önce (havuzda olmasa da seçilebilsin)
@@ -156,7 +159,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           {list.items.length === 0 ? (
             <Empty>{archive ? "Arşivde bu filtreye uygun soru yok." : review ? "Onay bekleyen soru yok." : "Bu filtreye uygun soru yok."}</Empty>
           ) : (
-            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} archive={archive} review={review} />
+            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} similar={similar} archive={archive} review={review} />
           )}
 
           {pages > 1 && (

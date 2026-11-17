@@ -5,7 +5,8 @@ import { createWrittenItems } from "@/modules/question-bank/server";
 
 /**
  * Elle yazılan / yapıştırılıp bölünen soruları kaydet (multipart):
- * meta = JSON dizi (WrittenMeta), image_<i> = i. sorunun isteğe bağlı görseli.
+ * meta = JSON dizi (WrittenMeta), image_<i> = i. sorunun isteğe bağlı görseli,
+ * confirm = "1": havuzda aynısı olan soruyu yine de kaydet (ilk denemede 409 + confirm döner).
  */
 export const POST = api(async (req) => {
   const ownerId = await ownerOrThrow();
@@ -25,5 +26,5 @@ export const POST = api(async (req) => {
       return f instanceof File && f.size ? new Uint8Array(await f.arrayBuffer()) : null;
     }),
   );
-  return createWrittenItems(ownerId, metas, images);
+  return createWrittenItems(ownerId, metas, images, { allowSimilar: form.get("confirm") === "1" });
 });

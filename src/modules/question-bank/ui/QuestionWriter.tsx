@@ -229,7 +229,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
   const imageSrc = previewUrl ?? (keepImage && edit ? `${API_ITEM(edit.id)}/gorsel` : null);
 
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [msg, setMsg] = useState<Msg | null>(null);
   const [saved, setSaved] = useState<{ type: string; text: string }[]>([]);
   const stemRef = useRef<HTMLTextAreaElement>(null);
   const optRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -309,7 +309,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
   const problem = blocking({ type: d.type, stem: d.stem, options: d.options, hasImage: !!imageSrc });
   const missingAnswer = d.type === "FILL" ? fill.some((x) => !x.trim()) : d.type !== "OPEN" && !d.answer;
 
-  async function save(next: "new" | "back") {
+  async function save(next: "new" | "back", confirmed = false) {
     if (!common.subject.trim()) return setMsg({ ok: false, text: "Önce dersi seçin." });
     if (problem) return setMsg({ ok: false, text: problem + "." });
     const meta: WrittenMeta = { type: d.type, stem: d.stem, options: d.type === "MC" ? trimOptions(d.options) : undefined, answer: d.type === "FILL" && fill.every((x) => !x.trim()) ? "" : answerValue, explanation: d.explanation, ...tagsOf(common) };
@@ -325,10 +325,13 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
     } else {
       fd.set("meta", JSON.stringify([meta]));
       if (image) fd.set("image_0", image);
+      if (confirmed) fd.set("confirm", "1");
       res = await fetch(API_NEW, { method: "POST", body: fd });
     }
     const json = await res.json().catch(() => ({}));
     setBusy(false);
+    // Havuzda aynısı var: kullanıcı karar verir (yine de kaydet / vazgeç)
+    if (!res.ok && json.confirm) return setMsg({ ok: false, text: json.error, confirm: () => save(next, true) });
     if (!res.ok) return setMsg({ ok: false, text: json.error ?? "Kaydedilemedi." });
     if (edit) {
       router.push("/kurum/soru-havuzu");
@@ -492,7 +495,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
             </>
           )}
         </div>
-        {msg && <p className={`mt-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`} role="status">{msg.text}</p>}
+        {msg && <Message msg={msg} busy={busy} onCancel={() => setMsg(null)} />}
       </section>
 
       <section className="min-w-0 lg:sticky lg:top-4 lg:self-start">
@@ -541,7 +544,7 @@ function PasteSplitter({ common }: { common: Common }) {
   const [text, setText] = useState("");
   const [over, setOver] = useState<Record<string, Override>>({});
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [msg, setMsg] = useState<Msg | null>(null);
   const parsed = useMemo(() => splitPasted(text), [text]);
 
   const drafts = parsed.map((q, i) => {
@@ -558,7 +561,8 @@ function PasteSplitter({ common }: { common: Common }) {
   const counts = TYPE_ORDER.map((t) => [t, active.filter((d) => d.type === t).length] as const).filter(([, n]) => n);
   const setO = (k: string, p: Override) => setOver((m) => ({ ...m, [k]: { ...m[k], ...p } }));
 
-  async function saveAll() {
+  /** from / doneBefore: "Yine de kaydet" denince kaldığı gruptan devam eder (önceki gruplar kaydedilmiştir). */
+  async function saveAll(confirmed = false, from = 0, doneBefore = 0) {
     if (!common.subject.trim()) return setMsg({ ok: false, text: "Önce dersi seçin." });
     if (!active.length) return setMsg({ ok: false, text: "Kaydedilecek soru yok." });
     if (bad.length) return setMsg({ ok: false, text: `${bad.length} soruda düzeltilmesi gereken sorun var; düzeltin ya da çıkarın.` });
@@ -569,16 +573,20 @@ function PasteSplitter({ common }: { common: Common }) {
       const fillOk = d.type === "FILL" && splitFill(d.answer).length === blanks;
       return { type: d.type, stem: d.stem, options: d.type === "MC" ? d.options : undefined, answer: d.type === "FILL" && !fillOk ? "" : d.answer, explanation: d.explanation, ...tagsOf(common) };
     });
-    let done = 0;
-    for (let i = 0; i < metas.length; i += LIMITS.batch) {
+    let done = doneBefore;
+    for (let i = from; i < metas.length; i += LIMITS.batch) {
       const fd = new FormData();
       fd.set("meta", JSON.stringify(metas.slice(i, i + LIMITS.batch)));
+      if (confirmed && i === from) fd.set("confirm", "1");
       const res = await fetch(API_NEW, { method: "POST", body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setBusy(false);
-        const err = String(json.error ?? "Kaydedilemedi.").replace(/^(\d+)\. soru/, (_, n) => `${Number(n) + i}. soru`);
-        return setMsg({ ok: false, text: done ? `${done} soru kaydedildi; sonrakiler kaydedilemedi: ${err}` : err });
+        const err = String(json.error ?? "Kaydedilemedi.").replace(/(\d+)\. soru/g, (_, n) => `${Number(n) + i}. soru`);
+        const text = done ? `${done} soru kaydedildi; sonrakiler kaydedilemedi: ${err}` : err;
+        const at = i;
+        const saved = done;
+        return setMsg({ ok: false, text, confirm: json.confirm ? () => saveAll(true, at, saved) : undefined });
       }
       done += json.created ?? 0;
     }
@@ -649,10 +657,10 @@ function PasteSplitter({ common }: { common: Common }) {
           </ol>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button className="btn-primary" disabled={busy || !active.length} onClick={saveAll}>{busy ? "Kaydediliyor…" : `${active.length || ""} soruyu havuza kaydet`.trim()}</button>
+          <button className="btn-primary" disabled={busy || !active.length} onClick={() => saveAll()}>{busy ? "Kaydediliyor…" : `${active.length || ""} soruyu havuza kaydet`.trim()}</button>
           {msg?.ok && <Link href="/kurum/soru-havuzu" className="text-[13px] text-lead hover:text-graphite">Havuzda gör ›</Link>}
         </div>
-        {msg && <p className={`mt-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`} role="status">{msg.text}</p>}
+        {msg && <Message msg={msg} busy={busy} onCancel={() => setMsg(null)} />}
         <p className="mt-2 text-xs text-lead">Şekilli soruları kaydettikten sonra havuzda “Düzenle” ile görsel ekleyebilirsiniz.</p>
       </section>
     </div>
@@ -693,4 +701,20 @@ function DraftAnswer({ d, onChange }: { d: { type: QuestionType; answer: string;
     );
   }
   return d.answer ? <p dir="auto" className="mt-1.5 text-xs text-lead">Örnek cevap: {d.answer}</p> : null;
+}
+
+/** Kayıt iletisi. confirm varsa (havuzda aynısı var) karar düğmeleriyle uyarı olarak gösterilir. */
+type Msg = { ok: boolean; text: string; confirm?: () => void };
+
+function Message({ msg, busy, onCancel }: { msg: Msg; busy: boolean; onCancel: () => void }) {
+  if (!msg.confirm) return <p className={`mt-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`} role="status">{msg.text}</p>;
+  return (
+    <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+      <p>{msg.text}</p>
+      <div className="mt-2 flex gap-2">
+        <button type="button" className="btn-secondary px-3 py-1 text-xs" disabled={busy} onClick={msg.confirm}>Yine de kaydet</button>
+        <button type="button" className="px-2 py-1 text-xs text-lead hover:text-graphite" disabled={busy} onClick={onCancel}>Vazgeç</button>
+      </div>
+    </div>
+  );
 }

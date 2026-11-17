@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/shared/db";
-import { invalid, notFound } from "@/shared/errors";
+import { invalid, needsConfirm, notFound } from "@/shared/errors";
 import { getFile, putFile, removeFiles, sniff } from "@/shared/storage";
 import { normalizeLevel } from "@/shared/cognitive";
 import { matchOutcome, subjectKey, topicKey, type OutcomeRow } from "@/modules/curriculum";
@@ -28,7 +28,9 @@ import {
   type QuestionType,
   type WrittenMeta,
   isBasis,
+  SIMILAR_KINDS,
 } from "../index";
+import { similarForDrafts } from "./similar";
 
 const ORIGINS = new Set(["MANUAL", "AUTO", "AI"]);
 const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
@@ -233,8 +235,16 @@ async function storeImages(ownerId: string, images: (Uint8Array | null)[]) {
   return keys;
 }
 
-/** Kaydı kimin yazdığı: AI (MCP üzerinden bir yapay zekâ agent'ı) ise soru onay bekler. */
-export type WrittenBy = { origin?: "MANUAL" | "AI" };
+/**
+ * Kaydı kimin yazdığı: AI (MCP üzerinden bir yapay zekâ agent'ı) ise soru onay bekler.
+ * allowSimilar: elle yazmada havuzdaki bir soruyla "Aynı soru" çıkarsa kayıt onay ister (409 + confirm); kullanıcı onaylarsa true gelir.
+ */
+export type WrittenBy = { origin?: "MANUAL" | "AI"; allowSimilar?: boolean };
+
+const short = (s: string, n = 70) => {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > n ? `${t.slice(0, n - 1)}…` : t || "(görselli soru)";
+};
 
 /**
  * Elle yazılan ya da yapıştırılıp bölünen soruları kaydeder. images[i]: i. sorunun isteğe bağlı görseli (yoksa null).
@@ -273,14 +283,35 @@ export async function createWrittenItems(ownerId: string, metas: unknown, images
       throw e;
     }
   });
+  // Tekrar kontrolü: elle yazmada "Aynı soru" kaydı durdurur (kullanıcı onaylarsa geçer); yapay zekâda kaydedilir, sonuçta bildirilir
+  const sim = await similarForDrafts(ownerId, rows.map((r) => ({ subject: r.subject, content: parseContent(r.content) ?? { stem: "" }, type: r.type, answer: r.answer })));
+  const nth = (i: number) => (many ? `${i + 1}. soru` : "Bu soru");
+  if (!ai && !by.allowSimilar) {
+    const same = sim.flatMap((x, i) => {
+      const b = x.bank.find((h) => h.kind === "same");
+      const d = x.drafts.find((h) => h.kind === "same" && h.index < i);
+      const where = (h: { pending: boolean; archived: boolean }) => (h.archived ? " (arşivde)" : h.pending ? " (onay bekliyor)" : "");
+      return b ? [`${nth(i)} havuzdaki “${short(b.stem)}”${where(b)} sorusuyla aynı görünüyor.`] : d ? [`${nth(i)}, ${d.index + 1}. soruyla aynı görünüyor.`] : [];
+    });
+    if (same.length) throw needsConfirm([...same.slice(0, 3), same.length > 3 ? `ve ${same.length - 3} soru daha.` : ""].filter(Boolean).join(" "));
+  }
   const keys = await storeImages(ownerId, rows.map((_, i) => images[i] ?? null));
+  let ids: string[];
   try {
-    await prisma.questionItem.createMany({ data: rows.map((r, i) => ({ ...r, ownerId, sourceId: null, imageKey: keys[i] })) });
+    ids = await prisma.$transaction(rows.map((r, i) => prisma.questionItem.create({ data: { ...r, ownerId, sourceId: null, imageKey: keys[i] }, select: { id: true } }))).then((x) => x.map((r) => r.id));
   } catch (e) {
     await removeFiles(ownerId, keys);
     throw e;
   }
-  return { created: rows.length, pendingReview: ai };
+  // Benzerler: havuzdakiler ve aynı gönderimdeki diğer sorular (kayıt sonrası kimlikleriyle)
+  const similar = sim.flatMap((x, i) => {
+    const list = [
+      ...x.bank.map((h) => ({ id: h.id, kind: h.kind, stem: short(h.stem, 120), pending: h.pending, archived: h.archived })),
+      ...x.drafts.map((d) => ({ id: ids[d.index], kind: d.kind, stem: short(rows[d.index].text, 120), pending: ai, archived: false })),
+    ];
+    return list.length ? [{ question: i + 1, id: ids[i], similar: list.map((h) => ({ ...h, label: SIMILAR_KINDS[h.kind].label })) }] : [];
+  });
+  return { created: rows.length, pendingReview: ai, ids, similar };
 }
 
 /**

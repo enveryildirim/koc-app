@@ -3,3 +3,4 @@ import "server-only";
 export * from "./internal/sources";
 export * from "./internal/items";
 export * from "./internal/for-exams";
+export * from "./internal/similar";

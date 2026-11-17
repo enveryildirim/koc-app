@@ -21,7 +21,7 @@ const NEEDED = `What you need from the user
 
 const BEFORE = `Before saving
 - Call get_bank_context with subject and grade; use subject, grade and topic names exactly as returned, and follow the institution rules it returns.
-- Use search_questions to spot duplicates. Tell the user about them; don't silently skip or save twice.
+- Check each question for duplicates with search_questions similarTo (stem, options, subject): it finds the same question even when worded differently. 'same' means a likely duplicate: tell the user and don't save it unless they want to; 'sibling' (same pattern, other numbers) is fine when variants are wanted. add_questions checks again and reports matches in 'similar'.
 - Write questions in the language the user asks for; if they don't say, the language of the material or the curriculum. These rules are in English; that is not a reason to write questions in English.`;
 
 const BASIS = `Record how each question was made (basis)

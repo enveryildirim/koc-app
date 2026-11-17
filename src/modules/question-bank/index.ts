@@ -2,6 +2,7 @@
 export * from "./types";
 export { detectQuestions, type DetectOptions } from "./detect";
 export * from "./written";
+export { SIMILAR_KINDS, SIMILARITY, findSimilar, type SimilarKind, type SimilarHit, type SimDoc } from "./similarity";
 export { splitPasted, PASTE_SAMPLE, type DraftQuestion } from "./paste";
 
 export const DIFFICULTY: Record<number, string> = { 1: "Kolay", 2: "Orta", 3: "Zor" };

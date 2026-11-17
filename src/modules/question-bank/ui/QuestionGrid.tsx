@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ANSWERS, answerLabel, BASIS, DIFFICULTY, isBasis, GRADES, OPTION_LETTERS, QUESTION_TYPES, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType } from "../index";
+import { ANSWERS, answerLabel, BASIS, DIFFICULTY, isBasis, GRADES, OPTION_LETTERS, QUESTION_TYPES, SIMILAR_KINDS, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType, type SimilarKind } from "../index";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 import Drawer from "@/shared/ui/Drawer";
 import QuestionView from "./QuestionView";
@@ -45,6 +45,7 @@ export default function QuestionGrid({
   subjects,
   topics,
   usage = {},
+  similar = {},
   archive = false,
   review = false,
 }: {
@@ -53,6 +54,8 @@ export default function QuestionGrid({
   topics: Record<string, string[]>;
   /** Sayfadaki soruların kullanım geçmişi (kullanılmamışlar yok) */
   usage?: Record<string, BankUsage>;
+  /** Sayfadaki soruların benzer soru sayıları (benzeri olmayanlar yok) */
+  similar?: Record<string, { same: number; sibling: number }>;
   /** Arşiv görünümü: toplu işlem "Arşivden çıkar" olur */
   archive?: boolean;
   /** Onay bekleyenler görünümü: toplu işlemlerin başında "Onayla" olur */
@@ -204,6 +207,7 @@ export default function QuestionGrid({
                     YZ{isBasis(q.basis) ? ` · ${BASIS[q.basis].label}` : ""}
                   </span>
                 )}
+                <SimilarBadge s={similar[q.id]} onOpen={() => setDetail(q.id)} />
                 {q.type !== "MC" && <span className="badge shrink-0 bg-mist text-graphite" title={QUESTION_TYPES[q.type as QuestionType]?.label}>{QUESTION_TYPES[q.type as QuestionType]?.short ?? q.type}</span>}
                 <span className="min-w-0 truncate">
                   <b className="font-semibold">{q.subject}</b>
@@ -338,6 +342,7 @@ function UsageDetail({
         </label>
         <button type="button" className="btn-primary py-1" disabled={busy || !dirty} onClick={() => onNotes({ explanation, sourceNote })}>Kaydet</button>
       </div>
+      {q.content && <SimilarList id={q.id} />}
       <h3 className="text-[13px] font-semibold">Kullanım geçmişi</h3>
       {q.outcome && (q.outcome.code || q.outcome.text) && (
         <p className="text-[13px]">
@@ -445,6 +450,77 @@ function AnswerControl({ q, busy, onSet }: { q: GridItem; busy: boolean; onSet: 
           {a}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Kart rozeti: havuzda aynısı (önce) ya da kardeşi var; tıklanınca ayrıntı paneli açılır. */
+function SimilarBadge({ s, onOpen }: { s?: { same: number; sibling: number }; onOpen: () => void }) {
+  if (!s || (!s.same && !s.sibling)) return null;
+  const same = s.same > 0;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`badge shrink-0 ${same ? "bg-amber-100 text-amber-900 hover:bg-amber-200" : "bg-mist text-graphite hover:bg-rule"}`}
+      title={same ? `Olası tekrar. ${SIMILAR_KINDS.same.hint}` : SIMILAR_KINDS.sibling.hint}
+    >
+      {same ? "Aynısı var" : `Kardeşi var${s.sibling > 1 ? ` (${s.sibling})` : ""}`}
+    </button>
+  );
+}
+
+type SimilarRow = {
+  id: string;
+  kind: SimilarKind;
+  stem: string;
+  options?: string[];
+  answer: string;
+  type: string;
+  topic: string;
+  grade: string;
+  hasImage: boolean;
+  pending: boolean;
+  archived: boolean;
+};
+
+/** Ayrıntı panelinde benzer sorular (açılınca yüklenir). */
+function SimilarList({ id }: { id: string }) {
+  const [rows, setRows] = useState<SimilarRow[] | null>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetch(`${API}/${id}/benzer`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((j) => live && setRows(j.similar ?? []))
+      .catch(() => live && setErr(true));
+    return () => {
+      live = false;
+    };
+  }, [id]);
+  if (err) return <p className="text-xs text-red-700">Benzer sorular yüklenemedi.</p>;
+  if (!rows) return <p className="text-xs text-lead">Benzer sorular aranıyor…</p>;
+  if (!rows.length) return null;
+  return (
+    <div className="space-y-2">
+      <h3 className="text-[13px] font-semibold">Benzer sorular</h3>
+      <ul className="space-y-2">
+        {rows.map((r) => (
+          <li key={r.id} className="rounded-md ring-1 ring-rule">
+            <div className="flex items-center gap-2 border-b border-rule/60 px-2.5 py-1 text-xs text-lead">
+              <span className={`badge shrink-0 ${r.kind === "same" ? "bg-amber-100 text-amber-900" : "bg-mist text-graphite"}`} title={SIMILAR_KINDS[r.kind].hint}>{SIMILAR_KINDS[r.kind].label}</span>
+              {r.pending && <span>onay bekliyor</span>}
+              {r.archived && <span>arşivde</span>}
+              <span className="ml-auto truncate">{[r.topic, r.grade ? (/^\d+$/.test(r.grade) ? `${r.grade}. sınıf` : r.grade) : ""].filter(Boolean).join(" · ")}</span>
+              <Link href={`/kurum/soru-havuzu/yaz?id=${r.id}`} className="shrink-0 font-semibold text-graphite hover:underline">Düzenle</Link>
+            </div>
+            <div className="max-h-48 overflow-hidden bg-white p-2.5 text-black">
+              <QuestionView type={r.type} content={{ stem: r.stem, options: r.options }} imageSrc={r.hasImage ? `${API}/${r.id}/gorsel` : null} answer={r.answer} compact />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-lead">Aynı soru: olası tekrar, birini silin ya da arşive kaldırın. Kardeş soru: aynı kalıp, başka sayılar; aynı denemede birlikte kullanmayın.</p>
     </div>
   );
 }

@@ -70,7 +70,7 @@ async function main() {
   // Imported after chdir / env so modules resolve paths and DATABASE_URL correctly.
   const { resolveLocalOwner, institutionName } = await import("@/modules/identity/server");
   const qb = await import("@/modules/question-bank");
-  const { bankSummary, createWrittenItems, listItems } = await import("@/modules/question-bank/server");
+  const { bankSummary, createWrittenItems, listItems, similarForDrafts } = await import("@/modules/question-bank/server");
   const { curriculumOutcomes } = await import("@/modules/curriculum/server");
   const { mergeSubjectNames, normGrade, subjectKey } = await import("@/modules/curriculum");
   const { listCourses } = await import("@/modules/schedule/server");
@@ -157,8 +157,19 @@ async function main() {
     {
       title: "Search the question bank",
       description:
-        "Searches approved questions in the bank (newest first). Use it to avoid duplicates and to match the institution's style before writing new questions.",
+        "Two modes. (1) similarTo: give a draft question (and subject); returns bank questions that are the same question (kind 'same': likely duplicate) " +
+        "or a sibling (kind 'sibling': same pattern, different numbers), including pending and archived ones. Use it before saving to catch duplicates even when the wording differs. " +
+        "(2) query/subject/topic/type: keyword search in approved questions (newest first), to see what exists and match the institution's style.",
       inputSchema: {
+        similarTo: z
+          .object({
+            stem: z.string().min(1),
+            options: z.array(z.string()).optional(),
+            type: z.enum(["MC", "TF", "FILL", "OPEN"]).optional(),
+            answer: z.string().optional().describe("With type: questions with a different correct answer count as siblings, not duplicates"),
+          })
+          .optional()
+          .describe("Draft question to compare against the bank (needs subject). Text-only: figures are not compared"),
         query: z.string().optional().describe("Words to search in subject, topic, question text and source note"),
         subject: z.string().optional(),
         topic: z.string().optional(),
@@ -166,8 +177,29 @@ async function main() {
         limit: z.number().int().min(1).max(50).default(20),
       },
     },
-    ({ query, subject, topic, type, limit }) =>
+    ({ similarTo, query, subject, topic, type, limit }) =>
       run(async () => {
+        if (similarTo) {
+          if (!subject) throw new Error("similarTo needs subject.");
+          const [r] = await similarForDrafts(await ownerId(), [{ subject, content: { stem: similarTo.stem, options: similarTo.options }, type: similarTo.type, answer: similarTo.answer }], { top: Math.min(limit, 10) });
+          return {
+            similar: r.bank.map((q) => ({
+              id: q.id,
+              kind: q.kind,
+              label: qb.SIMILAR_KINDS[q.kind].label,
+              status: q.archived ? "archived" : q.pending ? "pending review" : "approved",
+              type: q.type,
+              topic: q.topic,
+              grade: q.grade,
+              stem: q.stem,
+              options: q.options,
+              answer: q.answer,
+            })),
+            note: r.bank.length
+              ? "'same' is a likely duplicate: tell the user and don't save it unless they want to. 'sibling' is fine if the user wants variants; mention it."
+              : "No similar question found (text comparison only; figures are not compared).",
+          };
+        }
         const { total, items } = await listItems(await ownerId(), { q: query, subject, topic, type });
         return {
           total,
@@ -256,7 +288,11 @@ async function main() {
           byBasis,
           withImage: images.filter(Boolean).length,
           reviewUrl,
-          next: "Report to the user: how many were saved (by basis), duplicates, every doubt you put in agentNote, and reviewUrl. The questions are not approved yet.",
+          next:
+            "Report to the user: how many were saved (by basis), every doubt you put in agentNote, and reviewUrl. The questions are not approved yet. " +
+            (r.similar.length
+              ? "'similar' lists saved questions that match a bank question or another question in this batch: tell the user about each 'same' (likely duplicate; the teacher sees it flagged while reviewing) and mention 'sibling' ones."
+              : "No duplicates were found."),
         };
       }),
   );

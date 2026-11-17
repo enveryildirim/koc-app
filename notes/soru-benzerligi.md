@@ -1,6 +1,6 @@
 # Soru benzerliği (fikir)
 
-Durum: fikir aşamasında. Kod yazılmadı. (11 Kasım 2026, MCP çalışması sırasında konuşuldu.)
+Durum: 6. bölümdeki 1. adım (tekrarı önleme ve kardeş soru) yapıldı, 17 Kasım 2026. Uygulama ve ölçüm: 9. bölüm. (Fikir 11 Kasım 2026'da MCP çalışması sırasında konuşuldu.)
 
 ---
 
@@ -123,3 +123,25 @@ Ne zaman düşünülür: Öğretmen kararları binlerle ölçüldüğünde ve ha
 1. 50 Türkçe soru çifti elle etiketlenir.
 2. Jev ve kullanılan agent aynı çiftlerle ölçülür, sonuçlar karşılaştırılır.
 3. Maliyet önemsiz; asıl soru Türkçede ne kadar doğru çalıştığı.
+
+## 9. Uygulama (17 Kasım 2026)
+
+**Yöntem** (`question-bank/similarity.ts`, saf hesap):
+- Metin benzerliği: TF-IDF + kosinüs; sayılar `#` ile maskeli. Terimler: harf üçlüleri, kısa adlar ve simgeler (`ab`, `x`, `⊥`, `√`, `²`), simge ikilileri ve kelime içermeyen üçlüler (`ad ] ⊥`). Şıklar yarım ağırlık. IDF dersin sorularından.
+- Sayı örtüşmesi: sayı çoklukümelerinin Jaccard'ı.
+- Cevap: doğru cevabın içeriği (çoktan seçmelide şıkkın metni; açık uçluda karşılaştırılmaz).
+- Etiket: metin ≥ 0,8 ve sayılar ≥ 0,6 ve cevap aynı → **Aynı soru**; metin ≥ 0,8, sayılar ya da cevap farklı → **Kardeş soru**.
+
+**Ölçüm (dev.db):**
+- İlk deneme (harf üçlüsü, simgeler atılmış): "en sade hali hangisidir" kalıbını taşıyan iki farklı soru 0,93 aldı; geometride yalnızca sayıları farklı ama şekli farklı sorular 0,99'a çıktı. Simgeler terim olunca ilk çift 0,64'e, farklı şekilli geometri çiftleri 0,74 ve altına indi.
+- Eşiği geçen gerçek çiftler: birim çember soruları (0,84–0,96) ve aynı kosinüs kalıbı (1,0); hepsi kardeş, doğru.
+- Sentetik: 12 sorunun kopyası, kelimesi değişmiş hâli ve sayısı değişmiş hâli: 36/36 doğru soruyu buldu ve doğru etiketledi.
+- Şıkları karıştırılmış kopya "Aynı soru" (cevap harfi farklı, içerik aynı). Olumsuz kökle yeniden yazılmış soru (farklı cevap) aynı sayılmaz.
+
+**Nerede kullanılıyor:**
+- Elle yazma / yapıştır-böl: "Aynı soru" varsa kayıt durur, "Yine de kaydet / Vazgeç" (409 + confirm). Kardeş soru kaydı durdurmaz.
+- Havuz kartı: "Aynısı var" / "Kardeşi var (n)" rozeti; soru ayrıntısında "Benzer sorular" listesi (`GET sorular/[id]/benzer`).
+- MCP: `search_questions` `similarTo` (taslak soru → aynı / kardeş, onay bekleyen ve arşivdekiler dahil); `add_questions` yanıtında `similar` (havuz ve aynı gönderimdeki diğer sorular). Kayıt reddedilmez: öğretmen onay ekranında rozeti görür.
+- Havuz: aynı dersin metinli soruları (ders yazılışı gözetilmez, sınıf düzeyiyle daraltılmaz). Kesilmiş (yalnızca görsel) sorular karşılaştırılmaz.
+
+**Sonraki adımlar:** deneme kurarken aynı denemeye kardeş/aynı soru uyarısı; yanlış yapılan sorunun kardeşini önermek (6. bölüm, 2. adım); havuz büyüyünce benzerlik sonuçlarını önbelleğe almak (şu an her sayfa açılışında dersin tüm soruları üzerinden hesaplanıyor; 113 soruda ~0,2 s).
