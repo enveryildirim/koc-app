@@ -33,7 +33,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ i
     <div>
       <PageHeader
         title={edit ? "Soruyu düzenle" : "Soru yaz"}
-        sub={edit ? undefined : "Tek tek yazın ya da Word'deki soruları yapıştırıp bölün. Kesilecek PDF ya da fotoğraf için Kaynaklar sekmesi."}
+        sub={edit ? undefined : "Tek tek yazın ya da Word'deki soruları yapıştırıp bölün. PDF ya da fotoğraftan kesmek için Soru havuzu → Kaynaktan soru kes."}
         back={{ href: "/kurum/soru-havuzu", label: "Soru havuzu" }}
       />
       <QuestionWriter subjects={subjects} topics={mergeTopicSuggestions(curTopics, summary.topics)} grades={grades} outcomes={cur} edit={edit} initialMode={sp.mod === "yapistir" ? "yapistir" : "tek"} />

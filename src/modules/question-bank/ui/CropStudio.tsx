@@ -57,7 +57,7 @@ export default function CropStudio(props: {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [sensitivity, setSensitivity] = useState(3);
   const [autoDetect, setAutoDetect] = useState(true);
-  const [defaults, setDefaults] = useState({ subject: "", topic: "", grade: "", difficulty: 2, level: "" });
+  const [defaults, setDefaults] = useState({ subject: "", topic: "", grade: "", difficulty: 2, level: "", sourceNote: "" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -254,6 +254,8 @@ export default function CropStudio(props: {
       grade: defaults.grade,
       difficulty: defaults.difficulty,
       level: defaults.level,
+      // Kaynak notu boşsa kartta dosya adı ve sayfa görünür; not yazılırsa sayfa numarası eklenir
+      sourceNote: defaults.sourceNote.trim() ? `${defaults.sourceNote.trim()}, s. ${page}` : "",
       answer: b.answer,
       origin: b.origin,
     }));
@@ -394,6 +396,10 @@ export default function CropStudio(props: {
                   <option key={l} value={l}>{l}</option>
                 ))}
               </select>
+            </label>
+            <label className="col-span-full">
+              <span className="label">Kaynak notu <span className="font-normal text-lead">(isteğe bağlı; sayfa numarası eklenir)</span></span>
+              <input className="input" maxLength={180} value={defaults.sourceNote} onChange={(e) => setDefaults({ ...defaults, sourceNote: e.target.value })} placeholder="Ör. X Yayınları 9. Sınıf Soru Bankası, 2025" />
             </label>
           </div>
           <datalist id="qb-subjects">{props.subjects.map((s) => <option key={s} value={s} />)}</datalist>

@@ -44,6 +44,7 @@ export async function createExamFromBank(ownerId: string, body: Record<string, u
   const found = new Map((await bankItemsByIds(ownerId, all)).map((q) => [q.id, q]));
   if (found.size !== all.length) throw invalid("Seçilen sorulardan bazıları havuzda bulunamadı. Sayfayı yenileyin.");
   if ([...found.values()].some((q) => q.archived)) throw invalid("Seçilen sorulardan bazıları arşive kaldırılmış. Sayfayı yenileyin.");
+  if ([...found.values()].some((q) => q.pending)) throw invalid("Seçilen sorulardan bazıları henüz onaylanmamış. Soru havuzunda onaylayın.");
   const allowed = LETTERS.slice(0, choicesFor(type));
 
   const sections: ExamSection[] = filled.map((s) => {
@@ -123,7 +124,7 @@ export async function bookletOf(ownerId: string, secs: ExamSection[], booklet: s
       name: s.name,
       questions: order.map((i) => {
         const q = found.get(items[i]);
-        return q ? { id: q.id, widthMm: widthOf(q.crop), type: q.type, content: q.content, hasImage: q.hasImage, answer: q.answer } : null;
+        return q ? { id: q.id, widthMm: widthOf(q.crop), type: q.type, content: q.content, hasImage: q.hasImage, answer: q.answer, explanation: q.explanation } : null;
       }),
     };
   });

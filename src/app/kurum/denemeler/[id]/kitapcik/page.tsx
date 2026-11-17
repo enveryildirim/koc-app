@@ -12,12 +12,13 @@ import { Empty } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ k?: string; sutun?: string; cevap?: string; optik?: string }>;
+type SP = Promise<{ k?: string; sutun?: string; cevap?: string; optik?: string; cozum?: string }>;
 
 /**
  * Havuzdan kurulan denemenin yazdırılabilir soru kitapçığı (A / B, bir ya da iki sütun). Kesilmiş sorular görsel, yazılanlar metin olarak basılır.
  * `optik=1`: optik form soruların arkasına eklenir (tek yazdırmada sorular + form). Form okunabilsin diye kendi sayfası kenar boşluksuz
  * basılır (CSS adlandırılmış sayfa `@page omr`); soru sayfaları kitapçığın kenar boşluğunu korur. Cevap anahtarı açıksa en sondadır.
+ * `cozum=1`: çözümü yazılmış soruların çözümleri, kitapçık sırasıyla, en sona ("Çözümler"); düğme yalnızca çözümlü soru varsa görünür.
  */
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const ownerId = await requireOwner();
@@ -34,8 +35,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const sections = await bookletOf(ownerId, exam.secs, booklet);
   const hasItems = exam.secs.some((s) => s.items?.length);
   const missing = sections.reduce((n, s) => n + s.questions.filter((q) => !q).length, 0);
-  const link = (p: Partial<Record<"k" | "sutun" | "cevap" | "optik", string>>) => {
-    const q = new URLSearchParams({ k: booklet, sutun: String(cols), cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", ...p });
+  const solvable = sections.some((s) => s.questions.some((q) => q?.explanation));
+  const withSol = sp.cozum === "1" && solvable;
+  const link = (p: Partial<Record<"k" | "sutun" | "cevap" | "optik" | "cozum", string>>) => {
+    const q = new URLSearchParams({ k: booklet, sutun: String(cols), cevap: withKey ? "1" : "0", optik: withForm ? "1" : "0", cozum: withSol ? "1" : "0", ...p });
     return `?${q}`;
   };
   const pill = (on: boolean) => `rounded-md px-2.5 py-1 text-[13px] ${on ? "bg-graphite font-semibold text-surface" : "text-lead ring-1 ring-rule hover:text-graphite"}`;
@@ -64,6 +67,31 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 });
               })()}
             </section>
+  );
+
+  // Çözümler: kitapçıktaki soru numarasıyla, yalnızca çözümü yazılmış sorular
+  const solSection = (() => {
+    let k = 0;
+    const rows = sections.flatMap((s) => s.questions.map((q) => ({ no: ++k, text: q?.explanation ?? "" }))).filter((r) => r.text);
+    return (
+      <section style={{ breakBefore: "page" }} className="mt-8 print:mt-0">
+        <h2 className="mb-3 bg-black px-2 py-1 text-sm font-bold text-white [print-color-adjust:exact]">Çözümler{exam.letters.length > 1 ? ` (${booklet} kitapçığı)` : ""}</h2>
+        <ol className="space-y-2 text-[13px]">
+          {rows.map((r) => (
+            <li key={r.no} className="flex gap-1.5" style={{ breakInside: "avoid" }}>
+              <b className="w-6 shrink-0 text-right">{r.no}.</b>
+              <span dir="auto" className="min-w-0 whitespace-pre-wrap">{r.text}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
+  })();
+  const tail = (
+    <>
+      {withKey && keySection}
+      {withSol && solSection}
+    </>
   );
 
   return (
@@ -96,6 +124,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <Link href={link({ cevap: withKey ? "0" : "1" })} className={pill(withKey)} title={withForm ? "Optik formdan sonra, en son sayfaya cevap anahtarı ekler" : "Son sayfaya cevap anahtarı ekler"}>
           Cevap anahtarı sayfası
         </Link>
+        {solvable && (
+          <Link href={link({ cozum: withSol ? "0" : "1" })} className={pill(withSol)} title="Çözümü yazılmış soruların çözümlerini en sona ekler">
+            Çözümler
+          </Link>
+        )}
         <span className="ml-auto flex items-center gap-2">
           <Link href={`/kurum/denemeler/${id}?tab=anahtar`} className="text-[13px] text-lead hover:text-graphite">Cevap anahtarı</Link>
           {!worksheet && !withForm && <Link href={`/kurum/denemeler/${id}/form`} target="_blank" className="btn-secondary">Optik formu yazdır</Link>}
@@ -157,7 +190,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </div>
             </section>
           ))}
-          {withKey && !withForm && keySection}
+          {!withForm && tail}
         </article>
       )}
       {hasItems && withForm && (
@@ -166,9 +199,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <div className="omr-sheet mx-auto mt-8 bg-white shadow-lg ring-1 ring-rule" style={{ width: "210mm", height: "297mm" }}>
             <FormSvg info={examFormSpec(exam.name, exam.type, exam.secs, exam.letters, { studentNumber: exam.omrStudentNo })} style={{ width: "210mm", height: "297mm", display: "block" }} />
           </div>
-          {withKey && (
+          {(withKey || withSol) && (
             <article className="booklet mx-auto mt-8 bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule print:mt-0" style={{ width: "210mm", breakBefore: "page" }}>
-              {keySection}
+              {tail}
             </article>
           )}
         </>

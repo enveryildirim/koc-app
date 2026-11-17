@@ -384,11 +384,24 @@ model QuestionItem {
   answer     String          @default("")
   /// Sorunun metni (ileride OCR / yapay zekâ ile doldurulur; aramada kullanılır)
   text       String          @default("")
-  /// Arama anahtarı: ders + konu + metin, Türkçe küçük harf, şapkasız, ı = i (question-bank > searchKey). SQLite LIKE Türkçe harflerde
+  /// Çözüm / açıklama (isteğe bağlı, düz metin): kitapçıkta "Çözümler" sayfasına basılır; öğrenciye soruyla birlikte gösterilmez
+  explanation String         @default("")
+  /// Kaynak notu (isteğe bağlı): kitap / yayın / sayfa / yıl ya da "kendi sorumuz". Telif takibi ve arama için; kesilmiş soruda
+  /// kaynak dosyanın adı ayrıca bilinir
+  sourceNote String          @default("")
+  /// Arama anahtarı: ders + konu + metin + kaynak notu, Türkçe küçük harf, şapkasız, ı = i (question-bank > searchKey). SQLite LIKE Türkçe harflerde
   /// büyük/küçük harf ayırdığı için arama bu alanda yapılır
   searchText String          @default("")
   /// Kutunun nasıl bulunduğu: MANUAL | AUTO (sezgisel) | AI
   origin     String          @default("MANUAL")
+  /// Onay bekliyor: yapay zekâ (MCP) ile eklenen soru, öğretmen onaylayana kadar havuz listesinde ve sınav kurarken görünmez
+  /// ("Onay bekleyen" süzgecinde listelenir)
+  needsReview Boolean        @default(false)
+  /// Yapay zekâ agent'ının notu: emin olmadığı noktalar (öğretmen onaylarken okur; onaydan sonra soru ayrıntısında kalır)
+  agentNote  String          @default("")
+  /// Yapay zekâ sorusunun nasıl yapıldığı: transcribed (kaynaktan olduğu gibi aktarıldı) | adapted (kaynaktan uyarlandı) |
+  /// original (agent yazdı). Elle girilen soruda boş. Tanımlar: question-bank > BASIS
+  basis      String          @default("")
   createdAt  DateTime        @default(now())
 
   @@index([ownerId, subject])

@@ -22,7 +22,7 @@ import {
 } from "../index";
 import QuestionView from "./QuestionView";
 
-type Common = { subject: string; topic: string; grade: string; difficulty: number; level: string; optionCount: number };
+type Common = { subject: string; topic: string; grade: string; difficulty: number; level: string; optionCount: number; sourceNote: string };
 export type EditItem = {
   id: string;
   type: string;
@@ -35,12 +35,14 @@ export type EditItem = {
   difficulty: number;
   level: string;
   hasImage: boolean;
+  explanation: string;
+  sourceNote: string;
 };
 
 const COMMON_KEY = "qb-writer-common";
 const API_NEW = "/api/kurum/soru-havuzu/yaz";
 const API_ITEM = (id: string) => `/api/kurum/soru-havuzu/sorular/${id}`;
-const DEFAULT_COMMON: Common = { subject: "", topic: "", grade: "", difficulty: 2, level: "", optionCount: 4 };
+const DEFAULT_COMMON: Common = { subject: "", topic: "", grade: "", difficulty: 2, level: "", optionCount: 4, sourceNote: "" };
 
 function loadCommon(): Common {
   try {
@@ -104,7 +106,7 @@ type Props = {
 /** Soru yazma: tek tek (önizlemeli) ya da metni yapıştırıp sorulara bölerek. Ortak etiketler (ders, düzey, konu…) hatırlanır. */
 export default function QuestionWriter({ subjects, topics, grades, outcomes = [], edit, initialMode = "tek" }: Props) {
   const [common, setCommonState] = useState<Common>(() =>
-    edit ? { ...DEFAULT_COMMON, subject: edit.subject, topic: edit.topic, grade: edit.grade, difficulty: edit.difficulty, level: edit.level } : DEFAULT_COMMON,
+    edit ? { ...DEFAULT_COMMON, subject: edit.subject, topic: edit.topic, grade: edit.grade, difficulty: edit.difficulty, level: edit.level, sourceNote: edit.sourceNote } : DEFAULT_COMMON,
   );
   useEffect(() => {
     if (!edit) setCommonState(loadCommon());
@@ -156,6 +158,10 @@ export default function QuestionWriter({ subjects, topics, grades, outcomes = []
             {COGNITIVE_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </label>
+        <label className="w-56">
+          <span className="text-xs text-lead">Kaynak <span className="text-lead/70">(isteğe bağlı)</span></span>
+          <input className="input" maxLength={200} value={common.sourceNote} onChange={(e) => setCommon({ sourceNote: e.target.value })} placeholder="Ör. X Yayınları, s. 42 · kendi sorumuz" />
+        </label>
         <datalist id="qw-subjects">{subjects.map((s) => <option key={s} value={s} />)}</datalist>
         <datalist id="qw-topics">{topicList.map((s) => <option key={s} value={s} />)}</datalist>
         <p className="w-full text-xs text-lead">
@@ -187,12 +193,12 @@ export default function QuestionWriter({ subjects, topics, grades, outcomes = []
   );
 }
 
-const tagsOf = (c: Common) => ({ subject: c.subject.trim(), topic: c.topic.trim(), grade: c.grade, difficulty: c.difficulty, level: c.level });
+const tagsOf = (c: Common) => ({ subject: c.subject.trim(), topic: c.topic.trim(), grade: c.grade, difficulty: c.difficulty, level: c.level, sourceNote: c.sourceNote.trim() });
 
 /* ------------------------------------------------------------------ Tek tek yaz */
 
-type Draft = { type: QuestionType; stem: string; options: string[]; answer: string; fill: string[] };
-const emptyDraft = (type: QuestionType, n: number): Draft => ({ type, stem: "", options: Array(n).fill(""), answer: "", fill: [] });
+type Draft = { type: QuestionType; stem: string; options: string[]; answer: string; fill: string[]; explanation: string };
+const emptyDraft = (type: QuestionType, n: number): Draft => ({ type, stem: "", options: Array(n).fill(""), answer: "", fill: [], explanation: "" });
 
 function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: (p: Partial<Common>) => void; edit?: EditItem | null }) {
   const router = useRouter();
@@ -204,6 +210,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
           options: edit.options.length ? edit.options : Array(4).fill(""),
           answer: edit.type === "FILL" ? "" : edit.answer,
           fill: edit.type === "FILL" ? splitFill(edit.answer) : [],
+          explanation: edit.explanation,
         }
       : emptyDraft("MC", 4),
   );
@@ -305,7 +312,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
   async function save(next: "new" | "back") {
     if (!common.subject.trim()) return setMsg({ ok: false, text: "Önce dersi seçin." });
     if (problem) return setMsg({ ok: false, text: problem + "." });
-    const meta: WrittenMeta = { type: d.type, stem: d.stem, options: d.type === "MC" ? trimOptions(d.options) : undefined, answer: d.type === "FILL" && fill.every((x) => !x.trim()) ? "" : answerValue, ...tagsOf(common) };
+    const meta: WrittenMeta = { type: d.type, stem: d.stem, options: d.type === "MC" ? trimOptions(d.options) : undefined, answer: d.type === "FILL" && fill.every((x) => !x.trim()) ? "" : answerValue, explanation: d.explanation, ...tagsOf(common) };
     setBusy(true);
     setMsg(null);
     const fd = new FormData();
@@ -466,6 +473,11 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
           </label>
         )}
 
+        <label className="mt-3 block">
+          <span className="label">Çözüm / açıklama <span className="font-normal text-lead">(isteğe bağlı; kitapçıkta “Çözümler” sayfasına basılır)</span></span>
+          <textarea dir="auto" className="input min-h-16 resize-y" rows={Math.min(10, Math.max(2, d.explanation.split("\n").length + 1))} value={d.explanation} onChange={(e) => set({ explanation: e.target.value })} placeholder="Ör. 2x = 11 − 3 = 8, x = 4." />
+        </label>
+
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {edit ? (
             <>
@@ -555,7 +567,7 @@ function PasteSplitter({ common }: { common: Common }) {
     const metas: WrittenMeta[] = active.map((d) => {
       const blanks = countBlanks(d.stem);
       const fillOk = d.type === "FILL" && splitFill(d.answer).length === blanks;
-      return { type: d.type, stem: d.stem, options: d.type === "MC" ? d.options : undefined, answer: d.type === "FILL" && !fillOk ? "" : d.answer, ...tagsOf(common) };
+      return { type: d.type, stem: d.stem, options: d.type === "MC" ? d.options : undefined, answer: d.type === "FILL" && !fillOk ? "" : d.answer, explanation: d.explanation, ...tagsOf(common) };
     });
     let done = 0;
     for (let i = 0; i < metas.length; i += LIMITS.batch) {
@@ -596,6 +608,7 @@ function PasteSplitter({ common }: { common: Common }) {
             <li>Her soru numarayla başlar (1. 1) 1- “Soru 1:”). Numara yoksa boş satır soruları ayırır.</li>
             <li>Şıklar ayrı satırda ya da yan yana: A) … B) … — doğru şık önüne * konabilir (*C).</li>
             <li>Sorunun altında “Cevap: C” ya da en sonda “Cevap anahtarı: 1-C 2-A 3-D”.</li>
+            <li>Çözüm varsa sorunun sonunda “Çözüm: …” (birden çok satır olabilir).</li>
             <li>“( )” ile başlayan yargı ya da cevabı Doğru/Yanlış olan soru → doğru / yanlış.</li>
             <li>Kökte ___ ya da ..... varsa → boşluk doldurma; birden çok boşluğun cevabı virgülle.</li>
             <li>Bunlar yoksa → açık uçlu. Türü ve cevabı sağdaki listeden düzeltebilirsiniz.</li>
@@ -628,6 +641,7 @@ function PasteSplitter({ common }: { common: Common }) {
                   <>
                     <QuestionView type={d.type} content={{ stem: d.stem, options: d.type === "MC" ? d.options : undefined }} answer={d.answer} />
                     <DraftAnswer d={d} onChange={(answer) => setO(d.key, { answer })} />
+                    {d.explanation && <p dir="auto" className="mt-1 line-clamp-2 text-xs text-lead">Çözüm: {d.explanation}</p>}
                   </>
                 )}
               </li>

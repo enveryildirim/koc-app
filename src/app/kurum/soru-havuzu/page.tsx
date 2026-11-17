@@ -7,8 +7,7 @@ import { listCourses } from "@/modules/schedule/server";
 import { curriculumTopicNames } from "@/modules/curriculum/server";
 import { bankUsage } from "@/modules/exams/server";
 import QuestionGrid from "@/modules/question-bank/ui/QuestionGrid";
-import { HAVUZ_TABS } from "@/modules/question-bank/ui/tabs";
-import { Empty, Kpi, PageHeader, Tabs } from "@/shared/ui/kurum";
+import { Empty, Kpi, PageHeader } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +34,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   // Havuz toparlanır: ders / konu yazılışları birleşir, kazanım bağları ve arama anahtarı yenilenir (müfredat ya da Dersler değişmiş olabilir)
   const [usage] = await Promise.all([bankUsage(ownerId), tidyBank(ownerId)]);
   const archive = sp.durum === "arsiv";
+  const review = sp.durum === "onay";
   const [summary, sources, list, curTopics, courses] = await Promise.all([
     bankSummary(ownerId, Object.keys(usage.usage)),
     listSources(ownerId),
-    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, archived: archive, ...usageFilter(usage.usage, sp) }, page),
+    listItems(ownerId, { subject: sp.ders, topic: sp.konu, difficulty: sp.zorluk, type: sp.tur, sourceId: sp.kaynak, missing: sp.eksik, q: sp.q, archived: archive, review, ...usageFilter(usage.usage, sp) }, page),
     curriculumTopicNames(ownerId),
     listCourses(ownerId),
   ]);
@@ -65,7 +65,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           </>
         }
       />
-      <Tabs tabs={HAVUZ_TABS} active="items" />
 
       <div className="mb-4 grid grid-cols-3 gap-2">
         <Kpi
@@ -86,7 +85,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
         <Kpi label="Hiç kullanılmamış" value={unused} hint={unused ? <Link href="?kullanim=hic" className="underline">Listele</Link> : "Hepsi kullanıldı"} />
       </div>
 
-      {summary.total === 0 && !summary.archived ? (
+      {summary.pending > 0 && !review && (
+        <p className="mb-3 rounded-md bg-mist px-3 py-2 text-sm">
+          Yapay zekâ ile eklenen <b className="num">{summary.pending}</b> soru onay bekliyor; onaylanana kadar havuzda ve sınav kurarken görünmez.{" "}
+          <Link href="?durum=onay" className="font-semibold text-graphite underline">İncele ve onayla</Link>
+        </p>
+      )}
+
+      {summary.total === 0 && !summary.archived && !summary.pending ? (
         <Empty>
           Havuz boş. <Link href="/kurum/soru-havuzu/yaz" className="font-semibold text-graphite underline">Soru yazın</Link>,{" "}
           <Link href="/kurum/soru-havuzu/yaz?mod=yapistir" className="font-semibold text-graphite underline">Word&apos;deki soruları yapıştırın</Link> ya da{" "}
@@ -132,10 +138,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
               <option value="cevap">Cevabı girilmemiş</option>
               <option value="konu">Konusu girilmemiş</option>
               <option value="kazanim">Kazanımı bağlı değil</option>
+              <option value="cozum">Çözümü yazılmamış</option>
             </select>
-            {(summary.archived > 0 || archive) && (
+            {(summary.archived > 0 || summary.pending > 0 || archive || review) && (
               <select name="durum" defaultValue={sp.durum ?? ""} className="input w-auto" aria-label="Durum">
                 <option value="">Kullanımda</option>
+                <option value="onay">Onay bekleyen ({summary.pending})</option>
                 <option value="arsiv">Arşiv ({summary.archived})</option>
               </select>
             )}
@@ -146,9 +154,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           </form>
 
           {list.items.length === 0 ? (
-            <Empty>{archive ? "Arşivde bu filtreye uygun soru yok." : "Bu filtreye uygun soru yok."}</Empty>
+            <Empty>{archive ? "Arşivde bu filtreye uygun soru yok." : review ? "Onay bekleyen soru yok." : "Bu filtreye uygun soru yok."}</Empty>
           ) : (
-            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} archive={archive} />
+            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} archive={archive} review={review} />
           )}
 
           {pages > 1 && (

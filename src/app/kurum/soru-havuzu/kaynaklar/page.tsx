@@ -3,8 +3,7 @@ import { requireOwner } from "@/modules/identity/server";
 import { listSources } from "@/modules/question-bank/server";
 import DeleteSource from "@/modules/question-bank/ui/DeleteSource";
 import SourceUpload from "@/modules/question-bank/ui/SourceUpload";
-import { HAVUZ_TABS } from "@/modules/question-bank/ui/tabs";
-import { Empty, PageHeader, Tabs, td, th } from "@/shared/ui/kurum";
+import { Empty, PageHeader, td, th } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +15,11 @@ export default async function Page() {
 
   return (
     <div>
-      <PageHeader title="Soru havuzu" sub="Kitap PDF'i ya da sayfa fotoğrafı yükleyin; sorular otomatik bulunur, siz düzeltip havuza eklersiniz." />
-      <Tabs tabs={HAVUZ_TABS} active="sources" />
+      <PageHeader
+        title="Kaynaktan soru kes"
+        sub="Kitap PDF'i ya da sayfa fotoğrafı yükleyin; sorular otomatik bulunur, siz düzeltip havuza eklersiniz."
+        back={{ href: "/kurum/soru-havuzu", label: "Soru havuzu" }}
+      />
       <SourceUpload />
 
       {sources.length === 0 ? (

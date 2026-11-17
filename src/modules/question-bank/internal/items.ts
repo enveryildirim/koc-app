@@ -12,7 +12,9 @@ import {
   isQuestionType,
   LIMITS,
   MAX_OPTIONS,
+  needsAnswer,
   normalizeAnswer,
+  OPTION_LETTERS,
   parseContent,
   plainText,
   QUESTION_TYPES,
@@ -25,6 +27,7 @@ import {
   type QuestionPatch,
   type QuestionType,
   type WrittenMeta,
+  isBasis,
 } from "../index";
 
 const ORIGINS = new Set(["MANUAL", "AUTO", "AI"]);
@@ -93,8 +96,12 @@ async function canonizer(ownerId: string) {
   };
 }
 
-/** Ders + konu + metinden arama anahtarı (searchText). */
-const searchOf = (c: { subject: string; topic: string }, text: string) => searchKey(`${c.subject}\n${c.topic}\n${text}`);
+/** Ders + konu + metin + kaynak notundan arama anahtarı (searchText). */
+const searchOf = (c: { subject: string; topic: string }, text: string, sourceNote = "") => searchKey(`${c.subject}\n${c.topic}\n${text}\n${sourceNote}`);
+
+/** Çözüm: satır sonları korunur, baştaki / sondaki boşluk atılır. */
+const cleanExplanation = (v: unknown) => String(v ?? "").replace(/\r\n?/g, "\n").trim().slice(0, TEXT_LIMITS.explanation);
+const cleanSourceNote = (v: unknown) => str(v, TEXT_LIMITS.sourceNote).replace(/\s+/g, " ");
 
 /**
  * Havuzu toparlar (havuz açılırken çağrılır): ders ve konu yazılışlarını birleştirir, kazanım bağını yeniler (müfredat sonradan
@@ -103,12 +110,12 @@ const searchOf = (c: { subject: string; topic: string }, text: string) => search
 export async function tidyBank(ownerId: string) {
   const [canon, items] = await Promise.all([
     canonizer(ownerId),
-    prisma.questionItem.findMany({ where: { ownerId }, select: { id: true, subject: true, grade: true, topic: true, text: true, curriculumTopicId: true, searchText: true } }),
+    prisma.questionItem.findMany({ where: { ownerId }, select: { id: true, subject: true, grade: true, topic: true, text: true, sourceNote: true, curriculumTopicId: true, searchText: true } }),
   ]);
   let changed = 0;
   for (const it of items) {
     const c = canon(it);
-    const searchText = searchOf(c, it.text);
+    const searchText = searchOf(c, it.text, it.sourceNote);
     if (c.subject === it.subject && c.topic === it.topic && c.curriculumTopicId === it.curriculumTopicId && searchText === it.searchText) continue;
     await prisma.questionItem.update({ where: { id: it.id }, data: { ...c, searchText } });
     changed++;
@@ -116,12 +123,14 @@ export async function tidyBank(ownerId: string) {
   return changed;
 }
 
-type Patch = Omit<QuestionPatch, "answer" | "archived"> & { archivedAt?: Date | null };
+type Patch = Omit<QuestionPatch, "answer" | "archived" | "approved"> & { archivedAt?: Date | null; needsReview?: false };
+
 
 /** Düzenlenebilir alanları doğrular; yalnızca gönderilen alanları döndürür (cevap türe göre ayrıca denetlenir). */
 function cleanPatch(p: Record<string, unknown>): Patch {
   const out: Patch = {};
   if ("archived" in p) out.archivedAt = p.archived ? new Date() : null;
+  if (p.approved === true) out.needsReview = false;
   if ("subject" in p) {
     out.subject = str(p.subject, 60);
     if (!out.subject) throw invalid("Ders boş olamaz.");
@@ -130,6 +139,8 @@ function cleanPatch(p: Record<string, unknown>): Patch {
   if ("grade" in p) out.grade = str(p.grade, 20);
   if ("difficulty" in p) out.difficulty = cleanDifficulty(p.difficulty);
   if ("level" in p) out.level = normalizeLevel(p.level);
+  if ("explanation" in p) out.explanation = cleanExplanation(p.explanation);
+  if ("sourceNote" in p) out.sourceNote = cleanSourceNote(p.sourceNote);
   return out;
 }
 
@@ -177,10 +188,12 @@ export async function createItems(ownerId: string, sourceId: string | null, meta
     const page = Number.isInteger(m.page) && m.page! > 0 ? m.page! : null;
     const tags = cleanTags(m);
     const c = canon(tags);
+    const sourceNote = cleanSourceNote(m.sourceNote);
     return {
       ...tags,
       ...c,
-      searchText: searchOf(c, ""),
+      sourceNote,
+      searchText: searchOf(c, "", sourceNote),
       answer: cleanAnswer(m.answer),
       origin: ORIGINS.has(String(m.origin)) ? String(m.origin) : "MANUAL",
       page: sourceId ? page : null,
@@ -199,12 +212,13 @@ export async function createItems(ownerId: string, sourceId: string | null, meta
 }
 
 function checkImages(images: (Uint8Array | null)[]) {
-  for (const b of images) {
-    if (!b) continue;
+  images.forEach((b, i) => {
+    if (!b) return;
+    const at = images.length > 1 ? `${i + 1}. soru: ` : "";
     const k = sniff(b);
-    if (!k || k === "pdf") throw invalid("Soru görseli PNG, JPG ya da WEBP olmalı.");
-    if (b.length > LIMITS.cropMB * 1024 * 1024) throw invalid(`Soru görseli en fazla ${LIMITS.cropMB} MB olabilir.`);
-  }
+    if (!k || k === "pdf") throw invalid(`${at}Soru görseli PNG, JPG ya da WEBP olmalı.`);
+    if (b.length > LIMITS.cropMB * 1024 * 1024) throw invalid(`${at}Soru görseli en fazla ${LIMITS.cropMB} MB olabilir.`);
+  });
 }
 
 /** Görselleri depoya yazar; null olanlar için "" döner. Hata olursa yazılanları geri siler. */
@@ -219,11 +233,16 @@ async function storeImages(ownerId: string, images: (Uint8Array | null)[]) {
   return keys;
 }
 
+/** Kaydı kimin yazdığı: AI (MCP üzerinden bir yapay zekâ agent'ı) ise soru onay bekler. */
+export type WrittenBy = { origin?: "MANUAL" | "AI" };
+
 /**
  * Elle yazılan ya da yapıştırılıp bölünen soruları kaydeder. images[i]: i. sorunun isteğe bağlı görseli (yoksa null).
  * Hatalı bir soru varsa hiçbiri kaydedilmez; ileti sorunun sırasını söyler.
+ * `by.origin = "AI"`: soru "onay bekliyor" olarak kaydedilir (öğretmen onaylayana kadar havuzda ve sınav kurarken görünmez).
  */
-export async function createWrittenItems(ownerId: string, metas: unknown, images: (Uint8Array | null)[]) {
+export async function createWrittenItems(ownerId: string, metas: unknown, images: (Uint8Array | null)[], by: WrittenBy = {}) {
+  const ai = by.origin === "AI";
   if (!Array.isArray(metas) || !metas.length) throw invalid("Kaydedilecek soru yok.");
   if (metas.length > LIMITS.batch) throw invalid(`Tek seferde en fazla ${LIMITS.batch} soru kaydedilebilir.`);
   checkImages(images);
@@ -233,9 +252,22 @@ export async function createWrittenItems(ownerId: string, metas: unknown, images
     const label = many ? `${i + 1}. soru` : "";
     try {
       const w = cleanWritten(m, !!images[i], label);
+      // Elle yazarken cevap sonradan girilebilir; yapay zekâdan gelen soruda eksik ya da geçersiz cevap hata sayılır (agent düzeltsin)
+      if (ai && needsAnswer(w.type) && !w.answer)
+        throw invalid(
+          w.type === "MC" ? `Cevap eksik ya da geçersiz; şıklardan birinin harfi olmalı (A–${OPTION_LETTERS[(w.content.options?.length ?? 2) - 1]}).`
+          : w.type === "TF" ? 'Cevap eksik ya da geçersiz; "D" (doğru) ya da "Y" (yanlış) olmalı.'
+          : "Cevap eksik; her boşluk için bir cevap girin.",
+        );
+      const basis = ai ? (isBasis(m.basis) ? m.basis : "original") : "";
+      // Çözümü yazmak agent'ı soruyu gerçekten çözmeye zorlar; öğretmen de anahtarı çözümle karşılaştırır.
+      // Kaynaktan olduğu gibi aktarılan soruda kaynakta çözüm olmayabilir: isteğe bağlı
+      if (ai && basis !== "transcribed" && !cleanExplanation(m.explanation)) throw invalid("Çözüm (explanation) eksik; her sorunun çözümünü yazın.");
       const tags = cleanTags(m);
       const c = canon(tags);
-      return { ...tags, ...c, searchText: searchOf(c, w.text), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, origin: "MANUAL" };
+      const extra = { explanation: cleanExplanation(m.explanation), sourceNote: cleanSourceNote(m.sourceNote) };
+      const agentNote = ai ? String(m.agentNote ?? "").replace(/\r\n?/g, "\n").trim().slice(0, TEXT_LIMITS.agentNote) : "";
+      return { ...tags, ...c, ...extra, agentNote, basis, searchText: searchOf(c, w.text, extra.sourceNote), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, origin: ai ? "AI" : "MANUAL", needsReview: ai };
     } catch (e) {
       if (label && e instanceof Error && !e.message.startsWith(label)) throw invalid(`${label}: ${e.message}`);
       throw e;
@@ -248,7 +280,7 @@ export async function createWrittenItems(ownerId: string, metas: unknown, images
     await removeFiles(ownerId, keys);
     throw e;
   }
-  return { created: rows.length };
+  return { created: rows.length, pendingReview: ai };
 }
 
 /**
@@ -266,11 +298,12 @@ export async function updateWrittenItem(ownerId: string, id: string, meta: unkno
   const w = cleanWritten(m, hasImage);
   const tags = cleanTags(m);
   const linked = (await canonizer(ownerId))(tags);
+  const extra = { explanation: cleanExplanation(m.explanation), sourceNote: cleanSourceNote(m.sourceNote) };
   const [key] = img ? await storeImages(ownerId, [img]) : [image === "remove" ? "" : it.imageKey];
   try {
     await prisma.questionItem.update({
       where: { id: it.id },
-      data: { ...tags, ...linked, searchText: searchOf(linked, w.text), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, imageKey: key },
+      data: { ...tags, ...linked, ...extra, searchText: searchOf(linked, w.text, extra.sourceNote), type: w.type, content: JSON.stringify(w.content), text: w.text, answer: w.answer, imageKey: key },
     });
   } catch (e) {
     if (img) await removeFiles(ownerId, [key]);
@@ -284,7 +317,10 @@ export async function updateWrittenItem(ownerId: string, id: string, meta: unkno
 export async function findWrittenItem(ownerId: string, id: string) {
   const it = await prisma.questionItem.findFirst({
     where: { id, ownerId },
-    select: { id: true, type: true, content: true, answer: true, subject: true, topic: true, grade: true, difficulty: true, level: true, imageKey: true },
+    select: {
+      id: true, type: true, content: true, answer: true, subject: true, topic: true, grade: true, difficulty: true, level: true, imageKey: true,
+      explanation: true, sourceNote: true,
+    },
   });
   const content = parseContent(it?.content);
   if (!it || !content) return null;
@@ -300,7 +336,7 @@ export type ItemFilter = {
   sourceId?: string;
   /** MC | TF | OPEN | FILL */
   type?: string;
-  /** "cevap" = cevabı girilmemiş, "konu" = konusu girilmemiş, "kazanim" = müfredata bağlı değil */
+  /** "cevap" = cevabı girilmemiş, "konu" = konusu girilmemiş, "kazanim" = müfredata bağlı değil, "cozum" = çözümü yazılmamış */
   missing?: string;
   q?: string;
   /** Yalnızca bu sorular / bu sorular hariç (kullanım süzgeçleri; kullanım exams'ten hesaplanıp verilir) */
@@ -310,6 +346,8 @@ export type ItemFilter = {
   rank?: string[];
   /** true: yalnızca arşivdekiler; aksi hâlde arşivdekiler listelenmez */
   archived?: boolean;
+  /** true: yalnızca onay bekleyenler (yapay zekâ ile eklenen); aksi hâlde onay bekleyenler listelenmez */
+  review?: boolean;
 };
 
 const PAGE_SIZE = 120;
@@ -318,7 +356,8 @@ const NO_ANSWER: Prisma.QuestionItemWhereInput = { answer: "", type: { not: "OPE
 
 /** Havuz listesi (yeniden eskiye, sayfalı) ve filtreye uyan toplam soru sayısı. */
 export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
-  const where: Prisma.QuestionItemWhereInput = { ownerId, archivedAt: f.archived ? { not: null } : null };
+  const where: Prisma.QuestionItemWhereInput = { ownerId, archivedAt: f.archived ? { not: null } : null, needsReview: !!f.review && !f.archived };
+  if (f.archived) delete where.needsReview;
   if (f.subject) where.subject = f.subject;
   if (f.topic) where.topic = f.topic;
   if (f.difficulty) where.difficulty = cleanDifficulty(f.difficulty);
@@ -327,13 +366,15 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
   if (f.missing === "cevap") Object.assign(where, NO_ANSWER, f.type && isQuestionType(f.type) && f.type !== "OPEN" ? { type: f.type } : {});
   if (f.missing === "konu") where.topic = "";
   if (f.missing === "kazanim") where.curriculumTopicId = null;
+  if (f.missing === "cozum") where.explanation = "";
   // Türkçe harflerde büyük/küçük harf ayırmadan: saklanan anahtar ve aranan sözcük aynı işlemden geçer
   if (f.q && searchKey(f.q)) where.searchText = { contains: searchKey(f.q) };
   if (f.only || f.except) where.id = { ...(f.only ? { in: f.only } : {}), ...(f.except ? { notIn: f.except } : {}) };
 
   const select = {
     id: true, subject: true, topic: true, grade: true, difficulty: true, level: true, answer: true, origin: true, page: true,
-    type: true, content: true, imageKey: true, curriculumTopicId: true, archivedAt: true, source: { select: { name: true } },
+    type: true, content: true, imageKey: true, curriculumTopicId: true, archivedAt: true, explanation: true, sourceNote: true,
+    needsReview: true, agentNote: true, basis: true, source: { select: { name: true } },
   } satisfies Prisma.QuestionItemSelect;
   const orderBy: Prisma.QuestionItemOrderByWithRelationInput[] = [{ createdAt: "desc" }, { page: "asc" }];
   const skip = (Math.max(1, page) - 1) * PAGE_SIZE;
@@ -366,16 +407,17 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
 }
 
 /**
- * Özet sayıları ve filtre seçenekleri (arşivdekiler hariç): dersler, ders → konular, türlere göre sayılar.
+ * Özet sayıları ve filtre seçenekleri (arşivdekiler ve onay bekleyenler hariç): dersler, ders → konular, türlere göre sayılar.
  * used verilirse (kullanılmış soru kimlikleri, exams > bankUsage) hiç kullanılmamış soru sayısı da döner.
  */
 export async function bankSummary(ownerId: string, used?: string[]) {
-  const active = { ownerId, archivedAt: null };
-  const [total, noAnswer, noOutcome, archived, unused, groups, types] = await Promise.all([
+  const active = { ownerId, archivedAt: null, needsReview: false };
+  const [total, noAnswer, noOutcome, archived, pending, unused, groups, types] = await Promise.all([
     prisma.questionItem.count({ where: active }),
     prisma.questionItem.count({ where: { ...active, ...NO_ANSWER } }),
     prisma.questionItem.count({ where: { ...active, curriculumTopicId: null } }),
     prisma.questionItem.count({ where: { ownerId, archivedAt: { not: null } } }),
+    prisma.questionItem.count({ where: { ownerId, archivedAt: null, needsReview: true } }),
     used ? prisma.questionItem.count({ where: { ...active, id: { notIn: used } } }) : Promise.resolve(null),
     prisma.questionItem.groupBy({ by: ["subject", "topic"], where: active, _count: { _all: true } }),
     prisma.questionItem.groupBy({ by: ["type"], where: active, _count: { _all: true } }),
@@ -388,7 +430,7 @@ export async function bankSummary(ownerId: string, used?: string[]) {
   for (const s of Object.keys(topics)) topics[s].sort((a, b) => a.localeCompare(b, "tr"));
   const subjects = Object.keys(topics).sort((a, b) => a.localeCompare(b, "tr"));
   const byType = Object.fromEntries(types.map((t) => [t.type, t._count._all])) as Partial<Record<QuestionType, number>>;
-  return { total, noAnswer, noOutcome, archived, unused, subjects, topics, byType };
+  return { total, noAnswer, noOutcome, archived, pending, unused, subjects, topics, byType };
 }
 
 /**
@@ -405,12 +447,12 @@ export async function updateItems(ownerId: string, ids: unknown, patch: unknown)
   const where = { ownerId, id: { in: ids.map(String) } };
   let updated = 0;
   if (Object.keys(data).length) updated = (await prisma.questionItem.updateMany({ where, data })).count;
-  if ("subject" in data || "topic" in data || "grade" in data) {
+  if ("subject" in data || "topic" in data || "grade" in data || "sourceNote" in data) {
     const canon = await canonizer(ownerId);
-    const rows = await prisma.questionItem.findMany({ where, select: { id: true, subject: true, grade: true, topic: true, text: true } });
+    const rows = await prisma.questionItem.findMany({ where, select: { id: true, subject: true, grade: true, topic: true, text: true, sourceNote: true } });
     for (const r of rows) {
       const c = canon(r);
-      await prisma.questionItem.update({ where: { id: r.id }, data: { ...c, searchText: searchOf(c, r.text) } });
+      await prisma.questionItem.update({ where: { id: r.id }, data: { ...c, searchText: searchOf(c, r.text, r.sourceNote) } });
     }
   }
   if (!hasAnswer) return { updated, skipped: 0 };

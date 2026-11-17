@@ -7,6 +7,7 @@
  *   Cevap: C                                       → cevap satırı (Cvp, Yanıt, Doğru cevap)
  *   ( ) Yargı …  / cevap Doğru-Yanlış              → doğru / yanlış
  *   Kök içinde ___ ya da .....                     → boşluk doldurma
+ *   Çözüm: … (Açıklama: …)                         → çözüm; sorunun sonuna kadar birden çok satır olabilir
  *   Cevap anahtarı: 1-C 2-A 3-D …                  → sondaki anahtar, numarayla eşleşir
  * Numara yoksa boş satırlar soruları ayırır.
  */
@@ -19,11 +20,14 @@ export type DraftQuestion = {
   stem: string;
   options: string[];
   answer: string;
+  /** "Çözüm:" satırından sonraki metin (yoksa boş) */
+  explanation: string;
   warnings: string[];
 };
 
 const NUM_RE = /^\s*(?:soru\s*)?(\d{1,3})\s*[.)\-:–](?!\d)\s*(.*)$/i;
 const ANSWER_RE = /^\s*(?:doğru\s+)?(?:cevap|cvp|yanıt|yanit)\s*[:=\-–]\s*(.+)$/i;
+const EXPL_RE = /^\s*(?:çözüm|cozum|açıklama|aciklama)\s*[:=\-–]\s*(.*)$/iu;
 const KEY_HEAD_RE = /^\s*(?:cevap\s+anahtar[ıi]|cevaplar|yan[ıi]tlar)(?![\p{L}])\s*:?\s*(.*)$/iu;
 const KEY_PAIR_RE = /(\d{1,3})\s*[-.):=–]?\s*(doğru|yanlış|dogru|yanlis|[A-Ea-e]|[DdYy])(?![\p{L}])/gu;
 const OPTION_LINE_RE = /^\s*(\*)?\s*([A-Ea-e])\s*[).:\-–]\s*(.*)$/;
@@ -98,10 +102,21 @@ function parseBlock(no: number | null, lines: string[], keyAnswer: string | unde
   const options: string[] = [];
   let star = -1;
   let answerRaw = "";
+  let expl: string[] | null = null;
   for (const l of lines) {
     const am = l.match(ANSWER_RE);
     if (am) {
       answerRaw = am[1].trim();
+      continue;
+    }
+    const em = l.match(EXPL_RE);
+    if (em) {
+      expl = [em[1]];
+      continue;
+    }
+    // Çözüm başladıysa sorunun geri kalanı çözümdür (şık ya da kök sayılmaz)
+    if (expl) {
+      expl.push(l);
       continue;
     }
     const inl = options.length < MAX_OPTIONS ? inlineOptions(l, options.length) : null;
@@ -153,7 +168,8 @@ function parseBlock(no: number | null, lines: string[], keyAnswer: string | unde
     if (!answer) warnings.push("Boşluk cevabı yok");
     else if (a !== n) warnings.push(`${n} boşluk, ${a} cevap`);
   }
-  return { no, type, stem: text, options: type === "MC" ? options : [], answer, warnings };
+  const explanation = (expl ?? []).join("\n").trim();
+  return { no, type, stem: text, options: type === "MC" ? options : [], answer, explanation, warnings };
 }
 
 /** Yapıştırılan metni sorulara böler. */
@@ -176,6 +192,7 @@ B) 3
 C) 4
 D) 5
 E) 6
+Çözüm: 2x = 11 − 3 = 8, x = 4.
 
 3. ( ) Kur'an-ı Kerim 114 sureden oluşur.
 Cevap: Doğru

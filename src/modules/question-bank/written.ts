@@ -20,7 +20,7 @@ export const isOptical = (t: string) => isQuestionType(t) && QUESTION_TYPES[t].o
 
 export const OPTION_LETTERS = ["A", "B", "C", "D", "E"] as const;
 export const MAX_OPTIONS = 5;
-export const TEXT_LIMITS = { stem: 4000, option: 500, answer: 2000 };
+export const TEXT_LIMITS = { stem: 4000, option: 500, answer: 2000, explanation: 4000, sourceNote: 200, agentNote: 1000 };
 
 export type QuestionContent = { stem: string; options?: string[] };
 

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ANSWERS, answerLabel, DIFFICULTY, GRADES, OPTION_LETTERS, QUESTION_TYPES, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType } from "../index";
+import { ANSWERS, answerLabel, BASIS, DIFFICULTY, isBasis, GRADES, OPTION_LETTERS, QUESTION_TYPES, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType } from "../index";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 import Drawer from "@/shared/ui/Drawer";
 import QuestionView from "./QuestionView";
@@ -23,8 +23,18 @@ export type GridItem = {
   content: QuestionContent | null;
   hasImage: boolean;
   archived: boolean;
+  /** Yapay zekâ ile eklendi, öğretmen henüz onaylamadı (havuzda ve sınav kurarken görünmez) */
+  needsReview: boolean;
+  /** Agent'ın emin olmadığı noktalar (yapay zekâ sorusunda; boş = not yok) */
+  agentNote: string;
+  /** Yapay zekâ sorusunun nasıl yapıldığı (BASIS); elle girilende boş */
+  basis: string;
   /** Bağlı müfredat satırının kazanımı (yoksa null) */
   outcome: { code: string; text: string; unit: string } | null;
+  /** Çözüm / açıklama (boş = yazılmamış) */
+  explanation: string;
+  /** Kaynak notu (kitap / yayın / sayfa) */
+  sourceNote: string;
 };
 
 const API = "/api/kurum/soru-havuzu/sorular";
@@ -36,6 +46,7 @@ export default function QuestionGrid({
   topics,
   usage = {},
   archive = false,
+  review = false,
 }: {
   items: GridItem[];
   subjects: string[];
@@ -44,6 +55,8 @@ export default function QuestionGrid({
   usage?: Record<string, BankUsage>;
   /** Arşiv görünümü: toplu işlem "Arşivden çıkar" olur */
   archive?: boolean;
+  /** Onay bekleyenler görünümü: toplu işlemlerin başında "Onayla" olur */
+  review?: boolean;
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<string | null>(null);
@@ -99,6 +112,15 @@ export default function QuestionGrid({
       setSel(new Set());
       setDetail(null);
       setMsg({ ok: true, text: archived ? `${ids.length} soru arşive kaldırıldı; havuzda ve sınav kurarken görünmez, eski kitapçıklarda yerinde kalır.` : `${ids.length} soru arşivden çıkarıldı.` });
+    }
+  }
+
+  /** Onay: yapay zekâ ile eklenen soru havuza ve sınav kurma ekranına geçer. */
+  async function approve(ids: string[]) {
+    const r = await send("PATCH", ids, { approved: true });
+    if (r) {
+      setSel(new Set());
+      setMsg({ ok: true, text: `${ids.length} soru onaylandı; artık havuzda ve sınav kurarken görünür.` });
     }
   }
 
@@ -159,7 +181,8 @@ export default function QuestionGrid({
               {ANSWERS.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
-          <button className="btn-primary" disabled={busy} onClick={applyBulk}>Seçililere uygula</button>
+          {review && <button className="btn-primary" disabled={busy} onClick={() => approve([...sel])}>Onayla</button>}
+          <button className={review ? "btn-secondary" : "btn-primary"} disabled={busy} onClick={applyBulk}>Seçililere uygula</button>
           <button className="btn-secondary" disabled={busy} onClick={() => setArchived([...sel], !archive)}>{archive ? "Arşivden çıkar" : "Arşive kaldır"}</button>
           <button className="btn-danger" disabled={busy} onClick={removeSelected}>Sil</button>
           <button className="btn-secondary" onClick={() => setSel(new Set())}>Seçimi kaldır</button>
@@ -176,6 +199,11 @@ export default function QuestionGrid({
             <li key={q.id} className={`card flex flex-col overflow-hidden ${on ? "ring-2 ring-ink" : ""}`}>
               <div className="flex items-center gap-2 border-b border-rule px-2.5 py-1.5 text-[13px]">
                 <input type="checkbox" checked={on} onChange={() => toggle(q.id)} aria-label="Soruyu seç" />
+                {q.origin === "AI" && (
+                  <span className="badge shrink-0 bg-mist text-graphite" title={`Yapay zekâ agent'ı ile (MCP) eklendi${isBasis(q.basis) ? `: ${BASIS[q.basis].hint.toLocaleLowerCase("tr-TR")}` : ""}`}>
+                    YZ{isBasis(q.basis) ? ` · ${BASIS[q.basis].label}` : ""}
+                  </span>
+                )}
                 {q.type !== "MC" && <span className="badge shrink-0 bg-mist text-graphite" title={QUESTION_TYPES[q.type as QuestionType]?.label}>{QUESTION_TYPES[q.type as QuestionType]?.short ?? q.type}</span>}
                 <span className="min-w-0 truncate">
                   <b className="font-semibold">{q.subject}</b>
@@ -190,6 +218,7 @@ export default function QuestionGrid({
                   {q.outcome.text || "Kazanım"}
                 </p>
               )}
+              {q.needsReview && q.agentNote && <AgentNote note={q.agentNote} className="border-b border-rule/60 px-2.5 py-1.5" />}
               {q.content ? (
                 <div className="relative max-h-80 flex-1 overflow-hidden bg-white p-3 text-black">
                   <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `${API}/${q.id}/gorsel` : null} answer={q.answer} />
@@ -203,27 +232,43 @@ export default function QuestionGrid({
               <UsageLine q={q} u={usage[q.id]} onOpen={() => setDetail(q.id)} />
               <div className="flex items-center gap-2 border-t border-rule px-2.5 py-1.5">
                 <AnswerControl q={q} busy={busy} onSet={(answer) => send("PATCH", [q.id], { answer })} />
-                <span className="ml-auto flex min-w-0 items-center gap-2 text-xs text-lead">
-                  <span className="truncate" title={q.source?.name}>
-                    {q.grade && <>{/^\d+$/.test(q.grade) ? `${q.grade}. sınıf` : q.grade}{q.content ? "" : " · "}</>}
-                    {q.content ? "" : q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : "Kaynak silinmiş"}
+                {/* Sağ grup daralmaz (düğmeler kesilmesin); uzun cevap solda kısalır, kaynak metni burada en fazla %60 yer kaplar */}
+                <span className="ml-auto flex max-w-[60%] shrink-0 items-center gap-2 text-xs text-lead">
+                  {q.explanation && (
+                    <button type="button" onClick={() => setDetail(q.id)} className="badge shrink-0 bg-mist text-graphite hover:bg-rule" title="Çözümü göster">Çözümlü</button>
+                  )}
+                  <span className="truncate" title={[q.sourceNote, q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : ""].filter(Boolean).join(" · ")}>
+                    {[
+                      q.grade ? (/^\d+$/.test(q.grade) ? `${q.grade}. sınıf` : q.grade) : "",
+                      q.sourceNote || (q.content ? "" : q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : "Kaynak silinmiş"),
+                    ].filter(Boolean).join(" · ")}
                   </span>
                   {q.content && <Link href={`/kurum/soru-havuzu/yaz?id=${q.id}`} className="shrink-0 font-semibold text-graphite hover:underline">Düzenle</Link>}
                 </span>
               </div>
+              {q.needsReview && (
+                <div className="flex items-center gap-2 border-t border-rule bg-mist/60 px-2.5 py-1.5 text-xs text-lead">
+                  Onay bekliyor: onaylanana kadar havuzda ve sınav kurarken görünmez.
+                  <button type="button" disabled={busy} onClick={() => approve([q.id])} className="btn-primary ml-auto shrink-0 px-3 py-1 text-xs">Onayla</button>
+                </div>
+              )}
             </li>
           );
         })}
       </ul>
 
-      <Drawer open={!!shown} title="Kullanım geçmişi" onClose={() => setDetail(null)}>
+      <Drawer open={!!shown} title="Soru ayrıntısı" onClose={() => setDetail(null)}>
         {shown && (
           <UsageDetail
+            key={shown.id}
             q={shown}
             u={usage[shown.id]}
             busy={busy}
             onDifficulty={(d) => send("PATCH", [shown.id], { difficulty: d })}
             onArchive={() => setArchived([shown.id], !shown.archived)}
+            onNotes={async (set) => {
+              if (await send("PATCH", [shown.id], set)) setMsg({ ok: true, text: "Çözüm ve kaynak kaydedildi." });
+            }}
           />
         )}
       </Drawer>
@@ -259,11 +304,41 @@ function UsageLine({ q, u, onOpen }: { q: GridItem; u?: BankUsage; onOpen: () =>
 }
 
 /** Yan panel: her kullanım (sınav / çalışma kağıdı, tarih, gören sınıflar, sonuç) ve ölçülen zorluk. */
-function UsageDetail({ q, u, busy, onDifficulty, onArchive }: { q: GridItem; u?: BankUsage; busy: boolean; onDifficulty: (d: number) => void; onArchive: () => void }) {
+function UsageDetail({
+  q,
+  u,
+  busy,
+  onDifficulty,
+  onArchive,
+  onNotes,
+}: {
+  q: GridItem;
+  u?: BankUsage;
+  busy: boolean;
+  onDifficulty: (d: number) => void;
+  onArchive: () => void;
+  onNotes: (set: { explanation: string; sourceNote: string }) => void;
+}) {
   const title = q.content?.stem.split("\n")[0] || `${q.subject}${q.topic ? ` · ${q.topic}` : ""}`;
+  const [explanation, setExplanation] = useState(q.explanation);
+  const [sourceNote, setSourceNote] = useState(q.sourceNote);
+  const dirty = explanation.trim() !== q.explanation || sourceNote.trim() !== q.sourceNote;
   return (
     <div className="space-y-4 text-sm">
       <p dir="auto" className="line-clamp-3 text-lead">{title}</p>
+      {q.agentNote && <AgentNote note={q.agentNote} className="rounded-md px-3 py-2" />}
+      <div className="space-y-2 rounded-md ring-1 ring-rule px-3 py-2.5">
+        <label className="block">
+          <span className="text-xs text-lead">Çözüm / açıklama</span>
+          <textarea dir="auto" className="input min-h-20 resize-y" value={explanation} onChange={(e) => setExplanation(e.target.value)} placeholder="Kitapçıkta “Çözümler” sayfasına basılır." />
+        </label>
+        <label className="block">
+          <span className="text-xs text-lead">Kaynak notu</span>
+          <input className="input" maxLength={200} value={sourceNote} onChange={(e) => setSourceNote(e.target.value)} placeholder={q.source ? `Ör. ${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : "Ör. X Yayınları, s. 42"} />
+        </label>
+        <button type="button" className="btn-primary py-1" disabled={busy || !dirty} onClick={() => onNotes({ explanation, sourceNote })}>Kaydet</button>
+      </div>
+      <h3 className="text-[13px] font-semibold">Kullanım geçmişi</h3>
       {q.outcome && (q.outcome.code || q.outcome.text) && (
         <p className="text-[13px]">
           <span className="text-lead">Kazanım: </span>
@@ -330,6 +405,16 @@ function UsageDetail({ q, u, busy, onDifficulty, onArchive }: { q: GridItem; u?:
         </p>
       </div>
     </div>
+  );
+}
+
+/** Yapay zekâ agent'ının notu: soruyu yazarken emin olmadığı noktalar. */
+function AgentNote({ note, className = "" }: { note: string; className?: string }) {
+  return (
+    <p dir="auto" className={`whitespace-pre-line bg-amber-50 text-xs text-amber-900 ${className}`}>
+      <b className="font-semibold">Agent notu: </b>
+      {note}
+    </p>
   );
 }
 

@@ -18,7 +18,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   return (
     <div>
-      <PageHeader title={source.name} sub="Soruları kutulayın, cevaplarını işaretleyin, havuza ekleyin." back={{ href: "/kurum/soru-havuzu/kaynaklar", label: "Kaynaklar" }} />
+      <PageHeader title={source.name} sub="Soruları kutulayın, cevaplarını işaretleyin, havuza ekleyin." back={{ href: "/kurum/soru-havuzu/kaynaklar", label: "Kaynaktan soru kes" }} />
       <CropStudio
         source={{ id: source.id, name: source.name, kind: source.kind, files: source.files }}
         saved={source.cut}

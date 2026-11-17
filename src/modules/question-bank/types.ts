@@ -12,6 +12,15 @@ export type DetectedBox = Crop & { topic?: string; answer?: string; text?: strin
 
 export type QuestionOrigin = "MANUAL" | "AUTO" | "AI";
 
+/** Yapay zekâ sorusunun nasıl yapıldığı; onay ekranında rozet olarak görünür. */
+export const BASIS = {
+  transcribed: { label: "Aktarıldı", hint: "Kullanıcının verdiği kaynaktan olduğu gibi aktarıldı" },
+  adapted: { label: "Uyarlandı", hint: "Bir kaynaktan uyarlandı" },
+  original: { label: "Yeni yazıldı", hint: "Agent yeni yazdı" },
+} as const;
+export type Basis = keyof typeof BASIS;
+export const isBasis = (v: unknown): v is Basis => typeof v === "string" && v in BASIS;
+
 /** Kesme ekranından kaydedilen bir sorunun etiketleri (görsel ayrıca gönderilir). */
 export type QuestionMeta = {
   page?: number;
@@ -24,6 +33,8 @@ export type QuestionMeta = {
   level?: string;
   answer?: string;
   origin?: QuestionOrigin;
+  /** Kaynak notu (kitap / yayın / sayfa) */
+  sourceNote?: string;
 };
 
 /** Elle yazılan ya da yapıştırılan bir soru (görsel ayrıca gönderilir). */
@@ -38,12 +49,24 @@ export type WrittenMeta = {
   grade?: string;
   difficulty?: number;
   level?: string;
+  /** Çözüm / açıklama */
+  explanation?: string;
+  /** Kaynak notu (kitap / yayın / sayfa) */
+  sourceNote?: string;
+  /** Yalnızca yapay zekâ (MCP) sorusunda: agent'ın emin olmadığı noktalar */
+  agentNote?: string;
+  /** Yalnızca yapay zekâ (MCP) sorusunda: nasıl yapıldığı (BASIS) */
+  basis?: string;
 };
 
 /** Havuz listesinde toplu düzenlenebilen alanlar. */
-export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "level" | "answer">> & {
+export type QuestionPatch = Partial<Pick<QuestionMeta, "subject" | "topic" | "grade" | "difficulty" | "level" | "answer" | "sourceNote">> & {
+  /** Çözüm / açıklama (her soruda; kesilmiş soruda da yazılabilir) */
+  explanation?: string;
   /** true arşive kaldırır, false arşivden çıkarır */
   archived?: boolean;
+  /** true: onay bekleyen (yapay zekâ ile eklenen) soruyu onaylar; soru havuza ve sınav kurma ekranına geçer */
+  approved?: true;
 };
 
 /** Sorunun bir sınavda / çalışma kağıdında kullanımı (exams > bankUsage hesaplar; havuz yalnızca gösterir). */
