@@ -4,3 +4,4 @@ export * from "./internal/session";
 export * from "./internal/tenant";
 export * from "./internal/accounts";
 export * from "./internal/access";
+export * from "./internal/api-keys";

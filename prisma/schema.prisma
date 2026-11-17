@@ -15,6 +15,24 @@ model User {
   createdAt    DateTime @default(now())
 }
 
+/// Kurumun API anahtarı: yapay zekâ agent'larının uzaktan MCP bağlantısı (/api/mcp). identity modülünündür.
+/// Anahtarın kendisi saklanmaz (yalnızca SHA-256 özeti); oluşturulurken bir kez gösterilir. İptal edilen anahtar çalışmaz.
+model ApiKey {
+  id         String    @id @default(cuid())
+  ownerId    String
+  /// Kullanıcının verdiği ad (ör. "Ahmet hoca · Claude Code")
+  name       String
+  /// SHA-256 (hex) özeti
+  hash       String    @unique
+  /// Listede tanınsın diye ilk karakterler (ör. "rqb_k3J9…")
+  prefix     String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  @@index([ownerId])
+}
+
 /// Kişisel giriş linki (öğretmen / etüt mesulü). identity modülünündür; ad ve rol schedule'dan eşitlenir.
 /// Link yenilenir ya da kaldırılırsa bu linkle açılmış oturumlar da geçersiz olur.
 model AccessLink {

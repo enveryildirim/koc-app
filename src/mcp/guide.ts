@@ -32,7 +32,7 @@ Put the source and location in sourceNote (file, page, mm:ss for audio/video).`;
 
 const TRANSCRIBED = `Transcribed questions
 - Keep stem, options and answer exactly as in the source. Do not "improve" wording or fix errors silently; report suspected errors in agentNote.
-- Use the source's answer key. If there is none, solve it yourself and say so in agentNote.
+- Use the source's answer key and set answerSource: "key". If there is none, solve it yourself and set answerSource: "solved" (the teacher sees it flagged; don't repeat it in agentNote).
 - Never guess unreadable text; note it in agentNote, or skip the question and tell the user.
 - Leave out personal data found in the material (student names, numbers).
 - explanation is optional here: fill it if the source has a solution.`;

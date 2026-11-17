@@ -67,6 +67,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
         sub="Yazdığınız, yapıştırdığınız ya da PDF ve fotoğraftan kestiğiniz sorular."
         actions={
           <>
+            <Link href="/kurum/soru-havuzu/baglanti" className="self-center px-1 text-[13px] text-lead hover:text-graphite" title="Agent'ları (Claude Code, Cursor…) soru havuzuna bağlama">Yapay zekâ bağlantısı</Link>
             <Link href="/kurum/denemeler/havuzdan" className="btn-secondary">Havuzdan sınav</Link>
             <Link href="/kurum/soru-havuzu/kaynaklar" className="btn-secondary">Kaynaktan soru kes</Link>
             <Link href="/kurum/soru-havuzu/yaz" className="btn-primary">+ Soru yaz</Link>
