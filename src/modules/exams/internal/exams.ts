@@ -210,7 +210,7 @@ export async function deleteExam(ownerId: string, id: string) {
 }
 
 /** Cevap anahtarı / puanlama değişince tüm sonuçları yeniden hesaplar. */
-async function regrade(examId: string) {
+export async function regrade(examId: string) {
   const exam = await prisma.exam.findUniqueOrThrow({ where: { id: examId }, include: { results: true } });
   const secs = parseSections(exam.sections);
   const scoring = resolveScoring(exam.type, secs, exam.scoring);

@@ -6,7 +6,8 @@ import ExamPlanCoverage from "@/modules/planning/ui/ExamPlanCoverage";
 import { classroomsOf, listStudents } from "@/modules/enrollment/server";
 import { requireOwner } from "@/modules/identity/server";
 import { choicesFor, levelStats, discriminationLabel, EXAM_TYPES, fmtDate, fmtNet, ITEM_FLAGS, ITEM_RULES, itemAnalysis, keyFor, LETTERS, normNo, orderFor, sectionsKeyed, topicStats, totalQuestions } from "@/modules/exams";
-import { examAbsentees, examReport, findExam, listExams } from "@/modules/exams/server";
+import { examAbsentees, examKeyDrift, examReport, findExam, listExams } from "@/modules/exams/server";
+import KeySync from "@/modules/exams/ui/KeySync";
 import SolutionsToggle from "@/modules/exams/ui/SolutionsToggle";
 import { publicOrigin } from "@/shared/origin";
 import { parseReaderFormat } from "@/modules/exams";
@@ -36,6 +37,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const sp = await searchParams;
   const exam = await findExam(ownerId, id);
   if (!exam) notFound();
+  // Havuzda cevabı sonradan değişen sorular (anahtar kurulurken kopyalanır)
+  const drift = exam.secs.some((s) => s.items?.length) ? await examKeyDrift(ownerId, id) : [];
   const keyed = sectionsKeyed(exam.secs, exam.letters.length);
   const multi = exam.letters.length > 1;
   const worksheet = exam.purpose === "WORKSHEET";
@@ -74,6 +77,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             {exam.secs.some((s) => s.items?.length) && (
               <SolutionsToggle examId={id} open={exam.solutionsOpen} url={exam.solutionsOpen && exam.solutionToken ? `${await publicOrigin()}/cozum/${exam.solutionToken}` : null} />
             )}
+            {exam.secs.some((s) => s.items?.length) && !exam.resultCount && (
+              <Link href={`/kurum/denemeler/havuzdan?${new URLSearchParams({ duzenle: id })}`} className="btn-secondary" title="Soru ekleyin, çıkarın ya da sırasını değiştirin. Sorunun kendisi soru havuzunda düzenlenir.">
+                Soruları düzenle
+              </Link>
+            )}
             {exam.secs.some((s) => s.items?.length) && <Link href={`${base}/kitapcik`} className={worksheet ? "btn-primary" : "btn-secondary"}>{worksheet ? "Çalışma kağıdını yazdır" : "Soru kitapçığı"}</Link>}
             {!worksheet && exam.secs.some((s) => s.items?.length) && (
               <Link href={`${base}/benzer${sp.sinif ? `?${new URLSearchParams({ sinif: sp.sinif })}` : ""}`} className="btn-secondary" title="Yanlış ya da boş bırakılan soruların havuzdaki benzerleri; seçtiklerinizle çalışma kağıdı hazırlanır">
@@ -84,6 +92,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </>
         }
       />
+      {drift.length > 0 && <KeySync examId={id} drift={drift} results={exam.resultCount} multi={exam.secs.length > 1} />}
       <Tabs tabs={tabs} active={tab} />
       {!keyed && !worksheet && tab !== "anahtar" && (
         <p className="no-print mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800 ring-1 ring-amber-200">

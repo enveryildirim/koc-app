@@ -2,9 +2,11 @@ import { prisma } from "@/shared/db";
 import { parseContent } from "../written";
 
 /** Deneme kurma ekranı için havuzdaki sorular (arşivdekiler ve onay bekleyenler hariç; etiketleri ve yazılanların içeriğiyle, yeniden eskiye). */
-export async function bankPickerItems(ownerId: string, limit = 5000) {
+export async function bankPickerItems(ownerId: string, limit = 5000, include: string[] = []) {
+  const usable = { archivedAt: null, needsReview: false };
   const rows = await prisma.questionItem.findMany({
-    where: { ownerId, archivedAt: null, needsReview: false },
+    // include: düzenlenen denemede zaten olan sorular (sonradan arşivlenmiş / onaya düşmüş olsa da listede kalsın)
+    where: { ownerId, ...(include.length ? { OR: [usable, { id: { in: include } }] } : usable) },
     orderBy: [{ createdAt: "desc" }, { page: "asc" }],
     take: limit,
     select: { id: true, subject: true, topic: true, grade: true, difficulty: true, answer: true, type: true, content: true, imageKey: true },

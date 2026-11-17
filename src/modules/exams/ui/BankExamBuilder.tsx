@@ -61,6 +61,7 @@ export default function BankExamBuilder({
   courses = [],
   initialCourse = "",
   preset,
+  edit,
 }: {
   items: Item[];
   similar?: SimilarMap;
@@ -68,22 +69,32 @@ export default function BankExamBuilder({
   preset?: { items: string[]; name: string; worksheet: boolean };
   courses?: CourseOpt[];
   initialCourse?: string;
+  /** Var olan denemenin sorularını düzenleme: bilgileri ve bölümleriyle açılır, kaydedince deneme güncellenir */
+  edit?: { id: string; name: string; type: string; date: string; booklets: number; purpose: string; courseId: string; sections: { name: string; items: string[] }[] };
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initial);
   const byId = useMemo(() => new Map(items.map((q) => [q.id, q])), [items]);
   const subjects = useMemo(() => [...new Set(items.map((q) => q.subject))].sort((a, b) => a.localeCompare(b, "tr")), [items]);
 
-  const [meta, setMeta] = useState({
-    name: preset?.name ?? "",
-    type: "SERBEST",
-    date: toInputDate(new Date()),
-    booklets: preset?.worksheet ? 1 : 2,
-    purpose: preset?.worksheet ? "WORKSHEET" : "EXAM",
-    courseId: initialCourse,
-  });
+  const [meta, setMeta] = useState(
+    edit
+      ? { name: edit.name, type: edit.type, date: edit.date, booklets: edit.booklets, purpose: edit.purpose, courseId: edit.courseId }
+      : {
+          name: preset?.name ?? "",
+          type: "SERBEST",
+          date: toInputDate(new Date()),
+          booklets: preset?.worksheet ? 1 : 2,
+          purpose: preset?.worksheet ? "WORKSHEET" : "EXAM",
+          courseId: initialCourse,
+        },
+  );
   const worksheet = meta.purpose === "WORKSHEET";
-  const [secs, setSecs] = useState<Sec[]>(() => templateOf("SERBEST").map((x, i) => (i === 0 && preset?.items.length ? { ...x, items: preset.items } : x)));
+  const [secs, setSecs] = useState<Sec[]>(() =>
+    edit
+      ? edit.sections.map((x, i) => ({ name: x.name, target: edit.type === "SERBEST" ? 0 : (templateOf(edit.type)[i]?.target ?? 0), items: x.items }))
+      : templateOf("SERBEST").map((x, i) => (i === 0 && preset?.items.length ? { ...x, items: preset.items } : x)),
+  );
   const [active, setActive] = useState(0);
   const [f, setF] = useState({ subject: "", topic: "", difficulty: "", unused: false, unseen: true });
   // Derse bağlı sınavda o sınıfın daha önce gördüğü sorular varsayılan olarak gizlenir
@@ -213,18 +224,22 @@ export default function BankExamBuilder({
     if (!meta.name.trim()) return setMsg({ ok: false, text: worksheet ? "Çalışma kağıdına ad verin." : "Deneme adı girin." });
     if (!total) return setMsg({ ok: false, text: "Bölümlere soru ekleyin." });
     if (problems.length) return setMsg({ ok: false, text: `Önce şunları düzeltin: ${problems.slice(0, 3).join("; ")}${problems.length > 3 ? "…" : ""}` });
-    if (pairs.same && !confirm(`Bu ${worksheet ? "çalışma kağıdında" : "denemede"} ${pairs.same} çift aynı soru var (işaretli sorular). Yine de oluşturulsun mu?`)) return;
+    if (pairs.same && !confirm(`Bu ${worksheet ? "çalışma kağıdında" : "denemede"} ${pairs.same} çift aynı soru var (işaretli sorular). Yine de ${edit ? "kaydedilsin" : "oluşturulsun"} mi?`)) return;
     setBusy(true);
     setMsg(null);
-    const res = await fetch("/api/kurum/denemeler/havuzdan", {
-      method: "POST",
+    const res = await fetch(edit ? `/api/kurum/denemeler/${edit.id}/sorular` : "/api/kurum/denemeler/havuzdan", {
+      method: edit ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...meta, courseId: meta.courseId || null, sections: secs.map((s) => ({ name: s.name, items: s.items })) }),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       setBusy(false);
-      return setMsg({ ok: false, text: json.error ?? "Oluşturulamadı." });
+      return setMsg({ ok: false, text: json.error ?? (edit ? "Kaydedilemedi." : "Oluşturulamadı.") });
+    }
+    if (edit) {
+      setMsg({ ok: true, text: "Kaydedildi; deneme açılıyor…" });
+      return router.push(`/kurum/denemeler/${edit.id}`);
     }
     setCreated(json.id);
     setMsg({ ok: true, text: worksheet ? "Çalışma kağıdı oluşturuldu; kitapçık açılıyor…" : "Sınav oluşturuldu; kitapçık açılıyor…" });
@@ -447,7 +462,7 @@ export default function BankExamBuilder({
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={busy} onClick={create}>{created ? "Oluşturuldu" : busy ? "Oluşturuluyor…" : `${worksheet ? "Çalışma kağıdını oluştur" : "Denemeyi oluştur"} (${total} soru)`}</button>
+            <button className="btn-primary" disabled={busy} onClick={create}>{edit ? (busy ? "Kaydediliyor…" : `Değişiklikleri kaydet (${total} soru)`) : created ? "Oluşturuldu" : busy ? "Oluşturuluyor…" : `${worksheet ? "Çalışma kağıdını oluştur" : "Denemeyi oluştur"} (${total} soru)`}</button>
             {problems.length > 0 && <span className="text-xs text-red-700">{problems.length} soruda cevap sorunu var</span>}
             {pairs.same + pairs.sibling > 0 && (
               <span className="text-xs text-amber-700" title="Aynı soru: olası tekrar. Benzer soru: aynı kalıp, başka sayılar; biri diğerinin cevabını ele verebilir.">
