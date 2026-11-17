@@ -17,11 +17,12 @@ const measuredDifficulty = (p: number) => (p >= 70 ? 1 : p >= 40 ? 2 : 3);
  * - Doğru oranı ve uyarı: sonucu okunmuş sınavlarda madde analizinden (`itemAnalysis`); öğrenci sayısıyla ağırlıklı.
  *   Uyarı sonucu olan en son sınavdan; ayırt edicilik uyarıları ITEM_RULES.minN öğrenciden sonra.
  *   Ölçülen zorluk yalnızca ITEM_RULES.minN öğrenciden sonra verilir.
+ * - `except`: bu deneme sayılmaz (düzenlenen denemeden çıkarılan sorular "kullanıldı / sınıf gördü" diye gizlenmesin).
  */
-export async function bankUsage(ownerId: string) {
+export async function bankUsage(ownerId: string, except?: string) {
   const exams = (
     await prisma.exam.findMany({
-      where: { ownerId },
+      where: { ownerId, ...(except ? { id: { not: except } } : {}) },
       orderBy: { date: "desc" },
       select: { id: true, name: true, date: true, type: true, purpose: true, sections: true, courseId: true },
     })

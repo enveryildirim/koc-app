@@ -22,7 +22,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   if (sp.duzenle && !exam) notFound();
   const inExam = exam ? exam.secs.flatMap((s) => s.items ?? []) : [];
   if (exam && (!inExam.length || exam.resultCount)) redirect(`/kurum/denemeler/${exam.id}`);
-  const [bank, usage, courses, similar] = await Promise.all([bankPickerItems(ownerId, 5000, inExam), bankUsage(ownerId), listCourses(ownerId), similarPairs(ownerId)]);
+  const [bank, usage, courses, similar] = await Promise.all([bankPickerItems(ownerId, 5000, inExam), bankUsage(ownerId, exam?.id), listCourses(ownerId), similarPairs(ownerId)]);
   const edit = exam
     ? {
         id: exam.id,
