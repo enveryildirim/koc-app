@@ -51,4 +51,6 @@ prisma/test.db*
 /.next-*/
 
 # notlardaki kaynak PDF'ler (büyük dosyalar, kitap / kurum materyali)
-notes/*.pdf
+notes/**/*.pdf
+# geçmiş yazılı sınavlar: test materyali, commit'lenmez (PDF, Word, Excel, rar)
+notes/tahriri_imtihanlar/
