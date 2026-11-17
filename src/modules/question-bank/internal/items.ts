@@ -470,10 +470,9 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
  */
 export async function bankSummary(ownerId: string, used?: string[]) {
   const active = { ownerId, archivedAt: null, needsReview: false };
-  const [total, noAnswer, noOutcome, archived, pending, unused, groups, types] = await Promise.all([
+  const [total, noAnswer, archived, pending, unused, groups, types] = await Promise.all([
     prisma.questionItem.count({ where: active }),
     prisma.questionItem.count({ where: { ...active, ...NO_ANSWER } }),
-    prisma.questionItem.count({ where: { ...active, curriculumTopicId: null } }),
     prisma.questionItem.count({ where: { ownerId, archivedAt: { not: null } } }),
     prisma.questionItem.count({ where: { ownerId, archivedAt: null, needsReview: true } }),
     used ? prisma.questionItem.count({ where: { ...active, id: { notIn: used } } }) : Promise.resolve(null),
@@ -488,7 +487,22 @@ export async function bankSummary(ownerId: string, used?: string[]) {
   for (const s of Object.keys(topics)) topics[s].sort((a, b) => a.localeCompare(b, "tr"));
   const subjects = Object.keys(topics).sort((a, b) => a.localeCompare(b, "tr"));
   const byType = Object.fromEntries(types.map((t) => [t.type, t._count._all])) as Partial<Record<QuestionType, number>>;
-  return { total, noAnswer, noOutcome, archived, pending, unused, subjects, topics, byType };
+  return { total, noAnswer, archived, pending, unused, subjects, topics, byType };
+}
+
+/**
+ * Müfredattaki bir konuyla eşleşmeyen sorular (ders, düzey, konu → sayı); müfredat sayfasındaki uyarı için.
+ * Kayıtlı bağa değil, müfredatın şimdiki hâline bakar (bağ, havuz açılınca tidyBank ile yenilenir). Konusu boş olanlar sayılmaz.
+ * Arşivdekiler ve onay bekleyenler hariç.
+ */
+export async function unlinkedTopics(ownerId: string) {
+  const [rows, groups] = await Promise.all([
+    curriculumOutcomes(ownerId),
+    prisma.questionItem.groupBy({ by: ["subject", "grade", "topic"], where: { ownerId, archivedAt: null, needsReview: false, topic: { not: "" } }, _count: { _all: true } }),
+  ]);
+  return groups
+    .filter((g) => !matchOutcome(rows, { subject: g.subject, grade: g.grade, topic: g.topic }))
+    .map((g) => ({ subject: g.subject, grade: g.grade, topic: g.topic, count: g._count._all }));
 }
 
 /**

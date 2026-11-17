@@ -86,10 +86,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           label="Cevabı girilmemiş"
           value={summary.noAnswer}
           hint={
-            <>
-              {summary.noAnswer ? <Link href="?eksik=cevap" className="underline">Listele</Link> : "Hepsi tamam"}
-              {summary.noOutcome > 0 && <> · <Link href="?eksik=kazanim" className="underline">{summary.noOutcome} kazanımsız</Link></>}
-            </>
+            summary.noAnswer ? <Link href="?eksik=cevap" className="underline">Listele</Link> : "Hepsi tamam"
           }
         />
         <Kpi label="Hiç kullanılmamış" value={unused} hint={unused ? <Link href="?kullanim=hic" className="underline">Listele</Link> : "Hepsi kullanıldı"} />

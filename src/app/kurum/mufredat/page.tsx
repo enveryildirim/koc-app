@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
-import { CURRICULUM_COLUMNS, curriculumGradeOptions, gradeLabel, gradeScope } from "@/modules/curriculum";
+import { CURRICULUM_COLUMNS, curriculumGradeOptions, gradeLabel, gradeScope, normGrade, subjectKey } from "@/modules/curriculum";
+import { unlinkedTopics } from "@/modules/question-bank/server";
 import { allCurriculum, curriculumSets, curriculumTopics } from "@/modules/curriculum/server";
 import { classroomsOf } from "@/modules/enrollment/server";
 import { listCourses } from "@/modules/schedule/server";
@@ -29,12 +30,38 @@ const usersOf = (classes: ClassUse[], subject: string, grade: string) =>
 export default async function Page({ searchParams }: { searchParams: SP }) {
   const ownerId = await requireOwner();
   const sp = await searchParams;
-  const [sets, all, classrooms, courses] = await Promise.all([curriculumSets(ownerId), allCurriculum(ownerId), classroomsOf(ownerId), listCourses(ownerId)]);
+  const [sets, all, classrooms, courses, unlinked] = await Promise.all([curriculumSets(ownerId), allCurriculum(ownerId), classroomsOf(ownerId), listCourses(ownerId), unlinkedTopics(ownerId)]);
   const current = sets.find((s) => s.subject === sp.ders && s.grade === sp.sinif) ?? (sp.yeni ? null : sets[0]);
   const tab = sp.sekme === "duzenle" ? "duzenle" : "takip";
   const courseNames = [...new Set(courses.map((c) => c.name))].sort((a, b) => a.localeCompare(b, "tr"));
   const grades = curriculumGradeOptions(classrooms.map((c) => c.level), sets.map((s) => s.grade));
   const classes: ClassUse[] = classrooms.map((c) => ({ id: c.id, name: c.name, level: c.level, courses: courses.filter((x) => x.classroomId === c.id).map((x) => x.name) }));
+
+  // Havuzda sorusu olup müfredatı hiç girilmemiş ders / düzeyler (sorular kazanıma bağlanamıyor)
+  const setKey = (subject: string, grade: string) => `${subjectKey(subject)}|${normGrade(grade)}`;
+  const haveSets = new Set(sets.map((s) => setKey(s.subject, s.grade)));
+  const missing = new Map<string, { subject: string; grade: string; count: number }>();
+  for (const u of unlinked) {
+    const k = setKey(u.subject, u.grade);
+    if (haveSets.has(k)) continue;
+    const m = missing.get(k) ?? missing.set(k, { subject: u.subject, grade: normGrade(u.grade), count: 0 }).get(k)!;
+    m.count += u.count;
+  }
+  const missingNote = missing.size > 0 && (
+    <div className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+      <b>Soru havuzunda müfredatı girilmemiş dersler var:</b>{" "}
+      {[...missing.values()].map((m, i) => (
+        <span key={i}>
+          {i > 0 && " · "}
+          {m.subject} {m.grade ? gradeLabel(m.grade) : "(düzeysiz)"}{" "}
+          <Link href={`/kurum/soru-havuzu?${new URLSearchParams({ ders: m.subject, eksik: "kazanim" })}`} className="underline">{m.count} soru</Link>
+        </span>
+      ))}
+      <p className="mt-0.5 text-xs text-amber-800">
+        Bu sorular kazanıma bağlanamıyor. Müfredatı <Link href={q({ yeni: "1" })} className="underline">ekleyince</Link> konu adı eşleşen sorular kendiliğinden bağlanır.
+      </p>
+    </div>
+  );
 
   const exportRows = all.map((r) => [r.subject, gradeLabel(r.grade), r.unit, r.topic, r.code, r.outcome, r.weeks]);
   const header = (
@@ -56,6 +83,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       <div>
         {header}
         <CurriculumImport hasData={false} courseNames={courseNames} grades={grades} existing={sets} />
+        {missingNote}
         <Empty>
           Henüz müfredat yok. Excel dosyası yükleyin, örnek müfredatı yükleyin ya da <Link href={q({ yeni: "1" })} className="font-semibold text-graphite underline">elle girin</Link>.
         </Empty>
@@ -73,6 +101,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
       <div className="mb-3 flex justify-end">
         <CurriculumImport hasData courseNames={courseNames} grades={grades} existing={sets} />
       </div>
+      {missingNote}
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label="Müfredat setleri" className="flex flex-col gap-3">
           {[...byGrade.entries()].map(([grade, list]) => (
