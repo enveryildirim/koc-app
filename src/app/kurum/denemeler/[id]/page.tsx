@@ -211,7 +211,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   /* -------------------------------- Girmeyenler -------------------------------- */
   if (tab === "girmeyenler") {
-    const { expected, missing } = await examAbsentees(ownerId, id, sinif || undefined);
+    const { expected, missing, scope } = await examAbsentees(ownerId, id, sinif || undefined);
     return (
       <>
         {header}
@@ -224,7 +224,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           />
         </div>
         <p className="mb-3 text-sm text-lead">
-          Sınava girdiği sınıflardaki öğrencilerden sonucu olmayanlar: <b>{missing.length}</b> / {expected} öğrenci.
+          {scope ? <>Dersin sınıfı <b>{scope}</b> öğrencilerinden sonucu olmayanlar</> : "Sınava girdiği sınıflardaki öğrencilerden sonucu olmayanlar"}: <b>{missing.length}</b> / {expected} öğrenci.
         </p>
         {missing.length === 0 ? (
           <Empty>Tüm öğrenciler sınava girmiş. </Empty>

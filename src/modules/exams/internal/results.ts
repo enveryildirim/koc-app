@@ -4,6 +4,7 @@ import { invalid, notFound } from "@/shared/errors";
 import { listStudents, studentNoMatcher } from "@/modules/enrollment/server";
 import { gradeExam, LETTERS, maxScore, parseSections, resolveScoring, round2 } from "../domain";
 import { getExam } from "./exams";
+import { findCourse } from "@/modules/schedule/server";
 
 export type IncomingRow = { studentNo: string; booklet: string; answers: string };
 
@@ -133,16 +134,24 @@ export async function examReport(ownerId: string, examId: string) {
 export type ExamReport = NonNullable<Awaited<ReturnType<typeof examReport>>>;
 
 /**
- * Denemeye girmeyenler: sınava en az bir öğrencisi giren sınıfların (ya da verilen sınıfın)
- * kurum içi öğrencilerinden sonucu olmayanlar. `expected` beklenen katılımcı sayısıdır.
+ * Denemeye girmeyenler: beklenen kurum içi öğrencilerden sonucu olmayanlar. `expected` beklenen katılımcı sayısıdır.
+ * - Derse bağlı denemede beklenenler o dersin sınıfı / grubu (ek üyelikler dahil; ör. SEVİYE-2 grubu);
+ *   `classroomId` verilirse bunlardan ana sınıfı o olanlar. `scope` = dersin sınıfının adı.
+ * - Kurum denemesinde sınava en az bir öğrencisi giren sınıfların (ya da verilen sınıfın) öğrencileri; `scope` = null.
  */
 export async function examAbsentees(ownerId: string, examId: string, classroomId?: string) {
-  await getExam(ownerId, examId);
+  const exam = await getExam(ownerId, examId);
   const taken = await prisma.examResult.findMany({ where: { examId }, select: { studentId: true, student: { select: { classroomId: true } } } });
   const takenIds = new Set(taken.map((r) => r.studentId));
-  const classIds = classroomId ? [classroomId] : [...new Set(taken.map((r) => r.student.classroomId).filter((c): c is string => !!c))];
-  const expected = await listStudents(ownerId, { external: false, classroomId: classIds }, "class");
-  return { expected: expected.length, missing: expected.filter((s) => !takenIds.has(s.id)) };
+  const course = exam.courseId ? await findCourse(ownerId, exam.courseId) : null;
+  let expected;
+  if (course?.classroomId) {
+    expected = await listStudents(ownerId, { external: false, inClass: course.classroomId, ...(classroomId ? { classroomId } : {}) }, "class");
+  } else {
+    const classIds = classroomId ? [classroomId] : [...new Set(taken.map((r) => r.student.classroomId).filter((c): c is string => !!c))];
+    expected = await listStudents(ownerId, { external: false, classroomId: classIds }, "class");
+  }
+  return { expected: expected.length, missing: expected.filter((s) => !takenIds.has(s.id)), scope: course?.classroom.name ?? null };
 }
 
 /** Verilen denemelerin (yalnızca kurumun kendi denemeleri) tüm sonuçları, öğrenci ve sınıfıyla. */
