@@ -15,6 +15,8 @@ export type WeeklyDigest = {
   attendance: { total: number; absent: number; late: number; excused: number; absentSubjects: string[] };
   /** Rapor gününden sonraki 7 gün içinde velilere açık takvim kayıtları. */
   upcoming: { title: string; start: string }[];
+  /** Sınıfın ders ders haftada işlediği ve sıradaki konuları (yıllık plandan). Eski kayıtlarda olmayabilir. */
+  topics?: { subject: string; done: string[]; next: string[] }[];
 };
 
 export type WeeklyTemplate = { intro: string; outro: string };
@@ -82,6 +84,12 @@ export function weeklyLines(d: WeeklyDigest): string[] {
     }
   }
   if (!lines.length) lines.push("• Bu hafta deneme, sözlü/yazılı, ödev ve yoklama kaydı yok.");
+  const topicBlock = (title: string, pick: (t: { done: string[]; next: string[] }) => string[]) => {
+    const list = (d.topics ?? []).filter((t) => pick(t).length);
+    if (list.length) lines.push([`• ${title}:`, ...list.map((t) => `   – ${t.subject}: ${pick(t).join("; ")}`)].join("\n"));
+  };
+  topicBlock("Bu hafta sınıfta işlenen konular", (t) => t.done);
+  topicBlock("Sıradaki konular", (t) => t.next);
   if (d.upcoming.length) {
     lines.push(`• Önümüzdeki günlerde: ${d.upcoming.map((u) => `${u.title} (${dm(u.start, "short")})`).join(", ")}`);
   }

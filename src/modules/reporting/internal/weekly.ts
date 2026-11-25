@@ -56,6 +56,7 @@ export async function weeklyReports(ownerId: string, filter: StudentFilter, week
         absentSubjects: [...new Set(att.list.filter((a) => a.status === "ABSENT").map((a) => a.subject))],
       },
       upcoming: r.upcoming.filter((u) => u.start <= horizon).map((u) => ({ title: u.title, start: u.start })),
+      topics: r.topics.map((t) => ({ subject: t.subject, done: t.done.map((x) => x.topic), next: t.next.map((x) => x.topic) })),
     };
     const d = byStudent.get(share.id);
     return {

@@ -9,7 +9,7 @@ import { prisma } from "@/shared/db";
 import { invalid, notFound } from "@/shared/errors";
 import { parseSections, round2 } from "@/modules/exams";
 import { listStudents, type StudentFilter } from "@/modules/enrollment/server";
-import { upcomingForStudent } from "@/modules/planning/server";
+import { classTopicsForPeriod, upcomingForStudent } from "@/modules/planning/server";
 import { ymd } from "@/shared/date";
 import { attendanceSummary, homeworkSummary } from "./summary";
 
@@ -89,9 +89,13 @@ async function buildParentReport(student: StudentWithClass, from: string, to: st
   const types = await prisma.examResult.findMany({ where: { studentId }, select: { exam: { select: { type: true } } }, distinct: ["examId"] });
   const upcoming = await upcomingForStudent(student.ownerId, student.classroomId, [...new Set(types.map((t) => t.exam.type))], ymd());
 
+  /* ------------------------- Sınıfta işlenen konular ------------------------ */
+  const topics = student.classroomId ? await classTopicsForPeriod(student.ownerId, student.classroomId, from, to) : [];
+
   return {
     institution: owner.name,
     upcoming,
+    topics,
     student: {
       id: student.id,
       name: `${student.firstName} ${student.lastName}`,

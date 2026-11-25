@@ -154,6 +154,37 @@ export default function VeliKarne({ r }: { r: ParentReport }) {
         </Section>
       )}
 
+      {r.topics.length > 0 && (
+        <Section title="Sınıfta işlenen konular">
+          <div className="divide-y divide-rule/70 rounded-lg ring-1 ring-rule">
+            {r.topics.map((t) => (
+              <div key={t.subject} className="px-3 py-2 text-xs">
+                <b>{t.subject}</b>
+                {t.done.length > 0 && (
+                  <ul className="mt-1 space-y-1">
+                    {t.done.map((d, i) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="w-14 shrink-0 text-lead">{new Date(d.date + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}</span>
+                        <span>
+                          {d.topic}
+                          {d.outcome && <span className="block text-lead">{d.outcome}</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {t.next.length > 0 && (
+                  <p className="mt-1 text-lead">
+                    <span className="font-semibold text-graphite">Sıradaki:</span> {t.next.map((n) => n.topic).join("; ")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-lead/70">Sınıfın yıllık plandaki ilerlemesidir; öğrencinin bireysel durumunu göstermez.</p>
+        </Section>
+      )}
+
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Section title="Ödevler">
           {r.homework.list.length === 0 ? (

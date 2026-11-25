@@ -244,6 +244,44 @@ export async function topicsForLesson(ownerId: string, classroomId: string, subj
   };
 }
 
+export type ClassTopics = {
+  subject: string;
+  /** Dönemde işlendi diye işaretlenenler (işlenme sırasıyla) */
+  done: { topic: string; outcome: string; date: string }[];
+  /** Dönem sonu itibarıyla sıradaki işlenmemiş konu ve aynı haftaya planlanmış paralel konular */
+  next: { topic: string; outcome: string }[];
+};
+
+/**
+ * Veli raporu için sınıfın ders ders konu özeti: [from, to] arasında işlendi diye işaretlenen konular
+ * ve sıradaki konular. Kazanım, konu müfredata bağlıysa müfredattan gelir. Sınıf düzeyinde bilgidir;
+ * öğrencinin o konuyu öğrenip öğrenmediğini söylemez. Planı olmayan ya da gösterecek konusu olmayan ders listede yer almaz.
+ */
+export async function classTopicsForPeriod(ownerId: string, classroomId: string, from: string, to: string): Promise<ClassTopics[]> {
+  const lastYear = schoolYearOf(to);
+  const plans = await prisma.lessonPlan.findMany({
+    where: { ownerId, classroomId, year: { in: [...new Set([schoolYearOf(from), lastYear])] } },
+    include: { items: { orderBy: { order: "asc" }, include: { curriculumTopic: { select: { outcome: true } } } } },
+  });
+  const bySubject = new Map<string, ClassTopics>();
+  for (const plan of plans) {
+    const entry = bySubject.get(plan.subject) ?? { subject: plan.subject, done: [], next: [] };
+    bySubject.set(plan.subject, entry);
+    const outcome = (i: (typeof plan.items)[number]) => i.curriculumTopic?.outcome ?? "";
+    for (const i of plan.items) {
+      if (i.doneDate && i.doneDate >= from && i.doneDate <= to) entry.done.push({ topic: i.topic, outcome: outcome(i), date: i.doneDate });
+    }
+    if (plan.year !== lastYear) continue;
+    // Dönem sonunda henüz işlenmemiş olanlar (sonradan işaretlenenler de dönem itibarıyla işlenmemiş sayılır)
+    const open = byWeek(plan.items).filter((i) => !i.doneDate || i.doneDate > to);
+    entry.next = open.filter((i) => i.week === open[0]?.week).slice(0, 3).map((i) => ({ topic: i.topic, outcome: outcome(i) }));
+  }
+  return [...bySubject.values()]
+    .map((e) => ({ ...e, done: e.done.sort((a, b) => a.date.localeCompare(b.date)) }))
+    .filter((e) => e.done.length || e.next.length)
+    .sort((a, b) => a.subject.localeCompare(b.subject, "tr"));
+}
+
 /** Plan editörü için: sınıflar, sınıf başına ders adları (Yönetim → Dersler) ve yılın tatilleri. */
 export async function planEditorData(ownerId: string, year: number) {
   const { from, to } = schoolYearRange(year);
