@@ -2,7 +2,7 @@
 
 SınavKur'u bir sunucuda **Dokploy** ile yayınlama rehberi: hazırlık, ilk kurulum, güncelleme, yedek ve sorun giderme.
 
-> **Durum (17 Kasım 2026):** Kodda yapılması gereken değişiklikler (bölüm 2) henüz yapılmadı. Rehber, o değişiklikler yapıldıktan sonraki hâli anlatır. Bölüm 2'deki maddeler bitmeden yayına almayın; özellikle 2.1.
+> **Durum (25 Kasım 2026):** Bölüm 2'deki maddelerin hepsi yapıldı. Üretim kipinde (`NODE_ENV=production`, standalone sunucu) yerelde denendi: anahtarsız / kısa anahtarla açılmama, güvenli çerez, demo ve kayıt kapalı, sağlık kontrolü, istek sınırları, güvenlik başlıkları, boş veritabanına `migrate deploy`, yedek betiği. Docker imajı henüz derlenip denenmedi (yerelde Docker çalışmıyordu); ilk Dokploy dağıtımında günlükleri izleyin.
 
 ---
 
@@ -29,36 +29,53 @@ Kontrol listesi. Her madde bittiğinde `[x]` yapın.
 
 **Zorunlu**
 
-- [ ] **2.1 `AUTH_SECRET` zorunlu.**
+- [x] **2.1 `AUTH_SECRET` zorunlu.**
   - Bugün tanımlı değilse oturumlar `"dev-secret"` ile imzalanıyor (`src/modules/identity/internal/session.ts`). Bu, yayında herkesin oturum sahteleyebilmesi demek.
   - Üretimde değişken yoksa ya da kısaysa (32 karakterden az) uygulama açılmamalı.
-- [ ] **2.2 Güvenli çerez.** Oturum çerezi üretimde `secure: true` (yalnızca HTTPS).
-- [ ] **2.3 Demo kapalı.**
+- [x] **2.2 Güvenli çerez.** Oturum çerezi üretimde `secure: true` (yalnızca HTTPS).
+- [x] **2.3 Demo kapalı.**
   - Giriş sayfasındaki "Demo hesabıyla gir" düğmesi üretimde görünmez (`SHOW_DEMO_LOGIN=true` ile açılabilir).
   - Üretimde `prisma db seed` çalıştırılmaz.
-- [ ] **2.4 Kayıt kapalı.**
+- [x] **2.4 Kayıt kapalı.**
   - `/kayit` sayfası ve `POST /api/auth/register` yalnızca `ALLOW_REGISTRATION=true` iken çalışır. Varsayılan kapalı.
-- [ ] **2.5 Dockerfile ve `.dockerignore`.**
+- [x] **2.5 Dockerfile ve `.dockerignore`.**
   - `next.config.ts`'de `output: "standalone"`.
   - Çok aşamalı imaj (Debian tabanlı `node:22-slim`; sharp ve Prisma için).
   - Prisma CLI imajda kalır (açılışta migration çalışır).
   - `.env`, `prisma/*.db`, `storage/`, `notes/`, `.next*` imaja girmez.
-- [ ] **2.6 Prisma Migrate.**
+- [x] **2.6 Prisma Migrate.**
   - Geliştirmede `prisma db push` kullanıldı. Yayında şema değişiklikleri kayıtlı migration'larla yapılır.
   - Mevcut şemadan başlangıç migration'ı çıkarılır (`prisma/migrations/0_init`).
   - Container açılırken önce `prisma migrate deploy`, sonra sunucu çalışır.
   - Geliştiriciler bundan sonra şema değiştirince `prisma migrate dev --name <ad>` kullanır.
-- [ ] **2.7 Sağlık kontrolü.**
+- [x] **2.7 Sağlık kontrolü.**
   - `GET /api/health`: veritabanına basit bir sorgu atar; sorun yoksa `200 {"ok":true}`, yoksa `503`.
-- [ ] **2.8 Tutarlı veritabanı yedeği.**
+- [x] **2.8 Tutarlı veritabanı yedeği.**
   - `npm run db:backup` (imajda düz `node` betiği olarak).
   - SQLite'ın `VACUUM INTO` komutuyla `/app/data/backups/app-YYYYMMDD.db` yazar.
   - 14 günden eski kopyaları siler.
 
 **Kısa sürede**
 
-- [ ] **2.9 İstek sınırı:** girişe (şifre deneme) ve `/api/mcp`'ye.
-- [ ] **2.10 Güvenlik başlıkları:** `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`.
+- [x] **2.9 İstek sınırı:** girişe (şifre deneme) ve `/api/mcp`'ye.
+- [x] **2.10 Güvenlik başlıkları:** `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`.
+
+**Nerede?**
+
+| Madde | Dosya |
+|---|---|
+| 2.1–2.4 | `src/modules/identity/internal/config.ts` (ayarlar), `src/instrumentation.ts` (açılış denetimi) |
+| 2.5 | `Dockerfile`, `docker-entrypoint.sh`, `.dockerignore`, `next.config.ts` |
+| 2.6 | `prisma/migrations/` |
+| 2.7 | `src/app/api/health/route.ts` |
+| 2.8 | `scripts/db-backup.mjs` |
+| 2.9 | `src/shared/rateLimit.ts`: giriş 15 dakikada adres başına 30, e-posta başına 10; kayıt saatte 5; `/api/mcp` dakikada 300, geçersiz anahtarla 10 dakikada 20. Sayaçlar bellekte (tek kopya), yeniden başlatmada sıfırlanır |
+| 2.10 | `next.config.ts` |
+
+**Geliştiriciler için (migration düzeni)**
+- Şema değişikliği: `schema.prisma`'yı düzenleyin → `npm run db:migrate -- --name <ad>`. Oluşan `prisma/migrations/<tarih>_<ad>/` klasörünü commit'leyin.
+- `prisma db push` artık kullanılmaz; yayındaki veritabanı yalnızca migration'larla değişir.
+- `db push` ile kurulmuş eski bir yerel veritabanını bir kez işaretleyin: `npx prisma migrate resolve --applied 0_init` (önce `npx prisma migrate diff --from-url file:./prisma/dev.db --to-schema-datamodel prisma/schema.prisma --script` boş çıkmalı).
 
 ---
 
@@ -87,6 +104,7 @@ Dokploy → uygulama → **Environment**.
 | `APP_TIME_ZONE` | `Europe/Istanbul` | Hayır | Varsayılan zaten bu |
 | `ALLOW_REGISTRATION` | `false` | Hayır | İlk kurum hesabını açarken geçici olarak `true` (bölüm 5.6) |
 | `SHOW_DEMO_LOGIN` | `false` | Hayır | Tanıtım sunucusunda `true` |
+| `COOKIE_SECURE` | — | Hayır | Yalnızca yerelde HTTP üzerinden üretim derlemesi denerken `false`. Yayında boş bırakın |
 
 `AUTH_SECRET` ve diğer gizli değerleri **build argümanı olarak değil**, çalışma zamanı ortam değişkeni olarak girin; build argümanları imajın içinde kalabilir.
 

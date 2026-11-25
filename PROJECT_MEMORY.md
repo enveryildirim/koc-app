@@ -38,13 +38,14 @@ Son güncelleme: 7 Kasım 2026 · Dal: `dahili-ders-takip`
 ```bash
 npm install
 cp .env.example .env
-npm run db:setup   # prisma db push + seed
+npm run db:setup   # prisma migrate deploy + seed
 npm run dev        # http://localhost:3000
 ```
 
 - **Demo hesap:** `demo@sinavkur.com` / `demo1234`. Giriş sayfasında "Demo hesabıyla gir" düğmesi var; `/giris?demo=1` adresi de otomatik giriş yapar. Girişten sonra `/kurum` açılır.
 - **Veriyi sıfırlama:** `npm run db:seed`. Seed, demo kullanıcıyı ve tüm kurum tablolarını silip yeniden oluşturur.
 - **npm 11 notu:** install script'leri onay gerektiriyor. Prisma ve esbuild `package.json > allowScripts` içinde onaylı. `fsevents` uyarısı önemsiz.
+- **Şema değişikliği migration ile:** `npm run db:migrate -- --name <ad>` (25 Kasım 2026'dan beri; başlangıç `prisma/migrations/0_init`). `db push` kullanılmaz. Ayrıntı: DEPLOY.md bölüm 2.
 - **`prisma db push --force-reset` kullanmayın.** Prisma bu komutu yapay zekâ asistanları için açık kullanıcı onayına bağlıyor. Seed zaten veriyi temizliyor.
 
 ---

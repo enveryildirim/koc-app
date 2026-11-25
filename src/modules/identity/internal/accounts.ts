@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/shared/db";
-import { conflict, invalid, unauthorized } from "@/shared/errors";
+import { conflict, forbidden, invalid, unauthorized } from "@/shared/errors";
+import { allowRegistration } from "./config";
 import { createSession } from "./session";
 
 /** E-posta + şifre ile giriş yapar ve oturum çerezini yazar. */
@@ -14,6 +15,7 @@ export async function login(body: Record<string, unknown>) {
 
 /** Yeni hesap (kurum) açar ve oturum çerezini yazar. */
 export async function register(body: Record<string, unknown>) {
+  if (!allowRegistration()) throw forbidden("Yeni hesap açma kapalı.");
   const name = String(body.name ?? "").trim();
   const email = String(body.email ?? "").toLowerCase().trim();
   const password = String(body.password ?? "");

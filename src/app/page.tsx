@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { allowRegistration, showDemoLogin } from "@/modules/identity/server";
+
+// Demo ve kayıt düğmeleri ortam değişkenine bağlı: sayfa derlemede sabitlenmesin
+export const dynamic = "force-dynamic";
 
 /** Açılış: optik form şeridi doldurulur, net hesaplanır. Sayfanın tek hareketli anı. */
 const SHEET: { section: string; answers: string; key: string }[] = [
@@ -72,6 +76,8 @@ const WEEK: [string, string][] = [
 ];
 
 export default function Home() {
+  const demo = showDemoLogin();
+  const registration = allowRegistration();
   return (
     <div>
       <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 md:grid-cols-[1fr_minmax(0,30rem)] md:py-20">
@@ -81,10 +87,11 @@ export default function Home() {
             SınavKur deneme sınavlarını optik formdan okur, neti ve sıralamayı hesaplar. Yoklamayı, ödevleri ve yıllık ders planını takip eder, velilere karne gönderir.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/giris?demo=1" className="btn-primary px-5 py-2.5 text-base">Demo kurumu gezin</Link>
-            <Link href="/kayit" className="btn-secondary px-5 py-2.5 text-base">Kurum hesabı açın</Link>
+            {demo && <Link href="/giris?demo=1" className="btn-primary px-5 py-2.5 text-base">Demo kurumu gezin</Link>}
+            {registration && <Link href="/kayit" className="btn-secondary px-5 py-2.5 text-base">Kurum hesabı açın</Link>}
+            {!demo && !registration && <Link href="/giris" className="btn-primary px-5 py-2.5 text-base">Giriş yap</Link>}
           </div>
-          <p className="mt-3 text-sm text-lead">Demo hesabında örnek sınıflar, denemeler ve bir aylık yoklama hazır.</p>
+          {demo && <p className="mt-3 text-sm text-lead">Demo hesabında örnek sınıflar, denemeler ve bir aylık yoklama hazır.</p>}
         </div>
         <AnswerSheet />
       </section>

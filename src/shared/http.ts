@@ -2,7 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { AppError, type AppErrorKind } from "./errors";
 
-const STATUS: Record<AppErrorKind, number> = { unauthorized: 401, invalid: 400, not_found: 404, conflict: 409 };
+const STATUS: Record<AppErrorKind, number> = { unauthorized: 401, forbidden: 403, invalid: 400, not_found: 404, conflict: 409, too_many: 429 };
 
 /**
  * Route handler sarmalayıcı: handler'ın döndürdüğü değeri JSON'a, fırlattığı AppError'ı

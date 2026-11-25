@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getUser } from "@/modules/identity/server";
+import { allowRegistration, getUser } from "@/modules/identity/server";
 import { AnswerRow } from "./Logo";
 
 export default async function SiteHeader() {
@@ -25,10 +25,12 @@ export default async function SiteHeader() {
           ) : (
             <>
               <Link href="/giris" className="btn whitespace-nowrap text-graphite hover:bg-white">Giriş yap</Link>
-              <Link href="/kayit" className="btn-primary whitespace-nowrap">
-                <span className="sm:hidden">Hesap açın</span>
-                <span className="hidden sm:inline">Kurum hesabı açın</span>
-              </Link>
+              {allowRegistration() && (
+                <Link href="/kayit" className="btn-primary whitespace-nowrap">
+                  <span className="sm:hidden">Hesap açın</span>
+                  <span className="hidden sm:inline">Kurum hesabı açın</span>
+                </Link>
+              )}
             </>
           )}
         </nav>

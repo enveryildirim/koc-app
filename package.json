@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:setup": "prisma db push && prisma db seed",
+    "db:setup": "prisma migrate deploy && prisma db seed",
     "db:seed": "prisma db seed",
     "setup": "npm run db:setup",
     "mcp": "tsx --tsconfig tsconfig.mcp.json src/mcp/server.ts",
     "dev:test": "DATABASE_URL=file:./test.db next dev",
-    "db:test:reset": "rm -f prisma/test.db prisma/test.db-journal && DATABASE_URL=file:./test.db prisma db push --skip-generate"
+    "db:test:reset": "rm -f prisma/test.db prisma/test.db-journal && DATABASE_URL=file:./test.db prisma migrate deploy",
+    "db:migrate": "prisma migrate dev",
+    "db:backup": "node scripts/db-backup.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

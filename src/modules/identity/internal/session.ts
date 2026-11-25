@@ -2,9 +2,9 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/shared/db";
+import { authSecret, secureCookies } from "./config";
 
 const COOKIE = "sk_session";
-const secret = new TextEncoder().encode(process.env.AUTH_SECRET ?? "dev-secret");
 
 /** Kişisel linkle giren öğretmen ya da etüt mesulü. */
 export type Staff = { teacherId: string; name: string; role: "TEACHER" | "MENTOR"; linkId: string };
@@ -16,8 +16,8 @@ export type Staff = { teacherId: string; name: string; role: "TEACHER" | "MENTOR
 export type Session = { ownerId: string; staff: Staff | null };
 
 async function sign(payload: Record<string, string>, sub: string) {
-  const token = await new SignJWT(payload).setProtectedHeader({ alg: "HS256" }).setSubject(sub).setIssuedAt().setExpirationTime("30d").sign(secret);
-  (await cookies()).set(COOKIE, token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  const token = await new SignJWT(payload).setProtectedHeader({ alg: "HS256" }).setSubject(sub).setIssuedAt().setExpirationTime("30d").sign(authSecret());
+  (await cookies()).set(COOKIE, token, { httpOnly: true, secure: secureCookies(), sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
 }
 
 export async function createSession(userId: string) {
@@ -38,7 +38,7 @@ export async function getSession(): Promise<Session | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, authSecret());
     if (!payload.sub) return null;
     if (typeof payload.lid !== "string") return { ownerId: payload.sub, staff: null };
     const link = await prisma.accessLink.findFirst({ where: { id: payload.lid, ownerId: payload.sub } });

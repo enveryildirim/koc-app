@@ -5,7 +5,8 @@ import Link from "next/link";
 
 const DEMO = { email: "demo@sinavkur.com", password: "demo1234" };
 
-export default function AuthForm({ mode }: { mode: "login" | "register" }) {
+/** `demo`: "Demo hesabıyla gir" düğmesi; `registration`: kayıt bağlantısı. Sunucu ayarlarından gelir (identity > config). */
+export default function AuthForm({ mode, demo, registration }: { mode: "login" | "register"; demo: boolean; registration: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -30,7 +31,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   }
 
   useEffect(() => {
-    if (mode === "login" && params.get("demo")) submit({ name: "", ...DEMO });
+    if (mode === "login" && demo && params.get("demo")) submit({ name: "", ...DEMO });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -67,11 +68,12 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
             {busy ? "Lütfen bekleyin…" : mode === "login" ? "Giriş yap" : "Kayıt ol"}
           </button>
         </form>
-        {mode === "login" && (
+        {mode === "login" && demo && (
           <button className="btn-secondary mt-3 w-full" disabled={busy} onClick={() => submit({ name: "", ...DEMO })}>
             Demo hesabıyla gir
           </button>
         )}
+        {(mode === "register" || registration) && (
         <p className="mt-6 text-center text-sm text-lead">
           {mode === "login" ? (
             <>Hesabınız yok mu? <Link className="font-semibold text-brand-600" href="/kayit">Kayıt olun</Link></>
@@ -79,6 +81,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
             <>Zaten üye misiniz? <Link className="font-semibold text-brand-600" href="/giris">Giriş yapın</Link></>
           )}
         </p>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,33 @@
+# İmaja girmeyenler: bağımlılıklar imajda kurulur; yerel veri, gizli değerler ve notlar asla girmez.
+node_modules
+.next
+.next-*
+out
+coverage
+.git
+.github
+.claude
+.vscode
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# gizli değerler
+.env
+.env.*
+!.env.example
+
+# yerel veritabanları ve kurum dosyaları
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
+storage
+data
+
+# notlar ve test materyali
+notes
+
+Dockerfile
+.dockerignore
+docker-compose*.yml
