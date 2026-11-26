@@ -3,6 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
 import { bankPickerItems, similarPairs } from "@/modules/question-bank/server";
 import { listCourses } from "@/modules/schedule/server";
+import { curriculumTopicNames } from "@/modules/curriculum/server";
+import { gradeSortKey, subjectKey, topicKey } from "@/modules/curriculum";
+import { classroomsOf } from "@/modules/enrollment/server";
 import { bankUsage, findExam } from "@/modules/exams/server";
 import { toInputDate } from "@/shared/date";
 import BankExamBuilder from "@/modules/exams/ui/BankExamBuilder";
@@ -22,7 +25,24 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   if (sp.duzenle && !exam) notFound();
   const inExam = exam ? exam.secs.flatMap((s) => s.items ?? []) : [];
   if (exam && (!inExam.length || exam.resultCount)) redirect(`/kurum/denemeler/${exam.id}`);
-  const [bank, usage, courses, similar] = await Promise.all([bankPickerItems(ownerId, 5000, inExam), bankUsage(ownerId, exam?.id), listCourses(ownerId), similarPairs(ownerId)]);
+  const [bank, usage, courses, similar, curTopics, rooms] = await Promise.all([
+    bankPickerItems(ownerId, 5000, inExam),
+    bankUsage(ownerId, exam?.id),
+    listCourses(ownerId),
+    similarPairs(ownerId),
+    curriculumTopicNames(ownerId),
+    classroomsOf(ownerId),
+  ]);
+  const levelOf = new Map(rooms.map((r) => [r.id, r.level ?? ""]));
+  // Havuzdaki sınıf / seviye değerleri, sınıf sırasıyla (sınıf süzgeci)
+  const grades = [...new Set(bank.map((q) => q.grade).filter(Boolean))].sort((a, b) => gradeSortKey(a).localeCompare(gradeSortKey(b), "tr"));
+  // Konu süzgeci müfredat sırasıyla dizilsin: "ders<TAB>konu" → müfredattaki sırası (müfredatta olmayan konu yok)
+  const curOrder = new Map(Object.entries(curTopics).map(([s, list]) => [subjectKey(s), new Map(list.map((t, i) => [topicKey(t), i]))]));
+  const topicRank: Record<string, number> = {};
+  for (const q of bank) {
+    const i = q.topic ? curOrder.get(subjectKey(q.subject))?.get(topicKey(q.topic)) : undefined;
+    if (i !== undefined) topicRank[`${q.subject}\t${q.topic}`] = i;
+  }
   const edit = exam
     ? {
         id: exam.id,
@@ -55,9 +75,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
         <BankExamBuilder
           items={items}
           similar={similar}
+          topicRank={topicRank}
+          grades={grades}
           preset={edit ? undefined : preset}
           edit={edit}
-          courses={courses.filter((c) => c.kind !== "STUDY").map((c) => ({ id: c.id, label: `${c.classroomName} · ${c.name}`, classroomId: c.classroomId, classroomName: c.classroomName }))}
+          courses={courses
+            .filter((c) => c.kind !== "STUDY")
+            .map((c) => ({ id: c.id, label: `${c.classroomName} · ${c.name}`, classroomId: c.classroomId, classroomName: c.classroomName, subject: c.name, level: levelOf.get(c.classroomId) ?? "" }))}
           initialCourse={courses.some((c) => c.id === sp.ders) ? sp.ders : ""}
         />
       )}
