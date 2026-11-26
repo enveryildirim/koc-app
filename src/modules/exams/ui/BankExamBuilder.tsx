@@ -210,16 +210,21 @@ export default function BankExamBuilder({
   // Sınavda optikle okunamayan sorular havuzda gösterilmez; kaç tane olduğu söylenir
   const hiddenOpen = worksheet ? 0 : items.filter((q) => !isOptical(q.type)).length;
   // Konular müfredat sırasıyla (ders seçili değilse ders ders); müfredatta olmayanlar dersin sonunda, alfabetik
-  const topicChoices = useMemo(() => {
+  const topicEntries = useMemo(() => {
     const seen = new Map<string, { subject: string; rank: number }>();
     for (const q of items) {
       if (!q.topic || (f.subject && q.subject !== f.subject) || (f.grade && q.grade !== f.grade) || seen.has(q.topic)) continue;
       seen.set(q.topic, { subject: q.subject, rank: topicRank[`${q.subject}\t${q.topic}`] ?? Infinity });
     }
-    return [...seen.entries()]
-      .sort(([ta, a], [tb, b]) => a.subject.localeCompare(b.subject, "tr") || a.rank - b.rank || ta.localeCompare(tb, "tr"))
-      .map(([t]) => t);
+    return [...seen.entries()].sort(([ta, a], [tb, b]) => a.subject.localeCompare(b.subject, "tr") || a.rank - b.rank || ta.localeCompare(tb, "tr"));
   }, [items, f.subject, f.grade, topicRank]);
+  const topicChoices = useMemo(() => topicEntries.map(([t]) => t), [topicEntries]);
+  // Ders seçili değilken konu listesi ders başlıkları altında gruplanır (dersler birbirine karışmasın)
+  const topicGroups = useMemo(() => {
+    const g = new Map<string, string[]>();
+    for (const [t, { subject }] of topicEntries) (g.get(subject) ?? g.set(subject, []).get(subject)!).push(t);
+    return [...g.entries()];
+  }, [topicEntries]);
   // Konulara göre seçimin satırları: süzgece uyan, henüz eklenmemiş soru sayısı ve denemeye eklenmiş olanlar
   const topicRows = useMemo(
     () =>
@@ -517,8 +522,14 @@ export default function BankExamBuilder({
               </select>
             )}
             <select className="input w-auto max-w-64 min-w-40 flex-1" value={f.topic} onChange={(e) => filter({ topic: e.target.value })} aria-label="Konu">
-              <option value="">Tüm konular</option>
-              {topicChoices.map((t) => <option key={t} value={t}>{t}</option>)}
+              <option value="">{`Tüm konular (${topicChoices.length})`}</option>
+              {f.subject
+                ? topicChoices.map((t) => <option key={t} value={t}>{t}</option>)
+                : topicGroups.map(([s, ts]) => (
+                    <optgroup key={s} label={s}>
+                      {ts.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </optgroup>
+                  ))}
             </select>
             <select className="input w-auto" value={f.difficulty} onChange={(e) => filter({ difficulty: e.target.value })} aria-label="Zorluk">
               <option value="">Her zorluk</option>
