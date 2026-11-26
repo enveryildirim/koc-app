@@ -50,7 +50,5 @@ prisma/test.db*
 !.env.example
 /.next-*/
 
-# notlardaki kaynak PDF'ler (büyük dosyalar, kitap / kurum materyali)
-notes/**/*.pdf
-# geçmiş yazılı sınavlar: test materyali, commit'lenmez (PDF, Word, Excel, rar)
-notes/tahriri_imtihanlar/
+# notlar (planlar, müfredat dosyaları, kitap sayfaları, test materyali) yalnız yerelde kalır, commit'lenmez
+notes/
