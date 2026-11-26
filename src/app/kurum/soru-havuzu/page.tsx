@@ -8,6 +8,7 @@ import { classroomsOf } from "@/modules/enrollment/server";
 import { curriculumOutcomes, curriculumTopicNames } from "@/modules/curriculum/server";
 import { bankUsage } from "@/modules/exams/server";
 import QuestionGrid from "@/modules/question-bank/ui/QuestionGrid";
+import SubjectTopicFilter from "@/modules/question-bank/ui/SubjectTopicFilter";
 import { Empty, Kpi, PageHeader } from "@/shared/ui/kurum";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   // Düzenleme önerileri: müfredat konuları önce (havuzda olmasa da seçilebilsin)
   const suggestions = mergeTopicSuggestions(curTopics, summary.topics);
   const subjects = mergeSubjectNames(courses.filter((c) => c.kind !== "STUDY").map((c) => c.name), summary.subjects, Object.keys(curTopics));
-  const topicChoices = sp.ders ? summary.topics[sp.ders] ?? [] : [...new Set(Object.values(summary.topics).flat())].sort((a, b) => a.localeCompare(b, "tr"));
+  // Süzgeçteki konular: her dersin havuzdaki konuları, müfredat sırasıyla (müfredatta olmayanlar sonda, alfabetik)
+  const topicsBySubject = Object.fromEntries(
+    Object.entries(summary.topics).map(([s, list]) => {
+      const order = curTopics[s] ?? [];
+      const rank = (t: string) => (order.indexOf(t) + 1 || order.length + 1);
+      return [s, [...list].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, "tr"))];
+    }),
+  );
   const pages = Math.ceil(list.total / list.pageSize);
   const filtered = Object.entries(sp).some(([k, v]) => k !== "s" && v);
   const href = (s: number) => `?${new URLSearchParams({ ...Object.fromEntries(Object.entries(sp).filter(([, v]) => v)), s: String(s) })}`;
@@ -113,14 +121,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
       ) : (
         <>
           <form className="no-print mb-3 flex flex-wrap items-center gap-2">
-            <select name="ders" defaultValue={sp.ders ?? ""} className="input w-auto" aria-label="Ders">
-              <option value="">Tüm dersler</option>
-              {summary.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select name="konu" defaultValue={sp.konu ?? ""} className="input w-auto max-w-56" aria-label="Konu">
-              <option value="">Tüm konular</option>
-              {topicChoices.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <SubjectTopicFilter subjects={summary.subjects} topics={topicsBySubject} subject={sp.ders} topic={sp.konu} />
             <select name="zorluk" defaultValue={sp.zorluk ?? ""} className="input w-auto" aria-label="Zorluk">
               <option value="">Her zorluk</option>
               {Object.entries(DIFFICULTY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
