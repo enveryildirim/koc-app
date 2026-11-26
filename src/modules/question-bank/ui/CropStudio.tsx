@@ -2,7 +2,7 @@
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ANSWERS, DIFFICULTY, GRADES, LIMITS, detectQuestions, type Crop, type QuestionMeta, type QuestionOrigin } from "../index";
+import { ANSWERS, DIFFICULTY, LIMITS, detectQuestions, type Crop, type QuestionMeta, type QuestionOrigin } from "../index";
 
 type Box = { id: string; crop: Crop; origin: QuestionOrigin; answer: string; topic: string };
 type Saved = { id: string; page: number; crop: Crop; answer: string; topic: string };
@@ -41,6 +41,8 @@ export default function CropStudio(props: {
   saved: Saved[];
   subjects: string[];
   topics: Record<string, string[]>;
+  /** Sınıf / seviye seçenekleri (yalnız kurumun girdikleri: sınıflar, müfredat, havuz) */
+  grades: string[];
 }) {
   const { source } = props;
   const router = useRouter();
@@ -378,7 +380,7 @@ export default function CropStudio(props: {
               <span className="label">Düzey</span>
               <select className="input" value={defaults.grade} onChange={(e) => setDefaults({ ...defaults, grade: e.target.value })}>
                 <option value="">—</option>
-                {GRADES.map((g) => (
+                {props.grades.map((g) => (
                   <option key={g} value={g}>{/^\d+$/.test(g) ? `${g}. sınıf` : g}</option>
                 ))}
               </select>

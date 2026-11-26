@@ -90,9 +90,15 @@ export default function CurriculumEditor({
             </label>
             <label>
               <span className="label">Düzey</span>
-              <select className="input" value={meta.grade} onChange={(e) => setMeta({ ...meta, grade: e.target.value })}>
-                {grades.map((g) => <option key={g} value={g}>{gradeLabel(g)}</option>)}
-              </select>
+              {grades.length > 0 ? (
+                <select className="input" value={meta.grade} onChange={(e) => setMeta({ ...meta, grade: e.target.value })}>
+                  {grades.map((g) => <option key={g} value={g}>{gradeLabel(g)}</option>)}
+                </select>
+              ) : (
+                <span className="block pt-2 text-sm text-amber-700">
+                  Sınıflarda düzey yok. <Link href="/kurum/siniflar" className="font-medium text-brand-600 hover:underline">Sınıflar sayfasında sınıfa düzey yazın</Link>.
+                </span>
+              )}
             </label>
           </div>
           <p className="mt-2 text-[12.5px] text-lead">

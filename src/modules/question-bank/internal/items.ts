@@ -466,11 +466,12 @@ export async function listItems(ownerId: string, f: ItemFilter = {}, page = 1) {
 
 /**
  * Özet sayıları ve filtre seçenekleri (arşivdekiler ve onay bekleyenler hariç): dersler, ders → konular, türlere göre sayılar.
+ * grades: havuzdaki bütün soruların (onay bekleyen ve arşivdekiler dahil) sınıf / seviyeleri; seçim listeleri bunu da içerir ki kayıtlı değer kaybolmasın.
  * used verilirse (kullanılmış soru kimlikleri, exams > bankUsage) hiç kullanılmamış soru sayısı da döner.
  */
 export async function bankSummary(ownerId: string, used?: string[]) {
   const active = { ownerId, archivedAt: null, needsReview: false };
-  const [total, noAnswer, archived, pending, unused, groups, types] = await Promise.all([
+  const [total, noAnswer, archived, pending, unused, groups, types, gradeRows] = await Promise.all([
     prisma.questionItem.count({ where: active }),
     prisma.questionItem.count({ where: { ...active, ...NO_ANSWER } }),
     prisma.questionItem.count({ where: { ownerId, archivedAt: { not: null } } }),
@@ -478,6 +479,7 @@ export async function bankSummary(ownerId: string, used?: string[]) {
     used ? prisma.questionItem.count({ where: { ...active, id: { notIn: used } } }) : Promise.resolve(null),
     prisma.questionItem.groupBy({ by: ["subject", "topic"], where: active, _count: { _all: true } }),
     prisma.questionItem.groupBy({ by: ["type"], where: active, _count: { _all: true } }),
+    prisma.questionItem.groupBy({ by: ["grade"], where: { ownerId } }),
   ]);
   const topics: Record<string, string[]> = {};
   for (const g of groups) {
@@ -487,7 +489,8 @@ export async function bankSummary(ownerId: string, used?: string[]) {
   for (const s of Object.keys(topics)) topics[s].sort((a, b) => a.localeCompare(b, "tr"));
   const subjects = Object.keys(topics).sort((a, b) => a.localeCompare(b, "tr"));
   const byType = Object.fromEntries(types.map((t) => [t.type, t._count._all])) as Partial<Record<QuestionType, number>>;
-  return { total, noAnswer, archived, pending, unused, subjects, topics, byType };
+  const grades = gradeRows.map((g) => g.grade).filter(Boolean);
+  return { total, noAnswer, archived, pending, unused, subjects, topics, byType, grades };
 }
 
 /**

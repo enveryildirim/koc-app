@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { requireOwner } from "@/modules/identity/server";
-import { DEFAULT_SUBJECTS, DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
+import { DIFFICULTY, QUESTION_TYPES, TYPE_ORDER } from "@/modules/question-bank";
 import { bankSummary, hashMissingImages, isReviewGroup, listItems, listSources, REVIEW_GROUPS, reviewQueue, similarForItems, tidyBank, type ReviewGroup } from "@/modules/question-bank/server";
-import { mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
+import { mergeGrades, mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
 import { listCourses } from "@/modules/schedule/server";
-import { curriculumTopicNames } from "@/modules/curriculum/server";
+import { classroomsOf } from "@/modules/enrollment/server";
+import { curriculumOutcomes, curriculumTopicNames } from "@/modules/curriculum/server";
 import { bankUsage } from "@/modules/exams/server";
 import QuestionGrid from "@/modules/question-bank/ui/QuestionGrid";
 import { Empty, Kpi, PageHeader } from "@/shared/ui/kurum";
@@ -41,13 +42,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const queue = review ? await reviewQueue(ownerId, filter) : null;
   const group: ReviewGroup | null = review && isReviewGroup(sp.onay) ? sp.onay : null;
   if (queue && group) filter.only = filter.only ? queue.groups[group].filter((id) => filter.only!.includes(id)) : queue.groups[group];
-  const [summary, sources, list, curTopics, courses] = await Promise.all([
+  const [summary, sources, list, curTopics, courses, cur, rooms] = await Promise.all([
     bankSummary(ownerId, Object.keys(usage.usage)),
     listSources(ownerId),
     listItems(ownerId, filter, page),
     curriculumTopicNames(ownerId),
     listCourses(ownerId),
+    curriculumOutcomes(ownerId),
+    classroomsOf(ownerId),
   ]);
+  // Toplu değiştirmede sınıf / seviye seçenekleri (soru yazma ekranıyla aynı): sınıfların düzeyi (ör. Seviye-2), müfredat, havuz; sabit liste yok
+  const grades = mergeGrades(rooms.map((r) => r.level), cur.map((r) => r.grade), summary.grades);
   // Sayfadaki soruların benzerleri (karttaki "Aynısı var" / "Benzeri var" rozeti; ayrıntı panelde açılır)
   const sim = await similarForItems(ownerId, list.items.map((i) => i.id));
   const similar = Object.fromEntries([...sim].map(([id, hs]) => [id, { same: hs.filter((h) => h.kind === "same").length, sibling: hs.filter((h) => h.kind === "sibling").length }]));
@@ -55,7 +60,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const pageUsage = Object.fromEntries(list.items.flatMap((i) => (usage.usage[i.id] ? [[i.id, usage.usage[i.id]]] : [])));
   // Düzenleme önerileri: müfredat konuları önce (havuzda olmasa da seçilebilsin)
   const suggestions = mergeTopicSuggestions(curTopics, summary.topics);
-  const subjects = mergeSubjectNames(courses.filter((c) => c.kind !== "STUDY").map((c) => c.name), summary.subjects, Object.keys(curTopics), DEFAULT_SUBJECTS);
+  const subjects = mergeSubjectNames(courses.filter((c) => c.kind !== "STUDY").map((c) => c.name), summary.subjects, Object.keys(curTopics));
   const topicChoices = sp.ders ? summary.topics[sp.ders] ?? [] : [...new Set(Object.values(summary.topics).flat())].sort((a, b) => a.localeCompare(b, "tr"));
   const pages = Math.ceil(list.total / list.pageSize);
   const filtered = Object.entries(sp).some(([k, v]) => k !== "s" && v);
@@ -184,7 +189,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           {list.items.length === 0 ? (
             <Empty>{archive ? "Arşivde bu filtreye uygun soru yok." : review ? "Onay bekleyen soru yok." : "Bu filtreye uygun soru yok."}</Empty>
           ) : (
-            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} usage={pageUsage} similar={similar} archive={archive} review={review} reviewAll={queue ? { ids: group ? queue.groups[group] : queue.ids, group } : undefined} />
+            <QuestionGrid items={list.items} subjects={subjects} topics={suggestions} grades={grades} usage={pageUsage} similar={similar} archive={archive} review={review} reviewAll={queue ? { ids: group ? queue.groups[group] : queue.ids, group } : undefined} />
           )}
 
           {pages > 1 && (

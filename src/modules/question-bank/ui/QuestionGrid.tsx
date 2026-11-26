@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { stripEmphasis, ANSWERS, answerLabel, BASIS, DIFFICULTY, isBasis, GRADES, OPTION_LETTERS, QUESTION_TYPES, SIMILAR_KINDS, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType, type SimilarKind } from "../index";
+import { stripEmphasis, ANSWERS, answerLabel, BASIS, DIFFICULTY, isBasis, OPTION_LETTERS, QUESTION_TYPES, SIMILAR_KINDS, type BankUsage, type QuestionContent, type QuestionPatch, type QuestionType, type SimilarKind } from "../index";
 import { COGNITIVE_LEVELS } from "@/shared/cognitive";
 import Drawer from "@/shared/ui/Drawer";
 import QuestionView from "./QuestionView";
@@ -59,6 +59,7 @@ export default function QuestionGrid({
   items,
   subjects,
   topics,
+  grades,
   usage = {},
   similar = {},
   archive = false,
@@ -68,6 +69,8 @@ export default function QuestionGrid({
   items: GridItem[];
   subjects: string[];
   topics: Record<string, string[]>;
+  /** Sınıf / seviye seçenekleri: sınıfların düzeyi (ör. Seviye-2), müfredat ve havuzdaki sorular; sabit liste yok */
+  grades: string[];
   /** Sayfadaki soruların kullanım geçmişi (kullanılmamışlar yok) */
   usage?: Record<string, BankUsage>;
   /** Sayfadaki soruların benzer soru sayıları (benzeri olmayanlar yok) */
@@ -277,7 +280,7 @@ export default function QuestionGrid({
             <span className="text-xs text-lead">Sınıf / seviye</span>
             <select className="input" {...field("grade")}>
               <option value="">— değiştirme —</option>
-              {GRADES.map((g) => <option key={g} value={g}>{gradeLabel(g)}</option>)}
+              {grades.map((g) => <option key={g} value={g}>{gradeLabel(g)}</option>)}
             </select>
           </label>
           <label className="block">

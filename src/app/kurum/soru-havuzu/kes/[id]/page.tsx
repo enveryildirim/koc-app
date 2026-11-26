@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { requireOwner } from "@/modules/identity/server";
-import { DEFAULT_SUBJECTS } from "@/modules/question-bank";
 import { bankSummary, findSource } from "@/modules/question-bank/server";
-import { mergeTopicSuggestions } from "@/modules/curriculum";
-import { curriculumTopicNames } from "@/modules/curriculum/server";
+import { mergeGrades, mergeSubjectNames, mergeTopicSuggestions } from "@/modules/curriculum";
+import { curriculumOutcomes, curriculumTopicNames } from "@/modules/curriculum/server";
+import { listCourses } from "@/modules/schedule/server";
+import { classroomsOf } from "@/modules/enrollment/server";
 import CropStudio from "@/modules/question-bank/ui/CropStudio";
 import { PageHeader } from "@/shared/ui/kurum";
 
@@ -13,8 +14,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const ownerId = await requireOwner();
   const source = await findSource(ownerId, (await params).id);
   if (!source) notFound();
-  const [summary, curTopics] = await Promise.all([bankSummary(ownerId), curriculumTopicNames(ownerId)]);
-  const subjects = [...new Set([...summary.subjects, ...Object.keys(curTopics), ...DEFAULT_SUBJECTS])].sort((a, b) => a.localeCompare(b, "tr"));
+  const [summary, curTopics, cur, courses, rooms] = await Promise.all([bankSummary(ownerId), curriculumTopicNames(ownerId), curriculumOutcomes(ownerId), listCourses(ownerId), classroomsOf(ownerId)]);
+  // Seçenekler yalnız kurumun girdiklerinden (soru yazma ekranıyla aynı): Dersler, müfredat, havuz; sınıfların düzeyi
+  const subjects = mergeSubjectNames(courses.filter((c) => c.kind !== "STUDY").map((c) => c.name), Object.keys(curTopics), summary.subjects);
+  const grades = mergeGrades(rooms.map((r) => r.level), cur.map((r) => r.grade), summary.grades);
 
   return (
     <div>
@@ -23,6 +26,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         source={{ id: source.id, name: source.name, kind: source.kind, files: source.files }}
         saved={source.cut}
         subjects={subjects}
+        grades={grades}
         topics={mergeTopicSuggestions(curTopics, summary.topics)}
       />
     </div>

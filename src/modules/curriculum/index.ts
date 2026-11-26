@@ -11,9 +11,6 @@ export type CurriculumRow = {
   weeks: number;
 };
 
-/** Düzeyler (soru havuzundaki ile aynı). */
-export const CURRICULUM_GRADES = ["5", "6", "7", "8", "9", "10", "11", "12", "LGS", "TYT", "AYT"];
-
 export const gradeLabel = (g: string) => (/^\d+$/.test(g) ? `${g}. sınıf` : g);
 
 const EXAM_GRADES = ["LGS", "TYT", "AYT"];
@@ -21,14 +18,19 @@ const EXAM_GRADES = ["LGS", "TYT", "AYT"];
 export const gradeSortKey = (g: string) => (/^\d+$/.test(g) ? g.padStart(2, "0") : EXAM_GRADES.includes(g) ? `y${EXAM_GRADES.indexOf(g)}` : `z${g}`);
 
 /**
- * Müfredat düzey seçenekleri: kurumun sınıf düzeyleri (9, 10, Seviye-2…), bunlara uyan sınav düzeyleri
- * (8 → LGS; 11 / 12 → TYT, AYT) ve var olan setlerin düzeyleri. Hiçbir sınıfa düzey girilmemişse standart liste.
+ * Soru havuzundaki sınıf / seviye seçenekleri: yalnız kurumun girdikleri (sınıfların düzeyi, müfredat, havuzdaki sorular).
+ * Sabit varsayılan liste yoktur; yazılışlar birleşir ("9. sınıf" = "9"), sınıf sırasıyla dizilir.
+ */
+export function mergeGrades(...lists: string[][]) {
+  return [...new Set(lists.flat().map(normGrade).filter(Boolean))].sort((a, b) => gradeSortKey(a).localeCompare(gradeSortKey(b), "tr"));
+}
+
+/**
+ * Müfredat düzey seçenekleri: yalnız kurumun girdikleri, yani sınıfların düzeyleri (9, 10, Seviye-2…) ve var olan setlerin düzeyleri.
+ * Sabit ya da otomatik eklenen düzey yok: hiçbir sınıfa düzey girilmemişse boş döner.
  */
 export function curriculumGradeOptions(classLevels: string[], existing: string[] = []) {
-  const levels = classLevels.map((l) => normGrade(l)).filter(Boolean);
-  const exam = [...(levels.includes("8") ? ["LGS"] : []), ...(levels.some((l) => l === "11" || l === "12") ? ["TYT", "AYT"] : [])];
-  const all = [...new Set([...levels, ...exam, ...existing])];
-  return (all.length ? all : CURRICULUM_GRADES).sort((a, b) => gradeSortKey(a).localeCompare(gradeSortKey(b), "tr"));
+  return mergeGrades(classLevels, existing);
 }
 
 /**

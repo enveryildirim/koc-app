@@ -76,23 +76,23 @@ export async function createBankServer(opts: BankServerOptions) {
   const qb = await import("@/modules/question-bank");
   const { bankSummary, createWrittenItems, listItems, setTranscripts, similarForDrafts, untranscribedItems } = await import("@/modules/question-bank/server");
   const { curriculumOutcomes } = await import("@/modules/curriculum/server");
-  const { mergeSubjectNames, normGrade, subjectKey } = await import("@/modules/curriculum");
+  const { mergeGrades, mergeSubjectNames, normGrade, subjectKey } = await import("@/modules/curriculum");
   const { listCourses } = await import("@/modules/schedule/server");
+  const { classroomsOf } = await import("@/modules/enrollment/server");
   const { COGNITIVE_LEVELS, COGNITIVE_HINTS } = await import("@/shared/cognitive");
 
   const ownerId = opts.ownerId;
   const reviewUrl = `${opts.appUrl.replace(/\/$/, "")}/kurum/soru-havuzu?durum=onay`;
 
-  /** Subjects and grades the institution already uses (courses, curriculum, bank, defaults): what agents may save under. */
+  /** Subjects and grades the institution already uses (courses, classes, curriculum, bank; no built-in defaults): what agents may save under. */
   async function known(id: string) {
-    const [summary, courses, outcomes] = await Promise.all([bankSummary(id), listCourses(id), curriculumOutcomes(id)]);
+    const [summary, courses, outcomes, rooms] = await Promise.all([bankSummary(id), listCourses(id), curriculumOutcomes(id), classroomsOf(id)]);
     const subjects = mergeSubjectNames(
       courses.filter((c) => c.kind !== "STUDY").map((c) => c.name),
       summary.subjects,
       [...new Set(outcomes.map((o) => o.subject))],
-      qb.DEFAULT_SUBJECTS,
     );
-    const grades = [...new Set([...qb.GRADES, ...outcomes.map((o) => o.grade)])];
+    const grades = mergeGrades(rooms.map((r) => r.level), outcomes.map((o) => o.grade), summary.grades);
     return { summary, outcomes, subjects, grades };
   }
 
