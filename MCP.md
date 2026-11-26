@@ -153,7 +153,7 @@ Metin yazılmasa da aynı görselin ikinci kez kesilmesi yakalanır: kesme ekran
 | `transcript` + `transcriptBy` | Kesilmiş sorunun metni ve kimin yazdığı |
 | `imageHash` | Kesilmiş görselin parmak izi |
 
-Benzerlik hesabı: `src/modules/question-bank/similarity.ts`, görsel parmak izi: `internal/image-hash.ts`. Gerekçe ve ölçümler: `notes/soru-benzerligi.md`.
+Benzerlik hesabı: `src/modules/question-bank/similarity.ts`, görsel parmak izi: `internal/image-hash.ts`.
 
 **Tuzak.** Modüllerdeki `import "server-only"` Next dışında hata verir. Yerel sunucu `tsconfig.mcp.json` ile bunu boş dosyaya yönlendirir.
 
