@@ -15,6 +15,7 @@ export default function QuestionView({
   optical = false,
   compact = false,
   narrow = false,
+  card = false,
 }: {
   type: string;
   content: QuestionContent;
@@ -30,10 +31,12 @@ export default function QuestionView({
   compact?: boolean;
   /** Dar sütun (iki sütunlu kitapçık): şıklar daha erken ikili / alt alta dizilir, sözcük ortadan bölünmesin */
   narrow?: boolean;
+  /** Ekrandaki dar kart (soru havuzu ızgarası, ~300 px): şıklar daha da erken ikili / alt alta dizilir, sözcük ortadan bölünmesin */
+  card?: boolean;
 }) {
   const options = content.options ?? [];
   const longest = Math.max(0, ...options.map((o) => o.length));
-  const [wide, mid] = narrow ? [5, 16] : [14, 34];
+  const [wide, mid] = narrow ? [5, 16] : card ? [3, 12] : [14, 34];
   const cols = longest <= wide ? Math.min(options.length, 5) : longest <= mid ? 2 : 1;
   const mark = (letter: string) => !!answer && answer === letter;
   const tf: [string, string, string][] = optical ? [["A", "Doğru", "D"], ["B", "Yanlış", "Y"]] : [["", "Doğru", "D"], ["", "Yanlış", "Y"]];

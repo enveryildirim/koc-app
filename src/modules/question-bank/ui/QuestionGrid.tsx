@@ -45,7 +45,16 @@ export type GridItem = {
 
 const API = "/api/kurum/soru-havuzu/sorular";
 
-/** Havuzdaki sorular: kart ızgarası, karttan cevap işaretleme (türüne göre), seçili sorularda toplu düzenleme / silme. */
+/** "9" → "9. sınıf"; "Seviye-2", "LGS" olduğu gibi */
+const gradeLabel = (g: string) => (/^\d+$/.test(g) ? `${g}. sınıf` : g);
+
+const EMPTY_BULK = { subject: "", topic: "", grade: "", difficulty: "", level: "", answer: "" };
+
+/**
+ * Havuzdaki sorular: kart ızgarası, karttan cevap işaretleme (türüne göre).
+ * Soru seçilince üstteki satır seçim çubuğuna döner (onayla / bilgilerini değiştir / arşive kaldır / sil);
+ * bilgileri değiştirme yan panelde yapılır, yalnız doldurulan alanlar değişir.
+ */
 export default function QuestionGrid({
   items,
   subjects,
@@ -74,7 +83,8 @@ export default function QuestionGrid({
   const [detail, setDetail] = useState<string | null>(null);
   const shown = detail ? items.find((i) => i.id === detail) : undefined;
   const [sel, setSel] = useState<Set<string>>(new Set());
-  const [bulk, setBulk] = useState({ subject: "", topic: "", grade: "", difficulty: "", level: "", answer: "" });
+  const [bulk, setBulk] = useState(EMPTY_BULK);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -94,17 +104,24 @@ export default function QuestionGrid({
 
   async function applyBulk() {
     const set: QuestionPatch = {};
-    if (bulk.subject.trim()) set.subject = bulk.subject.trim();
-    if (bulk.topic.trim()) set.topic = bulk.topic.trim();
-    if (bulk.grade) set.grade = bulk.grade;
-    if (bulk.difficulty) set.difficulty = Number(bulk.difficulty);
-    if (bulk.level) set.level = bulk.level;
-    if (bulk.answer) set.answer = bulk.answer;
-    if (!Object.keys(set).length) return setMsg({ ok: false, text: "Değiştirmek istediğiniz alanı doldurun." });
+    const changes: string[] = [];
+    const put = <K extends keyof QuestionPatch>(k: K, v: QuestionPatch[K], label: string) => {
+      set[k] = v;
+      changes.push(label);
+    };
+    if (bulk.subject) put("subject", bulk.subject, `ders: ${bulk.subject}`);
+    if (bulk.grade) put("grade", bulk.grade, `sınıf / seviye: ${gradeLabel(bulk.grade)}`);
+    if (bulk.topic) put("topic", bulk.topic, `konu: ${bulk.topic}`);
+    if (bulk.difficulty) put("difficulty", Number(bulk.difficulty), `zorluk: ${DIFFICULTY[Number(bulk.difficulty)]}`);
+    if (bulk.level) put("level", bulk.level, `bilişsel düzey: ${bulk.level}`);
+    if (bulk.answer) put("answer", bulk.answer, `doğru cevap: ${bulk.answer}`);
+    if (!changes.length) return setMsg({ ok: false, text: "Değiştirmek istediğiniz alanı seçin." });
     const r = await send("PATCH", [...sel], set);
     if (r) {
-      setMsg({ ok: true, text: r.skipped ? `${r.updated} soru güncellendi; ${r.skipped} sorunun türü bu cevaba uymadığı için cevabı değişmedi.` : `${r.updated} soru güncellendi.` });
-      setBulk({ subject: "", topic: "", grade: "", difficulty: "", level: "", answer: "" });
+      const skipped = r.skipped ? `; ${r.skipped} soru test olmadığı için cevabı değişmedi` : "";
+      setMsg({ ok: true, text: `${r.updated} soru güncellendi (${changes.join(", ")})${skipped}.` });
+      setBulk(EMPTY_BULK);
+      setEditing(false);
     }
   }
 
@@ -167,110 +184,178 @@ export default function QuestionGrid({
       return n;
     });
   const allSelected = items.length > 0 && items.every((i) => sel.has(i.id));
+  const chosen = items.filter((i) => sel.has(i.id));
+  // Seçili soruların şimdiki ders · sınıf durumu (panelde "şu an" satırı) ve ortak ders (konu listesi için)
+  const now = new Map<string, number>();
+  for (const i of chosen) {
+    const k = [i.subject, i.grade && gradeLabel(i.grade)].filter(Boolean).join(" · ");
+    now.set(k, (now.get(k) ?? 0) + 1);
+  }
+  const nowGroups = [...now];
+  const commonSubject = new Set(chosen.map((i) => i.subject)).size === 1 ? chosen[0].subject : "";
+  const topicSubject = bulk.subject || commonSubject;
+  const topicOptions = topicSubject ? topics[topicSubject] ?? [] : [];
+  const field = (k: keyof typeof EMPTY_BULK) => ({ value: bulk[k], onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setBulk({ ...bulk, [k]: e.target.value }) });
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center gap-3 text-[13px]">
+      {/* Seçim yokken: tümünü seç (+ onay görünümünde listedekilerin tümü); seçim varken aynı satır yapışkan seçim çubuğu olur */}
+      <div className={`mb-2 flex flex-wrap items-center gap-2 text-[13px] ${sel.size > 0 ? "card sticky top-14 z-20 px-2.5 py-2 lg:top-2" : ""}`}>
         <label className="flex items-center gap-1.5">
           <input type="checkbox" checked={allSelected} onChange={() => setSel(allSelected ? new Set() : new Set(items.map((i) => i.id)))} />
-          Bu sayfadakilerin tümünü seç
+          {sel.size > 0 ? <b className="font-semibold">{sel.size} soru seçili</b> : "Bu sayfadakilerin tümünü seç"}
         </label>
-        {sel.size > 0 && <span className="text-lead">{sel.size} soru seçili</span>}
-        {review && reviewAll && reviewAll.ids.length > 0 && (
-          <span className="ml-auto flex flex-wrap items-center gap-2">
-            <button type="button" className={reviewAll.group === "temiz" ? "btn-primary py-1" : "btn-secondary py-1"} disabled={busy} onClick={() => allInList("approve")}>
-              Listedeki {reviewAll.ids.length} sorunun tümünü onayla
-            </button>
-            {reviewAll.group === "tekrar" && (
-              <button type="button" className="btn-danger py-1" disabled={busy} onClick={() => allInList("delete")}>Listedeki {reviewAll.ids.length} soruyu sil</button>
+        {sel.size > 0 ? (
+          <>
+            {review && (
+              <button type="button" className="btn-primary py-1" disabled={busy} onClick={() => approve([...sel])} title="Seçili sorular havuza ve sınav kurma ekranına geçer">
+                Seçilenleri onayla
+              </button>
             )}
-          </span>
+            <button type="button" className="btn-secondary py-1" disabled={busy} onClick={() => setEditing(true)} title="Ders, sınıf / seviye, konu, zorluk, bilişsel düzey ya da doğru cevabı seçili sorularda birlikte değiştirin">
+              Bilgilerini değiştir…
+            </button>
+            <button type="button" className="btn-secondary py-1" disabled={busy} onClick={() => setArchived([...sel], !archive)}>{archive ? "Arşivden çıkar" : "Arşive kaldır"}</button>
+            <button type="button" className="btn-danger py-1" disabled={busy} onClick={removeSelected}>Sil</button>
+            <button type="button" className="ml-auto px-1 text-lead hover:text-graphite" onClick={() => setSel(new Set())}>Seçimi kaldır ✕</button>
+          </>
+        ) : (
+          review &&
+          reviewAll &&
+          reviewAll.ids.length > 0 && (
+            <span className="ml-auto flex flex-wrap items-center gap-2">
+              <button type="button" className={reviewAll.group === "temiz" ? "btn-primary py-1" : "btn-secondary py-1"} disabled={busy} onClick={() => allInList("approve")}>
+                Listedeki {reviewAll.ids.length} sorunun tümünü onayla
+              </button>
+              {reviewAll.group === "tekrar" && (
+                <button type="button" className="btn-danger py-1" disabled={busy} onClick={() => allInList("delete")}>Listedeki {reviewAll.ids.length} soruyu sil</button>
+              )}
+            </span>
+          )
         )}
       </div>
+      {msg && <p className={`mb-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
 
-      {sel.size > 0 && (
-        <div className="card sticky top-14 z-20 mb-3 flex flex-wrap items-end gap-2 p-2.5 lg:top-2">
-          <label className="w-36">
+      <Drawer
+        open={editing && sel.size > 0}
+        title={`Seçili ${sel.size} sorunun bilgilerini değiştir`}
+        onClose={() => setEditing(false)}
+        footer={
+          <>
+            <button type="button" className="btn-primary" disabled={busy || !Object.values(bulk).some(Boolean)} onClick={applyBulk}>
+              {sel.size} soruda değiştir
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setEditing(false);
+                setBulk(EMPTY_BULK);
+              }}
+            >
+              Vazgeç
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm">
+          <p className="text-lead">Yalnızca seçtiğiniz alanlar değişir; “değiştirme” olarak bıraktıklarınız her soruda olduğu gibi kalır.</p>
+          {nowGroups.length > 0 && (
+            <p className="rounded-md bg-mist/60 px-3 py-2 text-[13px]">
+              <span className="text-lead">Şu an: </span>
+              {nowGroups.map(([k, n]) => `${k} (${n} soru)`).join(", ")}
+            </p>
+          )}
+          <label className="block">
             <span className="text-xs text-lead">Ders</span>
-            <input className="input" list="qg-subjects" value={bulk.subject} onChange={(e) => setBulk({ ...bulk, subject: e.target.value })} />
-          </label>
-          <label className="w-44">
-            <span className="text-xs text-lead">Konu</span>
-            <input className="input" list="qg-topics" value={bulk.topic} onChange={(e) => setBulk({ ...bulk, topic: e.target.value })} />
-          </label>
-          <label>
-            <span className="text-xs text-lead">Düzey</span>
-            <select className="input" value={bulk.grade} onChange={(e) => setBulk({ ...bulk, grade: e.target.value })}>
-              <option value="">—</option>
-              {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
+            <select className="input" {...field("subject")} onChange={(e) => setBulk({ ...bulk, subject: e.target.value, topic: "" })}>
+              <option value="">— değiştirme —</option>
+              {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
-          <label>
-            <span className="text-xs text-lead">Zorluk</span>
-            <select className="input" value={bulk.difficulty} onChange={(e) => setBulk({ ...bulk, difficulty: e.target.value })}>
-              <option value="">—</option>
-              {Object.entries(DIFFICULTY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          <label className="block">
+            <span className="text-xs text-lead">Sınıf / seviye</span>
+            <select className="input" {...field("grade")}>
+              <option value="">— değiştirme —</option>
+              {GRADES.map((g) => <option key={g} value={g}>{gradeLabel(g)}</option>)}
             </select>
           </label>
-          <label>
-            <span className="text-xs text-lead">Bilişsel düzey</span>
-            <select className="input" value={bulk.level} onChange={(e) => setBulk({ ...bulk, level: e.target.value })}>
-              <option value="">—</option>
-              {COGNITIVE_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+          <label className="block">
+            <span className="text-xs text-lead">Konu {topicSubject && <span className="text-lead/80">({topicSubject} müfredatı ve havuzu)</span>}</span>
+            <select className="input" {...field("topic")} disabled={!topicSubject}>
+              <option value="">{topicSubject ? "— değiştirme —" : "Seçili soruların dersi farklı: önce ders seçin"}</option>
+              {topicOptions.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </label>
-          <label>
-            <span className="text-xs text-lead" title="Yalnızca çoktan seçmeli sorulara uygulanır">Cevap (test)</span>
-            <select className="input" value={bulk.answer} onChange={(e) => setBulk({ ...bulk, answer: e.target.value })}>
-              <option value="">—</option>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs text-lead">Zorluk</span>
+              <select className="input" {...field("difficulty")}>
+                <option value="">— değiştirme —</option>
+                {Object.entries(DIFFICULTY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-lead">Bilişsel düzey</span>
+              <select className="input" {...field("level")}>
+                <option value="">— değiştirme —</option>
+                {COGNITIVE_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-xs text-lead">Doğru cevap <span className="text-lead/80">(yalnız çoktan seçmeli sorulara uygulanır)</span></span>
+            <select className="input" {...field("answer")}>
+              <option value="">— değiştirme —</option>
               {ANSWERS.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
-          {review && <button className="btn-primary" disabled={busy} onClick={() => approve([...sel])}>Onayla</button>}
-          <button className={review ? "btn-secondary" : "btn-primary"} disabled={busy} onClick={applyBulk}>Seçililere uygula</button>
-          <button className="btn-secondary" disabled={busy} onClick={() => setArchived([...sel], !archive)}>{archive ? "Arşivden çıkar" : "Arşive kaldır"}</button>
-          <button className="btn-danger" disabled={busy} onClick={removeSelected}>Sil</button>
-          <button className="btn-secondary" onClick={() => setSel(new Set())}>Seçimi kaldır</button>
-          <datalist id="qg-subjects">{subjects.map((s) => <option key={s} value={s} />)}</datalist>
-          <datalist id="qg-topics">{(topics[bulk.subject] ?? Object.values(topics).flat()).map((s) => <option key={s} value={s} />)}</datalist>
+          {msg && !msg.ok && <p className="text-red-700">{msg.text}</p>}
         </div>
-      )}
-      {msg && <p className={`mb-2 text-sm ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
+      </Drawer>
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((q) => {
           const on = sel.has(q.id);
           return (
             <li key={q.id} className={`card flex flex-col overflow-hidden ${on ? "ring-2 ring-ink" : ""}`}>
-              <div className="flex items-center gap-2 border-b border-rule px-2.5 py-1.5 text-[13px]">
-                <input type="checkbox" checked={on} onChange={() => toggle(q.id)} aria-label="Soruyu seç" />
-                {q.origin === "AI" && (
-                  <span className="badge shrink-0 bg-mist text-graphite" title={`Yapay zekâ agent'ı ile (MCP) eklendi${isBasis(q.basis) ? `: ${BASIS[q.basis].hint.toLocaleLowerCase("tr-TR")}` : ""}`}>
-                    YZ{isBasis(q.basis) ? ` · ${BASIS[q.basis].label}` : ""}
-                  </span>
-                )}
-                {q.needsReview && q.basis === "transcribed" && q.answerBy === "agent" && (
-                  <span className="badge shrink-0 bg-amber-100 text-amber-900" title="Kaynakta cevap anahtarı yoktu; cevabı agent çözdü. Onaylamadan önce cevabı kontrol edin.">Cevabı agent çözdü</span>
-                )}
-                <SimilarBadge s={similar[q.id]} onOpen={() => setDetail(q.id)} />
-                {q.type !== "MC" && <span className="badge shrink-0 bg-mist text-graphite" title={QUESTION_TYPES[q.type as QuestionType]?.label}>{QUESTION_TYPES[q.type as QuestionType]?.short ?? q.type}</span>}
-                <span className="min-w-0 truncate">
+              <div className="border-b border-rule px-2.5 py-1.5 text-[13px]">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <input type="checkbox" checked={on} onChange={() => toggle(q.id)} aria-label="Soruyu seç" />
+                  {q.origin === "AI" && (
+                    <span className="badge shrink-0 bg-mist text-graphite" title={`Yapay zekâ agent'ı ile (MCP) eklendi${isBasis(q.basis) ? `: ${BASIS[q.basis].hint.toLocaleLowerCase("tr-TR")}` : ""}`}>
+                      YZ{isBasis(q.basis) ? ` · ${BASIS[q.basis].label}` : ""}
+                    </span>
+                  )}
+                  {q.needsReview && q.basis === "transcribed" && q.answerBy === "agent" && (
+                    <span className="badge shrink-0 bg-amber-100 text-amber-900" title="Kaynakta cevap anahtarı yoktu; cevabı agent çözdü. Onaylamadan önce cevabı kontrol edin.">Cevabı agent çözdü</span>
+                  )}
+                  <SimilarBadge s={similar[q.id]} onOpen={() => setDetail(q.id)} />
+                  <span className="badge shrink-0 bg-mist text-graphite" title={`Soru türü: ${QUESTION_TYPES[q.type as QuestionType]?.label ?? q.type}`}>{QUESTION_TYPES[q.type as QuestionType]?.short ?? q.type}</span>
+                  {q.level && <span className="badge badge-plain ml-auto bg-mist text-lead" title="Bilişsel düzey">{q.level}</span>}
+                  <span className={`badge bg-mist text-graphite ${q.level ? "" : "ml-auto"}`} title="Zorluk">{DIFFICULTY[q.difficulty]}</span>
+                </div>
+                {/* Ders · sınıf · konu kendi satırında: rozetler arasında kesilip kaybolmasın (uzun konu adı iki satıra kadar) */}
+                <p className="mt-1 line-clamp-2 leading-snug" title={[q.subject, q.grade && gradeLabel(q.grade), q.topic || "konu yok"].filter(Boolean).join(" · ")}>
                   <b className="font-semibold">{q.subject}</b>
+                  {q.grade && <span className="text-lead"> · {gradeLabel(q.grade)}</span>}
                   {q.topic ? <span className="text-lead"> · {q.topic}</span> : <span className="text-lead/70"> · konu yok</span>}
-                </span>
-                {q.level && <span className="badge badge-plain ml-auto bg-mist text-lead" title="Bilişsel düzey">{q.level}</span>}
-                <span className={`badge bg-mist text-graphite ${q.level ? "" : "ml-auto"}`}>{DIFFICULTY[q.difficulty]}</span>
+                </p>
               </div>
               {q.outcome && (q.outcome.code || q.outcome.text) && (
-                <p className="truncate border-b border-rule/60 px-2.5 py-1 text-xs text-lead" title={[q.outcome.unit, q.outcome.code, q.outcome.text].filter(Boolean).join(" · ")}>
-                  {q.outcome.code && <b className="mr-1 font-semibold text-graphite">{q.outcome.code}</b>}
-                  {q.outcome.text || "Kazanım"}
+                <p className="border-b border-rule/60 px-2.5 py-1 text-xs text-lead" title={[q.outcome.unit, q.outcome.code, q.outcome.text].filter(Boolean).join(" · ")}>
+                  {/* Kırpma iç öğede: dolgu alanında üçüncü satırın ucu görünmesin */}
+                  <span className="line-clamp-2">
+                    <span className="font-semibold text-graphite">Kazanım: </span>
+                    {q.outcome.code && <b className="mr-1 font-semibold text-graphite">{q.outcome.code}</b>}
+                    {q.outcome.text}
+                  </span>
                 </p>
               )}
               {q.needsReview && q.agentNote && <AgentNote note={q.agentNote} className="border-b border-rule/60 px-2.5 py-1.5" />}
               {q.content ? (
                 <div className="relative max-h-80 flex-1 overflow-hidden bg-surface p-3 text-graphite">
-                  <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `${API}/${q.id}/gorsel` : null} answer={q.answer} />
+                  <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `${API}/${q.id}/gorsel` : null} answer={q.answer} card />
                 </div>
               ) : (
                 <a href={`${API}/${q.id}/gorsel`} target="_blank" rel="noreferrer" className="block flex-1 bg-white p-2" title="Büyük aç">
@@ -296,11 +381,9 @@ export default function QuestionGrid({
                       {q.transcript ? (q.transcriptBy === "AI" ? "Metin · YZ" : "Metin") : "Metinsiz"}
                     </button>
                   )}
+                  {/* Sınıf / seviye üstteki ders satırında; burada yalnız kaynak */}
                   <span className="truncate" title={[q.sourceNote, q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : ""].filter(Boolean).join(" · ")}>
-                    {[
-                      q.grade ? (/^\d+$/.test(q.grade) ? `${q.grade}. sınıf` : q.grade) : "",
-                      q.sourceNote || (q.content ? "" : q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : "Kaynak silinmiş"),
-                    ].filter(Boolean).join(" · ")}
+                    {q.sourceNote || (q.content ? "" : q.source ? `${q.source.name}${q.page ? `, s. ${q.page}` : ""}` : "Kaynak silinmiş")}
                   </span>
                   {q.content && <Link href={`/kurum/soru-havuzu/yaz?id=${q.id}`} className="shrink-0 font-semibold text-graphite hover:underline">Düzenle</Link>}
                 </span>
