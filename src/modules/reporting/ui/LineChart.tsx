@@ -34,8 +34,8 @@ export default function LineChart({
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Gelişim grafiği">
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="#e2e8f0" strokeWidth={1} />
-            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize={11} fill="#64748b">
+            <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} className="stroke-rule" strokeWidth={1} />
+            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize={11} className="fill-lead">
               {Math.round(t)}
             </text>
           </g>
@@ -48,7 +48,7 @@ export default function LineChart({
             // Kenardaki etiketler grafiğin dışına taşmasın
             textAnchor={labels.length > 1 && i === 0 ? "start" : labels.length > 1 && i === labels.length - 1 ? "end" : "middle"}
             fontSize={11}
-            fill="#475569"
+            className="fill-lead"
           >
             {l.length > 18 ? l.slice(0, 17) + "…" : l}
           </text>

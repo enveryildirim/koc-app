@@ -42,7 +42,7 @@ export default function Karne({ report, row, solutionUrl }: { report: Report; ro
   const allLevels = new Map(levelStats(secs, report.rows).map((l) => [l.level, l.rate]));
 
   return (
-    <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-rule print:p-6 print:shadow-none print:ring-0">
+    <article className="karne mx-auto max-w-[210mm] bg-surface p-8 text-sm shadow-sm ring-1 ring-rule print:p-6 print:shadow-none print:ring-0">
       <header className="flex items-start justify-between border-b-4 border-brand-600 pb-3">
         <div>
           <div className="text-xs font-bold tracking-widest text-brand-600">SınavKur · Öğrenci Karnesi</div>
@@ -71,7 +71,7 @@ export default function Karne({ report, row, solutionUrl }: { report: Report; ro
       <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Ders analizi</h2>
       <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="bg-graphite text-white">
+          <tr className="bg-graphite text-surface">
             {["Ders", "Soru", "Doğru", "Yanlış", "Boş", "Net", "Sınıf ort.", "Kurum ort."].map((h, i) => (
               <th key={h} className={`px-2 py-1.5 ${i ? "text-right" : "text-left"}`}>{h}</th>
             ))}

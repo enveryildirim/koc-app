@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { institutionName, requireStaff } from "@/modules/identity/server";
 import { AnswerRow } from "@/shared/ui/Logo";
+import ThemeToggle from "@/shared/ui/ThemeToggle";
 
 /** Öğretmen ekranı çerçevesi: telefona göre dar sütun, üstte kim olduğu ve çıkış. */
 export default async function OgretmenLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +21,7 @@ export default async function OgretmenLayout({ children }: { children: React.Rea
           {me.role === "MENTOR" && (
             <Link href="/kurum/takip" className="btn-secondary px-2.5 py-1 text-[13px]">Takip</Link>
           )}
+          <ThemeToggle />
           <form action="/api/auth/logout" method="post">
             <button className="px-1 text-[13px] font-semibold text-lead hover:text-graphite">Çıkış</button>
           </form>

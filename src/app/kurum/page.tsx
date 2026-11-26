@@ -294,7 +294,7 @@ function SetupGuide({ steps }: { steps: SetupStep[] }) {
               {i > 0 && <span aria-hidden="true" className="mx-1 text-lead/50">›</span>}
               <Link
                 href={s.href}
-                className={`rounded-full px-2.5 py-0.5 ring-1 ${isNext ? "bg-graphite text-white ring-graphite" : ok ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : "text-lead ring-rule hover:text-graphite"}`}
+                className={`rounded-full px-2.5 py-0.5 ring-1 ${isNext ? "bg-graphite text-surface ring-graphite" : ok ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : "text-lead ring-rule hover:text-graphite"}`}
               >
                 {i + 1}. {s.label}
                 {ok && <span className="num"> · {s.count} {s.unit} ✓</span>}

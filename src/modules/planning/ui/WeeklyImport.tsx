@@ -175,7 +175,7 @@ export default function WeeklyImport({ classes }: { classes: Cls[] }) {
                   <button
                     key={c.id}
                     onClick={() => setSelected(on ? selected.filter((x) => x !== c.id) : [...selected, c.id])}
-                    className={`rounded-full px-3 py-1 text-sm font-medium ${on ? "bg-graphite text-white" : "bg-surface ring-1 ring-rule"}`}
+                    className={`rounded-full px-3 py-1 text-sm font-medium ${on ? "bg-graphite text-surface" : "bg-surface ring-1 ring-rule"}`}
                   >
                     {c.name}
                   </button>

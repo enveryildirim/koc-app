@@ -216,7 +216,7 @@ export default function OmrScanner({ spec, keys, saveUrl, resultsHref, mode = "t
       ))}
 
       {ready.length > 0 && (
-        <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-graphite p-4 text-white shadow-lg">
+        <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-graphite p-4 text-surface shadow-lg">
           <span className="text-sm">
             {ready.length} form kaydedilmeye hazır
             {unmatched > 0 && <span className="ml-2 text-amber-300">· {unmatched} formda öğrenci seçilmedi ya da numara kayıtlı öğrenciyle eşleşmiyor (atlanacak)</span>}
@@ -336,7 +336,7 @@ function SheetCard({
                     <button
                       key={k}
                       onClick={() => onPatch({ booklet: k })}
-                      className={`h-7 w-7 rounded-full text-xs font-bold ${s.booklet === k ? "bg-graphite text-white" : "ring-1 ring-rule"}`}
+                      className={`h-7 w-7 rounded-full text-xs font-bold ${s.booklet === k ? "bg-graphite text-surface" : "ring-1 ring-rule"}`}
                     >
                       {k}
                     </button>
@@ -373,7 +373,7 @@ function SheetCard({
                             key={c}
                             onClick={() => onToggle(qi, ci)}
                             className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
-                              on ? (isKey ? "bg-emerald-600 text-white" : "bg-red-500 text-white") : isKey ? "text-emerald-700 ring-1 ring-emerald-400" : "text-lead/70 ring-1 ring-rule"
+                              on ? (isKey ? "bg-emerald-600 text-surface" : "bg-red-500 text-surface") : isKey ? "text-emerald-700 ring-1 ring-emerald-400" : "text-lead/70 ring-1 ring-rule"
                             }`}
                           >
                             {c}

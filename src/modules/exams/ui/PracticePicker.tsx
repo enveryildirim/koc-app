@@ -54,12 +54,12 @@ export default function PracticePicker({ data, name }: { data: PracticeSuggestio
               <div className="border-b border-rule/60 bg-mist/30 p-3 md:border-r md:border-b-0">
                 <p className="mb-1 text-xs text-lead">Yanlış yapılan soru</p>
                 {it.content ? (
-                  <div className="max-h-56 overflow-hidden text-black">
+                  <div className="max-h-56 overflow-hidden text-graphite">
                     <QuestionView type={it.type} content={it.content} imageSrc={it.hasImage ? IMG(it.id) : null} answer={it.answer} compact />
                   </div>
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
-                  <img src={IMG(it.id)} alt="" loading="lazy" className="max-h-56 w-auto object-contain" />
+                  <img src={IMG(it.id)} alt="" loading="lazy" className="max-h-56 w-auto bg-white object-contain" />
                 )}
               </div>
               <div className="p-3">
@@ -81,10 +81,10 @@ export default function PracticePicker({ data, name }: { data: PracticeSuggestio
                                 {c.type !== "MC" && <span>{QUESTION_TYPES[c.type as QuestionType]?.short}</span>}
                                 {c.seen ? <span className="font-semibold text-amber-700">sınıf daha önce gördü</span> : c.uses > 0 ? <span>{c.uses}× kullanıldı</span> : <span>hiç kullanılmadı</span>}
                               </span>
-                              <span className="block max-h-40 overflow-hidden text-black">
+                              <span className="block max-h-40 overflow-hidden text-graphite">
                                 {c.cut ? (
                                   // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
-                                  <img src={IMG(c.id)} alt="" loading="lazy" className="max-h-36 w-auto object-contain" />
+                                  <img src={IMG(c.id)} alt="" loading="lazy" className="max-h-36 w-auto bg-white object-contain" />
                                 ) : (
                                   <QuestionView type={c.type} content={{ stem: c.stem, options: c.options }} imageSrc={c.hasImage ? IMG(c.id) : null} answer={c.answer} compact />
                                 )}

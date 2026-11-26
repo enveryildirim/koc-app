@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { allowRegistration, getUser } from "@/modules/identity/server";
 import { AnswerRow } from "./Logo";
+import ThemeToggle from "./ThemeToggle";
 
 export default async function SiteHeader() {
   const user = await getUser();
@@ -12,6 +13,7 @@ export default async function SiteHeader() {
           <span className="hidden font-display text-xl font-semibold [font-stretch:80%] min-[400px]:inline">SınavKur</span>
         </Link>
         <nav className="flex items-center gap-2 text-sm">
+          <ThemeToggle />
           {user ? (
             <>
               <Link href="/kurum" className="btn-secondary whitespace-nowrap">
@@ -24,7 +26,7 @@ export default async function SiteHeader() {
             </>
           ) : (
             <>
-              <Link href="/giris" className="btn whitespace-nowrap text-graphite hover:bg-white">Giriş yap</Link>
+              <Link href="/giris" className="btn whitespace-nowrap text-graphite hover:bg-surface">Giriş yap</Link>
               {allowRegistration() && (
                 <Link href="/kayit" className="btn-primary whitespace-nowrap">
                   <span className="sm:hidden">Hesap açın</span>

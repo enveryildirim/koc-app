@@ -51,7 +51,7 @@ export default function QuestionView({
       )}
       {imageSrc && (
         // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
-        <img src={imageSrc} alt="" loading="lazy" className={`my-1.5 block h-auto max-w-full ${compact ? "max-h-24" : print ? "max-h-[90mm]" : "max-h-64"}`} />
+        <img src={imageSrc} alt="" loading="lazy" className={`my-1.5 block h-auto max-w-full bg-white ${compact ? "max-h-24" : print ? "max-h-[90mm]" : "max-h-64"}`} />
       )}
       {type === "MC" && options.length > 0 && (
         <ol className="mt-1 grid gap-x-4 gap-y-0.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>

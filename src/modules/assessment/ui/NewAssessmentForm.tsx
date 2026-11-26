@@ -91,7 +91,7 @@ export default function NewAssessmentForm({
               type="button"
               key={k}
               onClick={() => setType(k)}
-              className={`rounded-md px-3 py-2 text-sm font-semibold ${type === k ? "bg-graphite text-white" : "bg-surface ring-1 ring-rule"}`}
+              className={`rounded-md px-3 py-2 text-sm font-semibold ${type === k ? "bg-graphite text-surface" : "bg-surface ring-1 ring-rule"}`}
             >
               {ASSESSMENT_TYPES[k].label}
             </button>

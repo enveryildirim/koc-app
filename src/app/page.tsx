@@ -25,7 +25,7 @@ function AnswerSheet() {
   const total = stats.reduce((a, s) => a + s.net, 0);
   const fmt = (x: number) => x.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
-    <figure aria-label="Örnek optik form ve hesaplanan net" className="rounded-lg bg-white p-5 ring-1 ring-rule sm:p-6">
+    <figure aria-label="Örnek optik form ve hesaplanan net" className="rounded-lg bg-surface p-5 ring-1 ring-rule sm:p-6">
       <div className="flex items-baseline justify-between border-b border-ink/30 pb-2 text-[13px] text-ink">
         <span className="font-semibold">LGS Deneme 3, A kitapçığı</span>
         <span className="num">Öğrenci no 1035</span>
@@ -96,7 +96,7 @@ export default function Home() {
         <AnswerSheet />
       </section>
 
-      <section className="border-t border-rule bg-white/60">
+      <section className="border-t border-rule bg-surface/60">
         <div className="mx-auto max-w-6xl px-4 py-14">
           <h2 className="text-3xl font-semibold">Bir haftanız</h2>
           <ol className="mt-6 divide-y divide-rule border-y border-rule">

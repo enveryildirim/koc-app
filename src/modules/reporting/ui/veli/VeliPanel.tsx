@@ -189,7 +189,7 @@ export default function VeliPanel({ institution, classes, sinif, from, to, stude
                         <div className="flex flex-wrap justify-end gap-1 max-sm:justify-start">
                           {s.token ? (
                             <>
-                              <a className="btn bg-emerald-600 px-2.5 py-1 text-xs text-white hover:bg-emerald-700" href={whatsappUrl(s, msg)} target="_blank" rel="noreferrer">
+                              <a className="btn bg-emerald-600 px-2.5 py-1 text-xs text-surface hover:bg-emerald-700" href={whatsappUrl(s, msg)} target="_blank" rel="noreferrer">
                                 WhatsApp
                               </a>
                               <button className="btn-secondary px-2.5 py-1 text-xs" onClick={() => copy(msg, "Mesaj ve bağlantı kopyalandı.")}>Kopyala</button>

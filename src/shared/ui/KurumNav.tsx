@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnswerRow } from "./Logo";
+import ThemeToggle from "./ThemeToggle";
 
 /**
  * Menü işe göre gruplanır: günlük bilgi girişi ve takibat üstte; yılda birkaç kez yapılan tanımlar
@@ -149,7 +150,8 @@ export function KurumMobileBar({ org, email, add }: { org: string; email: string
               ))}
             </nav>
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-rule px-2 pt-3 text-[13px]">
-              <span className="truncate text-lead">{email}</span>
+              <span className="min-w-0 flex-1 truncate text-lead">{email}</span>
+              <ThemeToggle />
               <form action="/api/auth/logout" method="post">
                 <button className="font-semibold text-graphite">Çıkış yap</button>
               </form>

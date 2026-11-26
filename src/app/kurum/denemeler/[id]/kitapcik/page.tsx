@@ -151,7 +151,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           Bu deneme soru havuzundan kurulmadığı için kitapçığı yok. <Link href="/kurum/denemeler/havuzdan" className="font-semibold text-graphite underline">Havuzdan deneme oluşturun</Link>.
         </Empty>
       ) : (
-        <article className="booklet mx-auto bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule" style={{ width: "210mm" }}>
+        <article className="paper booklet mx-auto bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule" style={{ width: "210mm" }}>
           {missing > 0 && <p className="no-print mb-3 rounded bg-amber-50 px-3 py-1.5 text-sm text-amber-800">{missing} soru havuzdan silinmiş; yerlerinde boşluk var.</p>}
           <header className="mb-4 flex items-stretch gap-4 border-b-2 border-black pb-3">
             <div className="flex-1">
@@ -212,11 +212,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       {hasItems && withForm && (
         <>
           {/* Optik form: kenar boşluksuz kendi sayfası (@page omr), okuyucu ölçüleri bozulmasın */}
-          <div className="omr-sheet mx-auto mt-8 bg-white shadow-lg ring-1 ring-rule" style={{ width: "210mm", height: "297mm" }}>
+          <div className="paper omr-sheet mx-auto mt-8 bg-white shadow-lg ring-1 ring-rule" style={{ width: "210mm", height: "297mm" }}>
             <FormSvg info={examFormSpec(exam.name, exam.type, exam.secs, exam.letters, { studentNumber: exam.omrStudentNo, booklet })} style={{ width: "210mm", height: "297mm", display: "block" }} />
           </div>
           {(withKey || withSol) && (
-            <article className="booklet mx-auto mt-8 bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule print:mt-0" style={{ width: "210mm", breakBefore: "page" }}>
+            <article className="paper booklet mx-auto mt-8 bg-white px-[12mm] py-[12mm] text-black shadow-lg ring-1 ring-rule print:mt-0" style={{ width: "210mm", breakBefore: "page" }}>
               {tail}
             </article>
           )}

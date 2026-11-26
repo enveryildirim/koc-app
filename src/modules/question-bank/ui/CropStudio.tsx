@@ -327,7 +327,7 @@ export default function CropStudio(props: {
               className="pointer-events-none absolute border border-emerald-600/70 bg-emerald-500/10"
               style={{ left: `${s.crop.x * 100}%`, top: `${s.crop.y * 100}%`, width: `${s.crop.w * 100}%`, height: `${s.crop.h * 100}%` }}
             >
-              <span className="absolute right-0 bottom-full rounded-t bg-emerald-700 px-1 text-[11px] font-semibold text-white">Kayıtlı{s.answer && ` · ${s.answer}`}</span>
+              <span className="absolute right-0 bottom-full rounded-t bg-emerald-700 px-1 text-[11px] font-semibold text-surface">Kayıtlı{s.answer && ` · ${s.answer}`}</span>
             </div>
           ))}
           {pageBoxes.map((b, i) => {
@@ -339,7 +339,7 @@ export default function CropStudio(props: {
                 className={`absolute cursor-move border-2 ${sel ? "border-ink bg-ink/10" : b.origin === "AUTO" ? "border-dashed border-graphite/70 bg-graphite/5" : "border-graphite bg-graphite/5"}`}
                 style={{ left: `${b.crop.x * 100}%`, top: `${b.crop.y * 100}%`, width: `${b.crop.w * 100}%`, height: `${b.crop.h * 100}%` }}
               >
-                <span className={`absolute bottom-full -left-0.5 rounded-t px-1.5 text-[12px] font-semibold text-white ${sel ? "bg-ink" : "bg-graphite"}`}>
+                <span className={`absolute bottom-full -left-0.5 rounded-t px-1.5 text-[12px] font-semibold text-surface ${sel ? "bg-ink" : "bg-graphite"}`}>
                   {i + 1}
                   {b.answer && ` · ${b.answer}`}
                 </span>
@@ -451,7 +451,7 @@ export default function CropStudio(props: {
                         type="button"
                         aria-pressed={b.answer === a}
                         onClick={() => setPageBoxes((l) => l.map((x) => (x.id === b.id ? { ...x, answer: x.answer === a ? "" : a } : x)))}
-                        className={`size-6 rounded-full border text-[11px] font-semibold ${b.answer === a ? "border-graphite bg-graphite text-white" : "border-ink/40 text-lead hover:border-graphite"}`}
+                        className={`size-6 rounded-full border text-[11px] font-semibold ${b.answer === a ? "border-graphite bg-graphite text-surface" : "border-ink/40 text-lead hover:border-graphite"}`}
                       >
                         {a}
                       </button>

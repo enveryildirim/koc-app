@@ -165,7 +165,7 @@ function MonthView({ month, today, items, onDay, onItem }: Props & { onDay: (d: 
                 } ${inMonth ? "" : "opacity-40"}`}
               >
                 <div className={`mb-1 text-right text-xs ${d === today ? "font-bold text-brand-700" : "text-lead"}`}>
-                  {d === today ? <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-white">{Number(d.slice(8))}</span> : Number(d.slice(8))}
+                  {d === today ? <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-surface">{Number(d.slice(8))}</span> : Number(d.slice(8))}
                 </div>
                 {/* Telefonda etiketler sığmaz: türe göre renkli noktalar, ayrıntı aşağıdaki listede. */}
                 <div className="flex flex-wrap justify-end gap-0.5 sm:hidden">

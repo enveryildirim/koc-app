@@ -12,7 +12,7 @@ export const EVENT_KINDS: Record<string, { label: string; cls: string; dot: stri
 
 /** Diğer modüllerden otomatik gelen kayıtlar (takvimden düzenlenmez). */
 export const FEED_KINDS: Record<string, { label: string; cls: string; dot: string }> = {
-  DENEME: { label: "Deneme", cls: "bg-violet-600 text-white ring-violet-600", dot: "bg-violet-700" },
+  DENEME: { label: "Deneme", cls: "bg-violet-600 text-surface ring-violet-600", dot: "bg-violet-700" },
   ODEV: { label: "Ödev teslimi", cls: "bg-amber-50 text-amber-800 ring-amber-200", dot: "bg-amber-500" },
 };
 

@@ -33,12 +33,12 @@ const PAGE = 40;
 function Thumb({ q, className }: { q: Item; className: string }) {
   if (q.content)
     return (
-      <div className={`overflow-hidden text-left text-black ${className}`}>
+      <div className={`overflow-hidden text-left text-graphite ${className}`}>
         <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? IMG(q.id) : null} compact />
       </div>
     );
   // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
-  return <img src={IMG(q.id)} alt="" loading="lazy" className={`object-contain ${className}`} />;
+  return <img src={IMG(q.id)} alt="" loading="lazy" className={`bg-white object-contain ${className}`} />;
 }
 
 const templateOf = (type: string): Sec[] => EXAM_TYPES[type].sections.map((s) => ({ name: s.name, target: type === "SERBEST" ? 0 : s.count, items: [] }));
@@ -258,7 +258,7 @@ export default function BankExamBuilder({
                 key={k}
                 type="button"
                 onClick={() => setMeta({ ...meta, purpose: k, booklets: k === "WORKSHEET" ? 1 : meta.booklets })}
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold ${meta.purpose === k ? "bg-graphite text-white" : "ring-1 ring-rule"}`}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold ${meta.purpose === k ? "bg-graphite text-surface" : "ring-1 ring-rule"}`}
               >
                 {l}
               </button>
@@ -371,7 +371,7 @@ export default function BankExamBuilder({
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pool.slice(0, shown).map((q) => (
                 <li key={q.id} className="card flex flex-col overflow-hidden">
-                  <button onClick={() => add([q.id])} className="group relative block bg-white p-1.5 text-left" title={`“${sec.name}” bölümüne ekle`}>
+                  <button onClick={() => add([q.id])} className="group relative block bg-surface p-1.5 text-left" title={`“${sec.name}” bölümüne ekle`}>
                     <Thumb q={q} className={q.content ? "max-h-44 px-1" : "mx-auto max-h-44 w-auto"} />
                     <span className="absolute inset-0 hidden items-center justify-center bg-graphite/10 text-sm font-semibold group-hover:flex">+ Ekle</span>
                   </button>
@@ -438,7 +438,7 @@ export default function BankExamBuilder({
                               aria-pressed={q?.answer === a}
                               onClick={() => setAnswer(id, a)}
                               title={q?.type === "TF" ? answerLabel("TF", a) : undefined}
-                              className={`size-5 rounded-full border text-[10px] font-semibold ${q?.answer === a ? "border-graphite bg-graphite text-white" : bad ? "border-red-300 text-red-700" : "border-ink/40 text-lead"}`}
+                              className={`size-5 rounded-full border text-[10px] font-semibold ${q?.answer === a ? "border-graphite bg-graphite text-surface" : bad ? "border-red-300 text-red-700" : "border-ink/40 text-lead"}`}
                             >
                               {a}
                             </button>

@@ -223,7 +223,7 @@ export default function ScheduleBoard({
                     {[1, 2, 3, 4, 5, 6, 7].map((d) => {
                       const on = draft.days?.includes(d) ?? false;
                       return (
-                        <label key={d} title={DAYS[d]} className={`cursor-pointer rounded-full px-3 py-1 text-sm ring-1 ${on ? "bg-graphite text-white ring-graphite" : "bg-surface ring-rule"}`}>
+                        <label key={d} title={DAYS[d]} className={`cursor-pointer rounded-full px-3 py-1 text-sm ring-1 ${on ? "bg-graphite text-surface ring-graphite" : "bg-surface ring-rule"}`}>
                           <input
                             type="checkbox"
                             className="sr-only"

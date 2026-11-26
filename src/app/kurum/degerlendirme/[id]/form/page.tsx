@@ -20,7 +20,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <div className="no-print">
         <PageHeader title="Kâğıt puan cetveli" back={{ href: `/kurum/degerlendirme/${a.id}`, label: a.title }} actions={<PrintButton label="Yazdır" />} />
       </div>
-      <div className="mx-auto max-w-[190mm] bg-white p-2 text-[12px] text-black">
+      <div className="paper mx-auto max-w-[190mm] bg-white p-2 text-[12px] text-black">
         <div className="mb-2 flex items-end justify-between border-b-2 border-black pb-1">
           <div>
             <div className="text-[11px]">{org}</div>

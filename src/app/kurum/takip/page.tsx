@@ -51,8 +51,8 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     <div className="mb-3 flex flex-wrap items-center gap-2">
       {mine.length > 0 && (
         <>
-          <Link href={q({ kapsam: undefined, sinif: undefined })} className={`rounded-full px-3 py-1 text-sm font-medium ${!wide && !sp.sinif ? "bg-graphite text-white" : "bg-surface ring-1 ring-rule"}`}>Sınıfım</Link>
-          <Link href={q({ kapsam: "kurum", sinif: undefined })} className={`rounded-full px-3 py-1 text-sm font-medium ${wide && !sp.sinif ? "bg-graphite text-white" : "bg-surface ring-1 ring-rule"}`}>Tüm kurum</Link>
+          <Link href={q({ kapsam: undefined, sinif: undefined })} className={`rounded-full px-3 py-1 text-sm font-medium ${!wide && !sp.sinif ? "bg-graphite text-surface" : "bg-surface ring-1 ring-rule"}`}>Sınıfım</Link>
+          <Link href={q({ kapsam: "kurum", sinif: undefined })} className={`rounded-full px-3 py-1 text-sm font-medium ${wide && !sp.sinif ? "bg-graphite text-surface" : "bg-surface ring-1 ring-rule"}`}>Tüm kurum</Link>
         </>
       )}
       <form className="flex gap-2">

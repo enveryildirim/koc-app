@@ -110,7 +110,7 @@ export default function ScoreEntry({ assessmentId, criteria, maxTotal, students 
                         <button
                           key={v}
                           onClick={() => setDraft((d) => ({ ...d, scores: d.scores.map((x, j) => (j === i ? v : x)) }))}
-                          className={`num min-w-11 rounded-md px-2 py-2 text-sm font-semibold ${draft.scores[i] === v ? "bg-graphite text-white" : "bg-surface ring-1 ring-rule"}`}
+                          className={`num min-w-11 rounded-md px-2 py-2 text-sm font-semibold ${draft.scores[i] === v ? "bg-graphite text-surface" : "bg-surface ring-1 ring-rule"}`}
                         >
                           {v}
                         </button>

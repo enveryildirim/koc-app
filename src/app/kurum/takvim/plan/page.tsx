@@ -42,9 +42,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ y
         <span className="font-semibold">{schoolYearLabel(year)}</span>
         <Link href={q({ yil: year + 1 })} className="btn-secondary px-2 py-1">›</Link>
         <div className="flex-1" />
-        <Link href={q({ sinif: "" })} className={`rounded-lg px-3 py-1 ${!classroomId ? "bg-graphite text-white" : "text-lead hover:bg-white"}`}>Tümü</Link>
+        <Link href={q({ sinif: "" })} className={`rounded-lg px-3 py-1 ${!classroomId ? "bg-graphite text-surface" : "text-lead hover:bg-surface"}`}>Tümü</Link>
         {classrooms.map((c) => (
-          <Link key={c.id} href={q({ sinif: c.id })} className={`rounded-lg px-3 py-1 ${classroomId === c.id ? "bg-graphite text-white" : "text-lead hover:bg-white"}`}>
+          <Link key={c.id} href={q({ sinif: c.id })} className={`rounded-lg px-3 py-1 ${classroomId === c.id ? "bg-graphite text-surface" : "text-lead hover:bg-surface"}`}>
             {c.name}
           </Link>
         ))}

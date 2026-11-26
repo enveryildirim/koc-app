@@ -40,7 +40,7 @@ export default function VeliCard({ student: initial, institution, from, to }: { 
         <Link className="btn-secondary" href={`/kurum/veli-karnesi/yazdir?ogrenci=${s.id}&bas=${from}&bit=${to}`}>Önizle / yazdır</Link>
         {s.token ? (
           <>
-            <a className="btn bg-emerald-600 text-white hover:bg-emerald-700" href={whatsappUrl(s, text)} target="_blank" rel="noreferrer">WhatsApp ile gönder</a>
+            <a className="btn bg-emerald-600 text-surface hover:bg-emerald-700" href={whatsappUrl(s, text)} target="_blank" rel="noreferrer">WhatsApp ile gönder</a>
             <button
               className="btn-secondary"
               onClick={async () => {

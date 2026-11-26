@@ -11,7 +11,7 @@ export default function VeliKarne({ r }: { r: ParentReport }) {
   const trend = last && prev && prev !== last ? last.totalNet - prev.totalNet : null;
 
   return (
-    <article className="karne mx-auto max-w-[210mm] bg-white p-6 text-sm shadow-sm ring-1 ring-rule sm:p-8 print:p-6 print:shadow-none print:ring-0">
+    <article className="karne mx-auto max-w-[210mm] bg-surface p-6 text-sm shadow-sm ring-1 ring-rule sm:p-8 print:p-6 print:shadow-none print:ring-0">
       <header className="border-b-4 border-brand-600 pb-3">
         <div className="text-xs font-bold tracking-widest text-brand-600">{r.institution} · Veli Bilgilendirme Karnesi</div>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-2">

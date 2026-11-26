@@ -1,6 +1,7 @@
 import Link from "next/link";
 import KurumNav, { KurumMobileBar } from "./KurumNav";
 import Logo from "./Logo";
+import ThemeToggle from "./ThemeToggle";
 
 /**
  * Kurum panelinin çerçevesi: solda gruplu kenar çubuğu (telefonda üst çubuk), sağda sayfa.
@@ -28,6 +29,7 @@ export default function KurumShell({ user, children, add, addCompact }: { user: 
           {user.staff && <Link href="/ogretmen" className="block font-semibold text-brand-600">Derslerim</Link>}
           <div className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-lead" title={who}>{who}</span>
+            <ThemeToggle className="-my-1 shrink-0" />
             <form action="/api/auth/logout" method="post">
               <button className="shrink-0 font-semibold text-graphite hover:text-ink">Çıkış</button>
             </form>

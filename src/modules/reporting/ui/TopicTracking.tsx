@@ -76,7 +76,7 @@ export default function TopicTracking({ rows, holidays, today, startDate }: { ro
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`rounded-full px-3 py-1 text-sm ${filter === f.key ? "bg-graphite text-white" : "bg-surface ring-1 ring-rule hover:bg-paper"}`}
+            className={`rounded-full px-3 py-1 text-sm ${filter === f.key ? "bg-graphite text-surface" : "bg-surface ring-1 ring-rule hover:bg-paper"}`}
           >
             {f.label} <span className="num text-xs opacity-75">{rows.filter((r) => matches(r, f.key)).length}</span>
           </button>

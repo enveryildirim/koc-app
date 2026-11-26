@@ -35,7 +35,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <FormStudentNo examId={id} on={exam.omrStudentNo !== false} compact />
           <span className="text-sm text-lead">A4, kenar boşluğu “yok” ve ölçek %100 olarak yazdırın. Gerekli sayıda fotokopi çekebilirsiniz.</span>
         </div>
-        <div className="print-page mx-auto bg-white shadow-lg print:shadow-none" style={page}>
+        <div className="paper print-page mx-auto bg-white shadow-lg print:shadow-none" style={page}>
           <FormSvg info={spec} style={{ ...page, display: "block" }} />
         </div>
       </div>
@@ -85,7 +85,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               },
             };
             return (
-              <div key={st.id} className="print-page mx-auto break-after-page bg-white shadow-lg print:shadow-none" style={page}>
+              <div key={st.id} className="paper print-page mx-auto break-after-page bg-white shadow-lg print:shadow-none" style={page}>
                 <FormSvg info={info} style={{ ...page, display: "block" }} />
               </div>
             );

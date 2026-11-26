@@ -126,7 +126,7 @@ export default function CourseAdmin({
             {classrooms.map((c) => {
               const on = d.classroomIds.includes(c.id);
               return (
-                <label key={c.id} className={`cursor-pointer rounded-full px-3 py-1 text-sm ring-1 ${on ? "bg-graphite text-white ring-graphite" : "bg-surface ring-rule"}`}>
+                <label key={c.id} className={`cursor-pointer rounded-full px-3 py-1 text-sm ring-1 ${on ? "bg-graphite text-surface ring-graphite" : "bg-surface ring-rule"}`}>
                   <input
                     type="checkbox"
                     className="sr-only"

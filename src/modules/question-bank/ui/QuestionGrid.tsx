@@ -269,7 +269,7 @@ export default function QuestionGrid({
               )}
               {q.needsReview && q.agentNote && <AgentNote note={q.agentNote} className="border-b border-rule/60 px-2.5 py-1.5" />}
               {q.content ? (
-                <div className="relative max-h-80 flex-1 overflow-hidden bg-white p-3 text-black">
+                <div className="relative max-h-80 flex-1 overflow-hidden bg-surface p-3 text-graphite">
                   <QuestionView type={q.type} content={q.content} imageSrc={q.hasImage ? `${API}/${q.id}/gorsel` : null} answer={q.answer} />
                 </div>
               ) : (
@@ -290,7 +290,7 @@ export default function QuestionGrid({
                     <button
                       type="button"
                       onClick={() => setDetail(q.id)}
-                      className={`badge shrink-0 hover:bg-rule ${q.transcript ? "bg-mist text-graphite" : "bg-white text-lead ring-1 ring-rule"}`}
+                      className={`badge shrink-0 hover:bg-rule ${q.transcript ? "bg-mist text-graphite" : "bg-surface text-lead ring-1 ring-rule"}`}
                       title={q.transcript ? `Metni ${q.transcriptBy === "AI" ? "yapay zekâ ile çıkarıldı" : "elle yazıldı"}: aranabilir, benzerleri bulunur` : "Metni yok: aramada ve benzer soru bulmada kullanılamaz. Yazmak için tıklayın"}
                     >
                       {q.transcript ? (q.transcriptBy === "AI" ? "Metin · YZ" : "Metin") : "Metinsiz"}
@@ -486,7 +486,7 @@ function AgentNote({ note, className = "" }: { note: string; className?: string 
 
 /** Kart altındaki cevap: test ve D/Y'de tıklanır; boşluk doldurma ve açık uçluda yazılan cevap gösterilir (Düzenle ile değişir). */
 function AnswerControl({ q, busy, onSet }: { q: GridItem; busy: boolean; onSet: (a: string) => void }) {
-  const pill = (on: boolean) => `rounded-full border text-[11px] font-semibold ${on ? "border-graphite bg-graphite text-white" : "border-ink/40 text-lead hover:border-graphite"}`;
+  const pill = (on: boolean) => `rounded-full border text-[11px] font-semibold ${on ? "border-graphite bg-graphite text-surface" : "border-ink/40 text-lead hover:border-graphite"}`;
   if (q.type === "TF")
     return (
       <div className="flex gap-0.5" role="group" aria-label="Doğru cevap">
@@ -576,10 +576,10 @@ function SimilarList({ id }: { id: string }) {
               <span className="ml-auto truncate">{[r.topic, r.grade ? (/^\d+$/.test(r.grade) ? `${r.grade}. sınıf` : r.grade) : ""].filter(Boolean).join(" · ")}</span>
               {!r.cut && <Link href={`/kurum/soru-havuzu/yaz?id=${r.id}`} className="shrink-0 font-semibold text-graphite hover:underline">Düzenle</Link>}
             </div>
-            <div className="max-h-48 overflow-hidden bg-white p-2.5 text-black">
+            <div className="max-h-48 overflow-hidden bg-surface p-2.5 text-graphite">
               {r.cut ? (
                 // eslint-disable-next-line @next/next/no-img-element -- kimlik doğrulamalı görsel
-                <img src={`${API}/${r.id}/gorsel`} alt="" loading="lazy" className="max-h-44 w-auto object-contain" />
+                <img src={`${API}/${r.id}/gorsel`} alt="" loading="lazy" className="max-h-44 w-auto bg-white object-contain" />
               ) : (
                 <QuestionView type={r.type} content={{ stem: r.stem, options: r.options }} imageSrc={r.hasImage ? `${API}/${r.id}/gorsel` : null} answer={r.answer} compact />
               )}

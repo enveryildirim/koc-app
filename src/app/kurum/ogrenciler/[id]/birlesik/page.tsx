@@ -62,7 +62,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   return (
     <>
       {header}
-      <article className="karne mx-auto max-w-[210mm] bg-white p-8 text-sm shadow-sm ring-1 ring-rule print:p-6 print:shadow-none print:ring-0">
+      <article className="karne mx-auto max-w-[210mm] bg-surface p-8 text-sm shadow-sm ring-1 ring-rule print:p-6 print:shadow-none print:ring-0">
         <header className="flex items-start justify-between border-b-4 border-brand-600 pb-3">
           <div>
             <div className="text-xs font-bold tracking-widest text-brand-600">{institution} · Birleştirilmiş Karne</div>
@@ -81,7 +81,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <h2 className="mt-5 mb-1 text-xs font-bold text-lead">Denemeler</h2>
         <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="bg-graphite text-white">
+            <tr className="bg-graphite text-surface">
               <th className="px-2 py-1.5 text-left">Deneme</th>
               {secNames.map((n) => (
                 <th key={n} className="px-2 py-1.5 text-right">{n}</th>
@@ -184,8 +184,8 @@ function Trend({ values, classAvg, labels, max }: { values: number[]; classAvg: 
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
       {[0, 0.5, 1].map((f) => (
         <g key={f}>
-          <line x1={pad} x2={w - pad} y1={y(max * f)} y2={y(max * f)} stroke="#e2e8f0" />
-          <text x={4} y={y(max * f) + 3} fontSize={9} fill="#94a3b8">{Math.round(max * f)}</text>
+          <line x1={pad} x2={w - pad} y1={y(max * f)} y2={y(max * f)} className="stroke-rule" />
+          <text x={4} y={y(max * f) + 3} fontSize={9} className="fill-lead">{Math.round(max * f)}</text>
         </g>
       ))}
       <polyline points={line(classAvg)} fill="none" stroke="#94a3b8" strokeWidth={2} strokeDasharray="4 3" />
@@ -193,15 +193,15 @@ function Trend({ values, classAvg, labels, max }: { values: number[]; classAvg: 
       {values.map((v, i) => (
         <g key={i}>
           <circle cx={x(i)} cy={y(v)} r={3.5} fill="#1f63dc" />
-          <text x={x(i)} y={y(v) - 7} fontSize={9} textAnchor="middle" fill="#1e293b">{v.toFixed(1)}</text>
-          <text x={x(i)} y={h - 8} fontSize={8} textAnchor="middle" fill="#64748b">{labels[i].slice(0, 18)}</text>
+          <text x={x(i)} y={y(v) - 7} fontSize={9} textAnchor="middle" className="fill-graphite">{v.toFixed(1)}</text>
+          <text x={x(i)} y={h - 8} fontSize={8} textAnchor="middle" className="fill-lead">{labels[i].slice(0, 18)}</text>
         </g>
       ))}
       <g fontSize={9}>
         <line x1={w - 170} x2={w - 155} y1={10} y2={10} stroke="#1f63dc" strokeWidth={2.5} />
-        <text x={w - 150} y={13} fill="#334155">Öğrenci</text>
+        <text x={w - 150} y={13} className="fill-graphite">Öğrenci</text>
         <line x1={w - 100} x2={w - 85} y1={10} y2={10} stroke="#94a3b8" strokeWidth={2} strokeDasharray="4 3" />
-        <text x={w - 80} y={13} fill="#334155">Sınıf ort.</text>
+        <text x={w - 80} y={13} className="fill-graphite">Sınıf ort.</text>
       </g>
     </svg>
   );

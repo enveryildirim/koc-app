@@ -370,7 +370,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
       >
         <div className="mb-2 flex flex-wrap gap-1" role="radiogroup" aria-label="Soru türü">
           {TYPE_ORDER.map((t) => (
-            <button key={t} role="radio" aria-checked={d.type === t} onClick={() => set({ type: t, answer: t === d.type ? d.answer : "" })} className={`rounded-md px-3 py-1.5 text-sm ${d.type === t ? "bg-graphite font-semibold text-white" : "ring-1 ring-rule hover:text-graphite"}`}>
+            <button key={t} role="radio" aria-checked={d.type === t} onClick={() => set({ type: t, answer: t === d.type ? d.answer : "" })} className={`rounded-md px-3 py-1.5 text-sm ${d.type === t ? "bg-graphite font-semibold text-surface" : "ring-1 ring-rule hover:text-graphite"}`}>
               {QUESTION_TYPES[t].label}
             </button>
           ))}
@@ -420,7 +420,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
                 const on = d.answer === l;
                 return (
                   <li key={i} className="flex items-center gap-2">
-                    <button type="button" aria-pressed={on} aria-label={`${l} doğru cevap`} onClick={() => set({ answer: on ? "" : l })} className={`size-8 shrink-0 rounded-full border text-sm font-semibold ${on ? "border-emerald-700 bg-emerald-700 text-white" : "border-ink/40 text-lead hover:border-graphite"}`}>
+                    <button type="button" aria-pressed={on} aria-label={`${l} doğru cevap`} onClick={() => set({ answer: on ? "" : l })} className={`size-8 shrink-0 rounded-full border text-sm font-semibold ${on ? "border-emerald-700 bg-emerald-700 text-surface" : "border-ink/40 text-lead hover:border-graphite"}`}>
                       {l}
                     </button>
                     <input ref={(el) => { optRefs.current[i] = el; }} dir="auto" className="input" value={o} onChange={(e) => setOption(i, e.target.value)} onKeyDown={(e) => optionKey(i, e)} onPaste={(e) => optionPaste(i, e)} placeholder={`${l} şıkkı`} />
@@ -444,7 +444,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
             <span className="label">Doğru cevap</span>
             <div className="flex gap-2">
               {([["D", "Doğru"], ["Y", "Yanlış"]] as const).map(([v, l]) => (
-                <button key={v} type="button" aria-pressed={d.answer === v} onClick={() => set({ answer: d.answer === v ? "" : v })} className={`rounded-md px-5 py-2 text-sm font-semibold ${d.answer === v ? "bg-emerald-700 text-white" : "ring-1 ring-rule hover:ring-graphite"}`}>
+                <button key={v} type="button" aria-pressed={d.answer === v} onClick={() => set({ answer: d.answer === v ? "" : v })} className={`rounded-md px-5 py-2 text-sm font-semibold ${d.answer === v ? "bg-emerald-700 text-surface" : "ring-1 ring-rule hover:ring-graphite"}`}>
                   {l}
                 </button>
               ))}
@@ -501,7 +501,7 @@ function SingleWriter({ common, setCommon, edit }: { common: Common; setCommon: 
 
       <section className="min-w-0 lg:sticky lg:top-4 lg:self-start">
         <h2 className="mb-1.5 text-sm font-semibold">Kâğıtta böyle görünür</h2>
-        <div className="rounded-lg bg-white p-4 text-black ring-1 ring-rule">
+        <div className="paper rounded-lg bg-white p-4 text-black ring-1 ring-rule">
           {d.stem.trim() || imageSrc || (d.type === "MC" && d.options.some(Boolean)) ? (
             <div className="flex gap-1.5">
               <b className="shrink-0 text-[14px]">1.</b>
@@ -670,7 +670,7 @@ function PasteSplitter({ common }: { common: Common }) {
 
 /** Bölünen sorunun cevabını türüne göre düzeltme. */
 function DraftAnswer({ d, onChange }: { d: { type: QuestionType; answer: string; options: string[]; stem: string }; onChange: (a: string) => void }) {
-  const pill = (on: boolean) => `size-6 rounded-full border text-[11px] font-semibold ${on ? "border-emerald-700 bg-emerald-700 text-white" : "border-ink/40 text-lead hover:border-graphite"}`;
+  const pill = (on: boolean) => `size-6 rounded-full border text-[11px] font-semibold ${on ? "border-emerald-700 bg-emerald-700 text-surface" : "border-ink/40 text-lead hover:border-graphite"}`;
   if (d.type === "MC")
     return (
       <div className="mt-1.5 flex items-center gap-1 text-xs text-lead">
@@ -686,7 +686,7 @@ function DraftAnswer({ d, onChange }: { d: { type: QuestionType; answer: string;
       <div className="mt-1.5 flex items-center gap-1 text-xs text-lead">
         Cevap:
         {(["D", "Y"] as const).map((v) => (
-          <button key={v} type="button" aria-pressed={d.answer === v} className={`rounded-md border px-2 py-0.5 font-semibold ${d.answer === v ? "border-emerald-700 bg-emerald-700 text-white" : "border-ink/40"}`} onClick={() => onChange(d.answer === v ? "" : v)}>
+          <button key={v} type="button" aria-pressed={d.answer === v} className={`rounded-md border px-2 py-0.5 font-semibold ${d.answer === v ? "border-emerald-700 bg-emerald-700 text-surface" : "border-ink/40"}`} onClick={() => onChange(d.answer === v ? "" : v)}>
             {answerLabel("TF", v)}
           </button>
         ))}

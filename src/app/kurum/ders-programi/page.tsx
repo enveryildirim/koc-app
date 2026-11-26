@@ -68,7 +68,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
           <Link
             key={c.id}
             href={c.href}
-            className={`rounded-full px-3 py-1 text-sm font-medium ${c.active ? "bg-graphite text-white" : "bg-surface text-lead ring-1 ring-rule hover:bg-paper"}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium ${c.active ? "bg-graphite text-surface" : "bg-surface text-lead ring-1 ring-rule hover:bg-paper"}`}
           >
             {c.label}
           </Link>

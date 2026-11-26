@@ -34,18 +34,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
     );
   }
   const count = (id: string) => all.filter((c) => c.classroomId === id).length;
-  const chip = (active: boolean) => `rounded-full px-3 py-1 text-sm font-medium ${active ? "bg-graphite text-white" : "bg-surface ring-1 ring-rule"}`;
+  const chip = (active: boolean) => `rounded-full px-3 py-1 text-sm font-medium ${active ? "bg-graphite text-surface" : "bg-surface ring-1 ring-rule"}`;
   const courses = sel ? all.filter((c) => c.classroomId === sel.id) : all;
   return (
     <>
       {header}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <Link href="/kurum/dersler" className={chip(!sel)}>
-          Tümü <span className={!sel ? "text-white/70" : "text-lead"}>{all.length}</span>
+          Tümü <span className={!sel ? "text-surface/70" : "text-lead"}>{all.length}</span>
         </Link>
         {classes.map((c) => (
           <Link key={c.id} href={`/kurum/dersler?sinif=${c.id}`} className={chip(c.id === sel?.id)}>
-            {c.name} <span className={c.id === sel?.id ? "text-white/70" : "text-lead"}>{count(c.id)}</span>
+            {c.name} <span className={c.id === sel?.id ? "text-surface/70" : "text-lead"}>{count(c.id)}</span>
           </Link>
         ))}
         {sel && (
